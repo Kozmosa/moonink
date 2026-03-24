@@ -218,73 +218,8 @@ fn scoped_output_path(root_dir : String, relative_path : String) -> String {
 }
 
 ///|
-#cfg(target="js")
-extern "js" fn starter_path_exists(path : String) -> Bool =
-  #| function(path) {
-  #|   if (typeof process !== "undefined" && typeof require === "function") {
-  #|     return require("fs").existsSync(path);
-  #|   }
-  #|   return false;
-  #| }
-
-///|
-#cfg(target="js")
-extern "js" fn starter_create_dir(path : String) -> Unit =
-  #| function(path) {
-  #|   if (typeof process !== "undefined" && typeof require === "function") {
-  #|     require("fs").mkdirSync(path, { recursive: true });
-  #|   }
-  #| }
-
-///|
-#cfg(target="js")
-extern "js" fn starter_write_string(path : String, content : String) -> Unit =
-  #| function(path, content) {
-  #|   if (typeof process !== "undefined" && typeof require === "function") {
-  #|     require("fs").writeFileSync(path, content, "utf8");
-  #|   }
-  #| }
-
-///|
-#cfg(not(target="js"))
-fn starter_path_exists(_path : String) -> Bool {
-  false
-}
-
-///|
-#cfg(not(target="js"))
-fn starter_create_dir(_path : String) -> Unit {
-  ()
-}
-
-///|
-#cfg(not(target="js"))
-fn starter_write_string(_path : String, _content : String) -> Unit {
-  ()
-}
-
-///|
-#cfg(not(target="js"))
-fn starter_runtime_supported() -> Bool {
-  false
-}
-
-///|
-#cfg(target="js")
-fn starter_runtime_supported() -> Bool {
-  true
-}
-
-///|
-fn emit_starter_project(plan : StarterTemplatePlan) -> CliOutcome {
-  if !starter_runtime_supported() {
-    return {
-      exit_code: 1,
-      message:
-        "[new] starter generation currently requires the js runtime target\nstatus: run `moon run --target js cmd/main -- new <project-name>`",
-    }
-  }
-  if starter_path_exists(plan.root_dir) {
+fn try_emit_starter_project(plan : StarterTemplatePlan) -> CliOutcome raise @fs.IOError {
+  if @fs.path_exists(plan.root_dir) {
     return {
       exit_code: 1,
       message:
@@ -292,15 +227,26 @@ fn emit_starter_project(plan : StarterTemplatePlan) -> CliOutcome {
     }
   }
   for directory in starter_directories(plan) {
-    starter_create_dir(directory)
+    @fs.create_dir(directory)
   }
   for file in plan.created_files {
-    starter_write_string(scoped_output_path(plan.root_dir, file.path), file.content)
+    @fs.write_string_to_file(scoped_output_path(plan.root_dir, file.path), file.content)
   }
   {
     exit_code: 0,
     message:
       "[new] starter project created\nproject: \{plan.project_name}\nroot: \{plan.root_dir}\nfiles written: \{plan.created_files.length()}\nnext: edit moonink.toml and begin writing content",
+  }
+}
+
+///|
+fn emit_starter_project(plan : StarterTemplatePlan) -> CliOutcome {
+  try_emit_starter_project(plan) catch {
+    err => {
+      exit_code: 1,
+      message:
+        "[new] failed to create starter project\nroot: \{plan.root_dir}\nerror: \{err}",
+    }
   }
 }
 
