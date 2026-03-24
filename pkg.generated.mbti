@@ -88,9 +88,19 @@ pub(all) struct SiteModel {
 pub impl Eq for SiteModel
 pub impl Show for SiteModel
 
+pub(all) struct StarterTemplateFile {
+  path : String
+  summary : String
+}
+pub impl Eq for StarterTemplateFile
+pub impl Show for StarterTemplateFile
+
 pub(all) struct StarterTemplatePlan {
   project_name : String
-  created_paths : Array[String]
+  root_dir : String
+  created_files : Array[StarterTemplateFile]
+  content_roots : Array[String]
+  theme_dir : String
   note : String
 }
 pub impl Eq for StarterTemplatePlan

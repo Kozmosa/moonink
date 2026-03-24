@@ -24,7 +24,7 @@ cmd/main
   -> parse_cli_command
   -> dispatch_cli_command
   -> command handler
-  -> placeholder module boundary
+  -> feature module
 ```
 
 ## Current Command Responsibilities
@@ -35,8 +35,10 @@ Returns static scaffold help text.
 
 ### new
 
-Delegates to starter-project planning logic and reports placeholder starter
-artifacts.
+Delegates to starter-project planning logic and now returns a concrete sample
+MoonInk site layout for Phase 1 milestone M1. The command remains pure for now:
+it models which files and directories should be emitted, but it does not yet
+write them to disk.
 
 ### build
 
@@ -60,7 +62,7 @@ Delegates to placeholder serve session preparation.
 - `moonink.mbt`
 - `cli_output.mbt`
 
-### Placeholder Feature Modules
+### Feature Modules
 
 - `starter.mbt`
 - `config.mbt`
@@ -79,18 +81,19 @@ Delegates to placeholder serve session preparation.
 - keep `cmd/main` thin;
 - keep the command core testable as pure functions where possible;
 - preserve explicit boundaries between CLI, config, content, model, render, and serve;
-- allow dummy implementations to be replaced incrementally without changing the public execution shape too early.
+- evolve the starter-project planner into file emission without collapsing the module boundary;
+- replace dummy implementations incrementally without changing the public execution shape too early.
 
 ## Known Gaps
 
 - no real runtime argv plumbing yet;
 - no option parser yet;
-- no side-effecting starter project generation yet;
+- `new` still plans starter emission instead of performing side effects;
 - no real build or serve implementation yet.
 
 ## Next Planned Evolution
 
-1. wire real runtime argv into `cmd/main`;
-2. add structured command options;
-3. make `new` perform starter template emission;
+1. make `new` emit the planned sample project files to disk;
+2. wire real runtime argv into `cmd/main`;
+3. add structured command options;
 4. replace build placeholders stage by stage while preserving the current pipeline shape.
