@@ -19,13 +19,27 @@ pub fn render_site_dummy(config : LoadedConfig, model : SiteModel) -> RenderPlan
 
 ///|
 fn run_build_command() -> CliOutcome {
-  let config = load_config_dummy()
-  let inventory = discover_content_dummy(config)
+  let config = try load_config() catch {
+    err => {
+      return {
+        exit_code: 1,
+        message: "[build] failed during config loading\nerror: \{err}",
+      }
+    }
+  }
+  let inventory = try discover_content(config) catch {
+    err => {
+      return {
+        exit_code: 1,
+        message: "[build] failed during content discovery\nerror: \{err}",
+      }
+    }
+  }
   let model = build_site_model_dummy(config, inventory)
   let render_plan = render_site_dummy(config, model)
   {
     exit_code: 0,
     message:
-      "[build] scaffold pipeline executed\nconfig: \{config.config_path}\noutput: \{render_plan.output_dir}\nstatus: placeholder only",
+      "[build] phase 1a input ready\nsite: \{config.site_name}\nconfig: \{config.config_path}\ndocs root: \{inventory.docs_root}\narticles root: \{inventory.articles_root}\ndocs files: \{inventory.discovered_docs}\narticle files: \{inventory.discovered_articles}\noutput: \{render_plan.output_dir}\nstatus: config and content discovery ready",
   }
 }

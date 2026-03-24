@@ -38,8 +38,70 @@ test "starter project plan models the phase 1 sample site layout" {
 }
 
 ///|
+test "load_config reads the minimal build phase 1a fixture" {
+  let config = @moonink.load_config(
+    config_path="fixtures/build_phase1a/minimal/moonink.toml",
+  ) catch {
+    _ => panic()
+  }
+  inspect(config.site_name, content="Fixture Site")
+  inspect(config.site_url, content="Some(\"https://example.com/docs\")")
+  inspect(config.project_root, content="fixtures/build_phase1a/minimal")
+  inspect(config.docs_dir, content="docs")
+  inspect(config.articles_dir, content="articles")
+  inspect(config.output_dir, content="site")
+  inspect(config.theme_name, content="default")
+}
+
+///|
+test "load_config reports missing required fields" {
+  inspect(
+    try? @moonink.load_config(
+      config_path="fixtures/build_phase1a/missing_site_name/moonink.toml",
+    ),
+    content="Err(MissingField(section=\"site\", key=\"name\"))",
+  )
+}
+
+///|
+test "discover_content scans docs and articles recursively" {
+  let config = @moonink.load_config(
+    config_path="fixtures/build_phase1a/minimal/moonink.toml",
+  ) catch {
+    _ => panic()
+  }
+  let inventory = @moonink.discover_content(config) catch {
+    _ => panic()
+  }
+  inspect(inventory.docs_root, content="fixtures/build_phase1a/minimal/docs")
+  inspect(inventory.articles_root, content="fixtures/build_phase1a/minimal/articles")
+  inspect(inventory.discovered_docs, content="2")
+  inspect(inventory.discovered_articles, content="1")
+  inspect(
+    inventory.docs_files,
+    content="[\"fixtures/build_phase1a/minimal/docs/index.md\", \"fixtures/build_phase1a/minimal/docs/guides/install.md\"]",
+  )
+  inspect(
+    inventory.article_files,
+    content="[\"fixtures/build_phase1a/minimal/articles/hello.md\"]",
+  )
+}
+
+///|
+test "discover_content reports missing content roots clearly" {
+  let config = @moonink.load_config(
+    config_path="fixtures/build_phase1a/missing_articles_dir/moonink.toml",
+  ) catch {
+    _ => panic()
+  }
+  inspect(
+    try? @moonink.discover_content(config),
+    content="Err(MissingDirectory(\"fixtures/build_phase1a/missing_articles_dir/articles\"))",
+  )
+}
+
+///|
 test "cli run remains a pure planning entry for new" {
-  inspect(@moonink.cli_run(["moonink", "build"]).exit_code, content="0")
   inspect(
     @moonink.cli_run(["moonink", "new", "demo"]).message,
     content=(

@@ -1,0 +1,9 @@
+[site]
+url = "https://example.com/docs"
+
+[content]
+docs = "docs"
+articles = "articles"
+
+[build]
+output = "site"

@@ -1,0 +1,13 @@
+[site]
+name = "Fixture Site"
+url = "https://example.com/docs"
+
+[content]
+docs = "docs"
+articles = "articles"
+
+[theme]
+name = "default"
+
+[build]
+output = "site"

@@ -10,9 +10,9 @@ pub fn cli_help_text() -> String
 
 pub fn cli_run(Array[String]) -> CliOutcome
 
-pub fn discover_content_dummy(LoadedConfig) -> ContentInventory
+pub fn discover_content(LoadedConfig) -> ContentInventory raise ContentDiscoveryError
 
-pub fn load_config_dummy() -> LoadedConfig
+pub fn load_config(config_path? : String) -> LoadedConfig raise ConfigError
 
 pub fn parse_cli_command(Array[String]) -> CliCommand
 
@@ -23,6 +23,24 @@ pub fn prepare_serve_dummy() -> ServeSession
 pub fn render_site_dummy(LoadedConfig, SiteModel) -> RenderPlan
 
 // Errors
+pub(all) suberror ConfigError {
+  IOError(String)
+  InvalidLine(line~ : Int, content~ : String)
+  InvalidSection(line~ : Int, section~ : String)
+  MissingSection(String)
+  MissingField(section~ : String, key~ : String)
+  DuplicateField(section~ : String, key~ : String)
+}
+pub impl Eq for ConfigError
+pub impl Show for ConfigError
+
+pub(all) suberror ContentDiscoveryError {
+  IOError(String)
+  MissingDirectory(String)
+  NotDirectory(String)
+}
+pub impl Eq for ContentDiscoveryError
+pub impl Show for ContentDiscoveryError
 
 // Types and methods
 pub enum CliCommand {
@@ -45,6 +63,10 @@ pub impl Show for CliOutcome
 pub(all) struct ContentInventory {
   docs_root : String
   articles_root : String
+  docs_files : Array[String]
+  article_files : Array[String]
+  discovered_docs : Int
+  discovered_articles : Int
   discovered_documents : Int
   discovered_assets : Int
   note : String
@@ -54,11 +76,13 @@ pub impl Show for ContentInventory
 
 pub(all) struct LoadedConfig {
   config_path : String
+  project_root : String
   site_name : String
+  site_url : String?
   docs_dir : String
   articles_dir : String
   output_dir : String
-  note : String
+  theme_name : String
 }
 pub impl Eq for LoadedConfig
 pub impl Show for LoadedConfig

@@ -59,14 +59,22 @@ being handled by JS-only extern bridges.
 
 ### build
 
-Delegates into the current dummy pipeline:
+`build` now implements the first real input stage of the pipeline:
 
 ```text
-load_config_dummy
-  -> discover_content_dummy
+load_config
+  -> validate required fields
+  -> discover_content
   -> build_site_model_dummy
   -> render_site_dummy
 ```
+
+Current real behavior includes:
+
+- reading `moonink.toml` from the current project;
+- validating the required `site`, `content`, and `build` fields;
+- recursively scanning `docs/` and `articles/` for `.md` files;
+- reporting a real phase-1a summary before the later pipeline stages remain placeholders.
 
 ### serve
 
@@ -104,12 +112,13 @@ Delegates to placeholder serve session preparation.
 ## Known Gaps
 
 - no structured option parser yet;
-- runtime filesystem handling is still embedded in `starter.mbt` rather than a dedicated IO package;
-- no real build or serve implementation yet.
+- runtime filesystem handling is still embedded in feature modules rather than a dedicated IO package;
+- `build` still uses dummy site-model and render stages after config/discovery;
+- `serve` remains entirely placeholder.
 
 ## Next Planned Evolution
 
-1. extract starter filesystem operations behind a dedicated runtime IO layer if the runtime surface grows beyond `starter.mbt`;
+1. decide whether filesystem helpers should move into a shared runtime IO layer as more commands gain real behavior;
 2. add structured command options and flags;
-3. implement real config loading/content discovery for `build`;
-4. expand `moonbitlang/x`-based IO usage to later build and serve phases as those features become real.
+3. implement frontmatter parsing and richer content typing after discovery;
+4. replace the remaining dummy model/render stages once the content input layer is stable.

@@ -3,8 +3,9 @@
 ## Goal
 
 Record the evolution of the MoonInk CLI from a cold-start scaffold into a
-partially real command-line tool, with `moonink new` now capable of creating a
-starter documentation project on disk.
+partially real command-line tool, with `moonink new` capable of creating a
+starter documentation project on disk and `moonink build` now able to perform
+the first real input stage of the build pipeline.
 
 ## Scope
 
@@ -17,24 +18,32 @@ Implemented in this milestone:
 - starter content generation for config, docs, articles, theme files, and `.gitignore`;
 - runtime argv integration in `cmd/main` via `@env.args()`;
 - argv normalization for both moonrun-style and JS-target layouts;
-- black-box tests for parse behavior and starter planning content.
+- build phase 1a config loading from `moonink.toml` with minimal TOML parsing and validation;
+- recursive Markdown discovery under `docs/` and `articles/` for build phase 1a;
+- committed fixture projects and black-box tests for config loading and content discovery.
 
 Not implemented in this milestone:
 
-- TOML parsing;
-- real content discovery;
-- Markdown/frontmatter parsing;
-- actual site rendering or local dev server startup.
+- frontmatter parsing;
+- Markdown/frontmatter semantic parsing;
+- actual site-model construction beyond the placeholder bridge;
+- actual rendering or local dev server startup.
 
 ## Files Changed In This Milestone
 
 - `moonink.mbt`
 - `starter.mbt`
+- `config.mbt`
+- `content.mbt`
+- `render.mbt`
 - `moonink_test.mbt`
 - `moon.pkg`
 - `cmd/main/main.mbt`
 - `cmd/main/moon.pkg`
 - `README.mbt.md`
+- `fixtures/build_phase1a/minimal/...`
+- `fixtures/build_phase1a/missing_site_name/...`
+- `fixtures/build_phase1a/missing_articles_dir/...`
 - `docs/agent-working/CliImpl0324.md`
 - `docs/agent-working/MoonInkCliArch.md`
 
@@ -43,7 +52,7 @@ Not implemented in this milestone:
 ### Preserve A Pure Test Path
 
 `cli_run(argv)` still returns a `CliOutcome` without side effects. This keeps
-core command parsing and starter planning testable without depending on runtime
+command parsing and starter planning testable without depending on runtime
 filesystem behavior.
 
 ### Add A Runtime Execution Layer
@@ -54,7 +63,7 @@ command model unchanged.
 
 ### Keep Starter Planning And Emission Together
 
-The `starter.mbt` module now owns both:
+The `starter.mbt` module owns both:
 
 - the pure starter-project plan; and
 - the runtime emission of that plan.
@@ -64,21 +73,34 @@ CLI parser.
 
 ### Use `moonbitlang/x/fs` For Runtime File IO
 
-The starter emission path now relies on `moonbitlang/x/fs` for path existence
-checks, directory creation, and string writes. This removed the earlier custom
-JS extern bridge and lets runtime IO failures surface as typed `IOError` values
-that are converted into user-facing CLI messages.
+The starter emission path and build phase 1a content access both rely on
+`moonbitlang/x/fs` for path existence checks, directory creation, directory
+listing, and string reads/writes. Runtime IO failures surface as typed error
+values that are converted into user-facing CLI messages.
+
+### Parse Only The Minimal TOML Subset Needed For Phase 1a
+
+Instead of adding a full TOML dependency immediately, phase 1a uses a focused
+line-oriented parser that supports:
+
+- section headers like `[site]`;
+- simple `key = "value"` entries;
+- blank lines and `#` comment lines.
+
+This is enough for the current starter format and fixture coverage, while
+keeping the implementation small and explicit.
 
 ## Current Limitations
 
 - `new` refuses to overwrite an existing directory, but it does not yet offer `--force` or conflict resolution options.
-- Runtime filesystem handling is still embedded in `starter.mbt` rather than a dedicated IO package.
-- `build` and `serve` remain placeholders.
+- Runtime filesystem handling is still embedded in feature modules rather than a dedicated IO package.
+- `build` validates config and discovers Markdown files, but later phases still rely on dummy site-model and render layers.
+- The TOML parser is intentionally minimal and does not yet support broader TOML syntax.
 - CLI options/flags are still not parsed beyond the simple positional project name.
 
 ## Recommended Next Steps
 
-1. extract starter filesystem operations behind a dedicated runtime IO abstraction if more runtime behavior is added;
+1. decide whether filesystem helpers should move into a shared runtime IO abstraction as more commands gain real behavior;
 2. add structured CLI option parsing;
-3. implement config loading and validation for `build`;
-4. reuse `moonbitlang/x` IO capabilities when `build` and `serve` begin doing real filesystem work.
+3. implement frontmatter parsing and richer content typing on top of the discovery layer;
+4. replace the remaining dummy model/render stages once the build input layer is stable.
