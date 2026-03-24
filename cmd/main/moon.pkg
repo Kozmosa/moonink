@@ -1,0 +1,7 @@
+import {
+  "username/moonink" @moonink,
+}
+
+options(
+  "is-main": true,
+)

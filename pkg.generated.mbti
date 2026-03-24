@@ -1,0 +1,102 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonink"
+
+// Values
+pub fn build_site_model_dummy(LoadedConfig, ContentInventory) -> SiteModel
+
+pub fn cli_help_text() -> String
+
+pub fn cli_run(Array[String]) -> CliOutcome
+
+pub fn discover_content_dummy(LoadedConfig) -> ContentInventory
+
+pub fn load_config_dummy() -> LoadedConfig
+
+pub fn parse_cli_command(Array[String]) -> CliCommand
+
+pub fn plan_starter_project(String?) -> StarterTemplatePlan
+
+pub fn prepare_serve_dummy() -> ServeSession
+
+pub fn render_site_dummy(LoadedConfig, SiteModel) -> RenderPlan
+
+// Errors
+
+// Types and methods
+pub enum CliCommand {
+  Help
+  New(String?)
+  Build
+  Serve
+  Unknown(String)
+}
+pub impl Eq for CliCommand
+pub impl Show for CliCommand
+
+pub(all) struct CliOutcome {
+  exit_code : Int
+  message : String
+}
+pub impl Eq for CliOutcome
+pub impl Show for CliOutcome
+
+pub(all) struct ContentInventory {
+  docs_root : String
+  articles_root : String
+  discovered_documents : Int
+  discovered_assets : Int
+  note : String
+}
+pub impl Eq for ContentInventory
+pub impl Show for ContentInventory
+
+pub(all) struct LoadedConfig {
+  config_path : String
+  site_name : String
+  docs_dir : String
+  articles_dir : String
+  output_dir : String
+  note : String
+}
+pub impl Eq for LoadedConfig
+pub impl Show for LoadedConfig
+
+pub(all) struct RenderPlan {
+  output_dir : String
+  emitted_html_files : Int
+  emitted_assets : Int
+  note : String
+}
+pub impl Eq for RenderPlan
+pub impl Show for RenderPlan
+
+pub(all) struct ServeSession {
+  host : String
+  port : Int
+  mode : String
+  note : String
+}
+pub impl Eq for ServeSession
+pub impl Show for ServeSession
+
+pub(all) struct SiteModel {
+  page_count : Int
+  article_count : Int
+  navigation_items : Int
+  note : String
+}
+pub impl Eq for SiteModel
+pub impl Show for SiteModel
+
+pub(all) struct StarterTemplatePlan {
+  project_name : String
+  created_paths : Array[String]
+  note : String
+}
+pub impl Eq for StarterTemplatePlan
+pub impl Show for StarterTemplatePlan
+
+// Type aliases
+
+// Traits
+
