@@ -14,7 +14,9 @@ Implemented pieces:
 Current status:
 
 - command parsing is wired through the root package;
-- `cmd/main` is a thin executable wrapper;
-- `new` now produces a concrete starter-project plan for a sample MoonInk site layout;
+- `cmd/main` now reads real runtime argv;
+- `new` has both a pure planning path for tests and a real runtime path that creates a starter project on disk;
+- the current real scaffold emission is supported on the JS runtime target (`moon run --target js cmd/main -- new <project-name>`);
+- the starter scaffold writes `moonink.toml`, sample docs/articles content, theme overrides, and `.gitignore`;
 - `build` and `serve` still call dummy placeholder modules;
 - no real config parsing, content discovery, rendering, or dev server exists yet.

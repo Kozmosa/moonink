@@ -20,9 +20,11 @@ The current scaffold supports the following command model:
 
 ```text
 cmd/main
-  -> @moonink.cli_run(argv placeholder)
+  -> @env.args()
+  -> normalize_runtime_argv(...)
+  -> @moonink.cli_exec(argv)
   -> parse_cli_command
-  -> dispatch_cli_command
+  -> runtime dispatch
   -> command handler
   -> feature module
 ```
@@ -35,10 +37,24 @@ Returns static scaffold help text.
 
 ### new
 
-Delegates to starter-project planning logic and now returns a concrete sample
-MoonInk site layout for Phase 1 milestone M1. The command remains pure for now:
-it models which files and directories should be emitted, but it does not yet
-write them to disk.
+The CLI now has two execution layers for `new`:
+
+- `cli_run(...)` remains pure and returns the starter-project plan status for tests;
+- `cli_exec(...)` performs real starter project emission at runtime.
+
+The emitted starter currently creates:
+
+- `moonink.toml`
+- `docs/index.md`
+- `docs/getting-started.md`
+- `articles/hello-moonink.md`
+- `theme/README.md`
+- `theme/overrides.css`
+- `.gitignore`
+
+The runtime command refuses to overwrite an existing target directory.
+Current real emission support is implemented on the JS runtime target; non-JS
+runtimes return a clear guidance message instead of attempting filesystem work.
 
 ### build
 
@@ -79,21 +95,21 @@ Delegates to placeholder serve session preparation.
 ## Architectural Constraints
 
 - keep `cmd/main` thin;
-- keep the command core testable as pure functions where possible;
+- keep a pure command core path for tests where possible;
 - preserve explicit boundaries between CLI, config, content, model, render, and serve;
-- evolve the starter-project planner into file emission without collapsing the module boundary;
-- replace dummy implementations incrementally without changing the public execution shape too early.
+- keep starter planning and starter emission in the same feature module without collapsing them into CLI parsing;
+- replace dummy implementations incrementally without changing the public command surface too early.
 
 ## Known Gaps
 
-- no real runtime argv plumbing yet;
-- no option parser yet;
-- `new` still plans starter emission instead of performing side effects;
-- no real build or serve implementation yet.
+- no structured option parser yet;
+- starter emission currently uses minimal JS runtime filesystem bridges instead of a richer abstraction layer;
+- no real build or serve implementation yet;
+- non-JS runtime starter emission is not implemented yet.
 
 ## Next Planned Evolution
 
-1. make `new` emit the planned sample project files to disk;
-2. wire real runtime argv into `cmd/main`;
-3. add structured command options;
-4. replace build placeholders stage by stage while preserving the current pipeline shape.
+1. extract starter filesystem operations behind a dedicated runtime IO layer;
+2. add structured command options and flags;
+3. implement real config loading/content discovery for `build`;
+4. add native or wasm-compatible filesystem support once the runtime surface is stable.

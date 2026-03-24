@@ -31,12 +31,14 @@ test "starter project plan models the phase 1 sample site layout" {
   inspect(plan.created_files.length(), content="7")
   inspect(plan.content_roots, content="[\"docs\", \"articles\"]")
   inspect(plan.created_files[0].path, content="moonink.toml")
+  inspect(plan.created_files[0].content.contains("name = \"demo\""), content="true")
+  inspect(plan.created_files[1].content.contains("# demo"), content="true")
   inspect(plan.created_files[3].path, content="articles/hello-moonink.md")
   inspect(plan.theme_dir, content="theme")
 }
 
 ///|
-test "cli run returns updated starter planning outcome" {
+test "cli run remains a pure planning entry for new" {
   inspect(@moonink.cli_run(["moonink", "build"]).exit_code, content="0")
   inspect(
     @moonink.cli_run(["moonink", "new", "demo"]).message,

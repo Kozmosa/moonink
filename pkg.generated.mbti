@@ -4,6 +4,8 @@ package "username/moonink"
 // Values
 pub fn build_site_model_dummy(LoadedConfig, ContentInventory) -> SiteModel
 
+pub fn cli_exec(Array[String]) -> CliOutcome
+
 pub fn cli_help_text() -> String
 
 pub fn cli_run(Array[String]) -> CliOutcome
@@ -91,6 +93,7 @@ pub impl Show for SiteModel
 pub(all) struct StarterTemplateFile {
   path : String
   summary : String
+  content : String
 }
 pub impl Eq for StarterTemplateFile
 pub impl Show for StarterTemplateFile
