@@ -13,7 +13,7 @@ Implemented in this milestone:
 - command model and pure CLI execution entry;
 - parsing and dispatch for `help`, `new`, `build`, and `serve`;
 - separate pure (`cli_run`) and runtime (`cli_exec`) execution paths;
-- real starter project file emission for `moonink new` on the JS runtime target;
+- real starter project file emission for `moonink new` through `moonbitlang/x/fs`;
 - starter content generation for config, docs, articles, theme files, and `.gitignore`;
 - runtime argv integration in `cmd/main` via `@env.args()`;
 - argv normalization for both moonrun-style and JS-target layouts;
@@ -24,8 +24,7 @@ Not implemented in this milestone:
 - TOML parsing;
 - real content discovery;
 - Markdown/frontmatter parsing;
-- actual site rendering or local dev server startup;
-- non-JS runtime starter emission.
+- actual site rendering or local dev server startup.
 
 ## Files Changed In This Milestone
 
@@ -63,12 +62,12 @@ The `starter.mbt` module now owns both:
 This keeps the feature cohesive and avoids leaking filesystem concerns into the
 CLI parser.
 
-### Use A JS Runtime Bridge First
+### Use `moonbitlang/x/fs` For Runtime File IO
 
-The first working scaffold emission path targets the JS runtime because it can
-use Node's filesystem API directly through MoonBit JS externs. Non-JS runtimes
-currently return a guidance message instead of attempting unstable filesystem
-calls.
+The starter emission path now relies on `moonbitlang/x/fs` for path existence
+checks, directory creation, and string writes. This removed the earlier custom
+JS extern bridge and lets runtime IO failures surface as typed `IOError` values
+that are converted into user-facing CLI messages.
 
 ## Current Limitations
 
@@ -76,11 +75,10 @@ calls.
 - Runtime filesystem handling is still embedded in `starter.mbt` rather than a dedicated IO package.
 - `build` and `serve` remain placeholders.
 - CLI options/flags are still not parsed beyond the simple positional project name.
-- Real starter emission currently requires `moon run --target js cmd/main -- new <project-name>`.
 
 ## Recommended Next Steps
 
-1. extract starter filesystem operations behind a dedicated runtime IO abstraction;
+1. extract starter filesystem operations behind a dedicated runtime IO abstraction if more runtime behavior is added;
 2. add structured CLI option parsing;
 3. implement config loading and validation for `build`;
-4. add native or wasm-compatible filesystem support and then promote `moon run cmd/main` to the default documented path.
+4. reuse `moonbitlang/x` IO capabilities when `build` and `serve` begin doing real filesystem work.

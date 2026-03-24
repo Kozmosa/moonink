@@ -53,8 +53,9 @@ The emitted starter currently creates:
 - `.gitignore`
 
 The runtime command refuses to overwrite an existing target directory.
-Current real emission support is implemented on the JS runtime target; non-JS
-runtimes return a clear guidance message instead of attempting filesystem work.
+Filesystem access for starter emission now goes through `moonbitlang/x/fs`, and
+runtime IO failures are converted into `CliOutcome` error messages instead of
+being handled by JS-only extern bridges.
 
 ### build
 
@@ -103,13 +104,12 @@ Delegates to placeholder serve session preparation.
 ## Known Gaps
 
 - no structured option parser yet;
-- starter emission currently uses minimal JS runtime filesystem bridges instead of a richer abstraction layer;
-- no real build or serve implementation yet;
-- non-JS runtime starter emission is not implemented yet.
+- runtime filesystem handling is still embedded in `starter.mbt` rather than a dedicated IO package;
+- no real build or serve implementation yet.
 
 ## Next Planned Evolution
 
-1. extract starter filesystem operations behind a dedicated runtime IO layer;
+1. extract starter filesystem operations behind a dedicated runtime IO layer if the runtime surface grows beyond `starter.mbt`;
 2. add structured command options and flags;
 3. implement real config loading/content discovery for `build`;
-4. add native or wasm-compatible filesystem support once the runtime surface is stable.
+4. expand `moonbitlang/x`-based IO usage to later build and serve phases as those features become real.

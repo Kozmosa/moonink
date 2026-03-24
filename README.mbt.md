@@ -16,7 +16,7 @@ Current status:
 - command parsing is wired through the root package;
 - `cmd/main` now reads real runtime argv;
 - `new` has both a pure planning path for tests and a real runtime path that creates a starter project on disk;
-- the current real scaffold emission is supported on the JS runtime target (`moon run --target js cmd/main -- new <project-name>`);
+- starter-project filesystem IO is now handled through `moonbitlang/x/fs`, so the runtime path no longer depends on custom JS FFI bridges;
 - the starter scaffold writes `moonink.toml`, sample docs/articles content, theme overrides, and `.gitignore`;
 - `build` and `serve` still call dummy placeholder modules;
 - no real config parsing, content discovery, rendering, or dev server exists yet.
