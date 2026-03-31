@@ -37,16 +37,18 @@ fn format_runtime_content_error(err : ContentDiscoveryError) -> String {
 
 ///|
 pub fn run_build_command_runtime() -> CliOutcome {
-  let config = try load_config() catch {
-    err => {
+  let config = match run_runtime_io_task(load_config_task("moonink.toml")) {
+    Ok(config) => config
+    Err(err) => {
       return {
         exit_code: 1,
         message: format_runtime_config_error(err),
       }
     }
   }
-  let inventory = try discover_content(config) catch {
-    err => {
+  let inventory = match run_runtime_io_task(discover_content_task(config)) {
+    Ok(inventory) => inventory
+    Err(err) => {
       return {
         exit_code: 1,
         message: format_runtime_content_error(err),

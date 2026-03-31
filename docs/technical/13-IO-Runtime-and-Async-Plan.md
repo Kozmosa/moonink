@@ -169,9 +169,30 @@ This stage freezes the current relative-path and UTF-8 assumptions so later IO f
 
 Wrap current `x/fs` calls with MoonInk-owned helper APIs without changing the whole call graph yet.
 
+Status: completed.
+
+Current sync facade shape:
+
+- `runtime_io.mbt` now owns sync helpers such as `io_read_file_to_string(...)`, `io_path_exists(...)`, `io_is_dir(...)`, `io_is_file(...)`, `io_read_dir(...)`, `io_create_dir(...)`, and `io_write_string(...)`;
+- the facade maps raw `x/fs` failures into `ProjectIOError` before feature modules see them;
+- `config.mbt`, `content.mbt`, and `starter.mbt` no longer call raw `@fs` APIs directly for current read/write/discovery paths.
+
+This stage makes the project-owned runtime facade real while keeping existing behavior synchronous.
+
 ### IO-P6: Introduce Async IO Interface
 
 Add the first async-capable facade surface for native runtime usage.
+
+Status: completed.
+
+Current async-capable shape:
+
+- `runtime_async.mbt` defines `RuntimeIOTask[T]` as the first project-owned async-capable runtime wrapper;
+- `run_runtime_io_task(...)` executes the task eagerly today, but freezes the interface shape for later true async native execution;
+- `load_config_task(...)`, `discover_content_task(...)`, and `emit_starter_project_task(...)` expose the first runtime IO task constructors;
+- `render.mbt` and `io_runtime.mbt` now route build/new execution through the task interface.
+
+This stage does not yet introduce true scheduling or concurrency, but it establishes the first async-oriented facade surface needed for later native runtime adaptation.
 
 ### IO-P7: Migrate Read Operations First
 

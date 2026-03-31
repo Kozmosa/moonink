@@ -235,19 +235,18 @@ fn scoped_output_path(root_dir : String, relative_path : String) -> String {
 pub fn emit_starter_project_runtime(plan : StarterTemplatePlan) -> CliOutcome {
   try_emit_starter_project(plan) catch {
     err => {
-      let io_error = project_io_error("create_starter_project", plan.root_dir, err.to_string())
       {
         exit_code: 1,
         message:
-          "[new] failed to create starter project\nroot: \{plan.root_dir}\nio error:\n\{format_project_io_error(io_error)}",
+          "[new] failed to create starter project\nroot: \{plan.root_dir}\nio error:\n\{format_project_io_error(err)}",
       }
     }
   }
 }
 
 ///|
-fn try_emit_starter_project(plan : StarterTemplatePlan) -> CliOutcome raise @fs.IOError {
-  if @fs.path_exists(plan.root_dir) {
+fn try_emit_starter_project(plan : StarterTemplatePlan) -> CliOutcome raise ProjectIOError {
+  if io_path_exists(plan.root_dir) {
     return {
       exit_code: 1,
       message:
@@ -255,11 +254,11 @@ fn try_emit_starter_project(plan : StarterTemplatePlan) -> CliOutcome raise @fs.
     }
   }
   for directory in starter_directories(plan) {
-    @fs.create_dir(directory)
+    io_create_dir(directory)
   }
   for file in plan.created_files {
     let output_path = scoped_output_path(plan.root_dir, file.path)
-    @fs.write_string_to_file(output_path, file.content)
+    io_write_string(output_path, file.content)
   }
   {
     exit_code: 0,

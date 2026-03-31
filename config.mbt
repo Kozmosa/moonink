@@ -31,11 +31,8 @@ fn config_path_policy_error(path : String, err : PathPolicyError) -> ConfigError
 
 ///|
 fn read_config_source(config_path : String) -> String raise ConfigError {
-  @fs.read_file_to_string(config_path) catch {
-    err =>
-      raise ConfigError::IOError(
-        project_io_error("read_file", config_path, err.to_string()),
-      )
+  io_read_file_to_string(config_path) catch {
+    err => raise ConfigError::IOError(err)
   }
 }
 

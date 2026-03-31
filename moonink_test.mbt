@@ -98,9 +98,17 @@ test "load_config reports normalized io errors" {
   inspect(
     try? @moonink.load_config(config_path="fixtures/build_phase1a/minimal/missing.toml"),
     content=(
-      #|Err(IOError({operation: "read_file", path: "fixtures/build_phase1a/minimal/missing.toml", detail: "IOError(\"Failed to read file fixtures/build_phase1a/minimal/missing.toml: No such file or directory (os error 2)\")"}))
+      #|Err(IOError(Failure(operation="read_file", path="fixtures/build_phase1a/minimal/missing.toml", detail="IOError(\"Failed to read file fixtures/build_phase1a/minimal/missing.toml: No such file or directory (os error 2)\")")))
     ),
   )
+}
+
+///|
+test "load_config task wraps config loading in runtime io task" {
+  let outcome = @moonink.run_runtime_io_task(
+    @moonink.load_config_task("fixtures/build_phase1a/minimal/moonink.toml"),
+  )
+  inspect(outcome is Ok(_), content="true")
 }
 
 ///|
@@ -156,6 +164,17 @@ test "discover_content reports missing content roots clearly" {
 }
 
 ///|
+test "discover_content task wraps discovery in runtime io task" {
+  let config = @moonink.load_config(
+    config_path="fixtures/build_phase1a/minimal/moonink.toml",
+  ) catch {
+    _ => panic()
+  }
+  let outcome = @moonink.run_runtime_io_task(@moonink.discover_content_task(config))
+  inspect(outcome is Ok(_), content="true")
+}
+
+///|
 test "cli run remains a pure planning entry for new" {
   inspect(
     @moonink.cli_run(["moonink", "new", "demo"]).message,
@@ -172,6 +191,14 @@ test "cli run remains a pure planning entry for new" {
   )
   inspect(@moonink.cli_run(["moonink", "serve"]).exit_code, content="0")
   inspect(@moonink.cli_run(["moonink", "doctor"]).exit_code, content="1")
+}
+
+///|
+test "emit starter project task keeps runtime interface shape" {
+  let outcome = @moonink.run_runtime_io_task(
+    @moonink.emit_starter_project_task(@moonink.plan_starter_project(Some("demo"))),
+  )
+  inspect(outcome.exit_code, content="0")
 }
 
 ///|

@@ -207,6 +207,8 @@ Without a dedicated runtime IO boundary, these call sites would continue to spre
 `IO-P2` has now introduced the first explicit runtime boundary in `io_runtime.mbt`, with `cli_exec` routed through that module before reaching side-effecting commands.
 `IO-P3` has now introduced a shared `ProjectIOError` model in `io_error.mbt`, so runtime and feature layers report filesystem failures with normalized operation/path/detail context.
 `IO-P4` has now introduced shared relative-path normalization and a UTF-8 text policy in `io_policy.mbt`, freezing the current path and text assumptions before facade work begins.
+`IO-P5` has now introduced `runtime_io.mbt` as the project-owned sync facade over `x/fs`.
+`IO-P6` has now introduced `runtime_async.mbt` with `RuntimeIOTask[T]` as the first async-capable runtime interface shape.
 
 ### 8.3 Atomic Commit Roadmap
 
@@ -215,8 +217,8 @@ Without a dedicated runtime IO boundary, these call sites would continue to spre
 - `IO-P2: Define IO Layer Boundaries` ✅
 - `IO-P3: Introduce Unified IO Error Model` ✅
 - `IO-P4: Introduce Path And Encoding Policy` ✅
-- `IO-P5: Add Sync Facade Over x fs`
-- `IO-P6: Introduce Async IO Interface`
+- `IO-P5: Add Sync Facade Over x fs` ✅
+- `IO-P6: Introduce Async IO Interface` ✅
 - `IO-P7: Migrate Read Operations First`
 - `IO-P8: Migrate Write Operations With Safety Guarantees`
 - `IO-P9: Migrate Directory And Workspace Loading`

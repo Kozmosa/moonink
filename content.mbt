@@ -22,11 +22,6 @@ pub(all) struct ContentInventory {
 } derive(Show, Eq)
 
 ///|
-fn path_operation_error(operation : String, path : String, err : @fs.IOError) -> ContentDiscoveryError {
-  ContentDiscoveryError::IOError(project_io_error(operation, path, err.to_string()))
-}
-
-///|
 fn content_path_policy_error(path : String, err : PathPolicyError) -> ContentDiscoveryError {
   ContentDiscoveryError::InvalidPath(path=path, reason=err.to_string())
 }
@@ -39,24 +34,29 @@ fn join_content_path(base : String, child : String) -> String raise ContentDisco
 }
 
 ///|
+fn io_discovery_error(err : ProjectIOError) -> ContentDiscoveryError {
+  ContentDiscoveryError::IOError(err)
+}
+
+///|
 fn collect_markdown_files(root : String) -> Array[String] raise ContentDiscoveryError {
-  if !@fs.path_exists(root) {
+  if !io_path_exists(root) {
     raise ContentDiscoveryError::MissingDirectory(root)
   }
-  let is_dir = @fs.is_dir(root) catch {
-    err => raise path_operation_error("inspect_directory", root, err)
+  let is_dir = io_is_dir(root) catch {
+    err => raise io_discovery_error(err)
   }
   if !is_dir {
     raise ContentDiscoveryError::NotDirectory(root)
   }
   let discovered = []
-  let entries = @fs.read_dir(root) catch {
-    err => raise path_operation_error("read_directory", root, err)
+  let entries = io_read_dir(root) catch {
+    err => raise io_discovery_error(err)
   }
   for entry in entries {
     let full_path = join_content_path(root, entry)
-    let is_dir = @fs.is_dir(full_path) catch {
-      err => raise path_operation_error("inspect_path", full_path, err)
+    let is_dir = io_is_dir(full_path) catch {
+      err => raise io_discovery_error(err)
     }
     if is_dir {
       let nested = collect_markdown_files(full_path)
@@ -65,8 +65,8 @@ fn collect_markdown_files(root : String) -> Array[String] raise ContentDiscovery
       }
       continue
     }
-    let is_file = @fs.is_file(full_path) catch {
-      err => raise path_operation_error("inspect_path", full_path, err)
+    let is_file = io_is_file(full_path) catch {
+      err => raise io_discovery_error(err)
     }
     if is_file && full_path.has_suffix(".md") {
       discovered.push(full_path)
@@ -93,6 +93,6 @@ pub fn discover_content(config : LoadedConfig) -> ContentInventory raise Content
     discovered_articles,
     discovered_documents: discovered_docs + discovered_articles,
     discovered_assets: 0,
-    note: "Content discovery now scans the docs/articles trees for Markdown files with normalized relative paths.",
+    note: "Content discovery now scans the docs/articles trees for Markdown files with normalized relative paths through the runtime IO facade.",
   }
 }
