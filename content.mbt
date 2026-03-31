@@ -8,6 +8,15 @@ pub(all) suberror ContentDiscoveryError {
 } derive(Show, Eq)
 
 ///|
+/// Workspace discovery plan introduced by IO-P9.
+pub(all) struct ContentDiscoveryPlan {
+  docs_root : String
+  articles_root : String
+  workspace_roots : Array[String]
+  note : String
+} derive(Show, Eq)
+
+///|
 /// Real content discovery summary for the build phase 1a pipeline.
 pub(all) struct ContentInventory {
   docs_root : String
@@ -36,6 +45,21 @@ fn join_content_path(base : String, child : String) -> String raise ContentDisco
 ///|
 fn io_discovery_error(err : ProjectIOError) -> ContentDiscoveryError {
   ContentDiscoveryError::IOError(err)
+}
+
+///|
+pub fn plan_content_discovery(
+  config : LoadedConfig,
+) -> ContentDiscoveryPlan raise ContentDiscoveryError {
+  let docs_root = join_content_path(config.project_root, config.docs_dir)
+  let articles_root = join_content_path(config.project_root, config.articles_dir)
+  {
+    docs_root,
+    articles_root,
+    workspace_roots: [docs_root, articles_root],
+    note:
+      "Content discovery planning now freezes workspace roots before runtime traversal begins.",
+  }
 }
 
 ///|
@@ -77,22 +101,29 @@ fn collect_markdown_files(root : String) -> Array[String] raise ContentDiscovery
 }
 
 ///|
-pub fn discover_content(config : LoadedConfig) -> ContentInventory raise ContentDiscoveryError {
-  let docs_root = join_content_path(config.project_root, config.docs_dir)
-  let articles_root = join_content_path(config.project_root, config.articles_dir)
-  let docs_files = collect_markdown_files(docs_root)
-  let article_files = collect_markdown_files(articles_root)
+pub fn discover_planned_content(
+  plan : ContentDiscoveryPlan,
+) -> ContentInventory raise ContentDiscoveryError {
+  let docs_files = collect_markdown_files(plan.docs_root)
+  let article_files = collect_markdown_files(plan.articles_root)
   let discovered_docs = docs_files.length()
   let discovered_articles = article_files.length()
   {
-    docs_root,
-    articles_root,
+    docs_root: plan.docs_root,
+    articles_root: plan.articles_root,
     docs_files,
     article_files,
     discovered_docs,
     discovered_articles,
     discovered_documents: discovered_docs + discovered_articles,
     discovered_assets: 0,
-    note: "Content discovery now scans the docs/articles trees for Markdown files with normalized relative paths through the runtime IO facade.",
+    note:
+      "Content discovery now scans planned workspace roots for Markdown files through the runtime IO boundary.",
   }
+}
+
+///|
+pub fn discover_content(config : LoadedConfig) -> ContentInventory raise ContentDiscoveryError {
+  let plan = plan_content_discovery(config)
+  discover_planned_content(plan)
 }
