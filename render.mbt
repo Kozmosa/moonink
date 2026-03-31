@@ -36,8 +36,24 @@ fn format_runtime_content_error(err : ContentDiscoveryError) -> String {
 }
 
 ///|
+fn parse_loaded_config_result(
+  config_path : String,
+  source : String,
+) -> Result[LoadedConfig, ConfigError] {
+  try parse_loaded_config(config_path, source) catch {
+    err => Err(err)
+  } noraise {
+    config => Ok(config)
+  }
+}
+
+///|
 pub fn run_build_command_runtime() -> CliOutcome {
-  let config = match run_runtime_io_task(load_config_task("moonink.toml")) {
+  let config_result = match run_runtime_io_task(read_config_source_task("moonink.toml")) {
+    Ok((config_path, source)) => parse_loaded_config_result(config_path, source)
+    Err(err) => Err(err)
+  }
+  let config = match config_result {
     Ok(config) => config
     Err(err) => {
       return {

@@ -104,6 +104,14 @@ test "load_config reports normalized io errors" {
 }
 
 ///|
+test "read config source task moves file reads to runtime boundary" {
+  let outcome = @moonink.run_runtime_io_task(
+    @moonink.read_config_source_task("fixtures/build_phase1a/minimal/moonink.toml"),
+  )
+  inspect(outcome is Ok(_), content="true")
+}
+
+///|
 test "load_config task wraps config loading in runtime io task" {
   let outcome = @moonink.run_runtime_io_task(
     @moonink.load_config_task("fixtures/build_phase1a/minimal/moonink.toml"),

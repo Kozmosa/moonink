@@ -16,8 +16,30 @@ pub fn[T] run_runtime_io_task(task : RuntimeIOTask[T]) -> T {
 }
 
 ///|
+pub fn read_config_source_task(
+  config_path : String,
+) -> RuntimeIOTask[Result[(String, String), ConfigError]] {
+  let normalized_path = try normalize_config_path_or_error(config_path) catch {
+    err => return Ready(Err(err))
+  }
+  let source = io_read_file_to_string(normalized_path) catch {
+    err => return Ready(Err(ConfigError::IOError(err)))
+  }
+  Ready(Ok((normalized_path, source)))
+}
+
+///|
 pub fn load_config_task(config_path : String) -> RuntimeIOTask[Result[LoadedConfig, ConfigError]] {
-  Ready(try? load_config(config_path=config_path))
+  let source_result = run_runtime_io_task(read_config_source_task(config_path))
+  let config = match source_result {
+    Ok((normalized_path, source)) => try parse_loaded_config(normalized_path, source) catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
+    Err(err) => Err(err)
+  }
+  Ready(config)
 }
 
 ///|
