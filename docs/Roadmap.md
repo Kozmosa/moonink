@@ -216,6 +216,7 @@ Without a dedicated runtime IO boundary, these call sites would continue to spre
 `IO-P11` has now removed direct synchronous feature entrypoints from the public surface in favor of result-oriented runtime APIs plus task/native adapter paths.
 `IO-P12` has now added explicit async IO contract coverage for read, discovery, write, and native adapter failure propagation.
 `IO-P13` now defines explicit conflict and cancellation policy types and threads them through the native runtime adapter layer.
+`IO-P14` now closes the migration by updating the long-lived architecture and contributor docs so the runtime IO model is the default engineering path.
 
 ### 8.3 Atomic Commit Roadmap
 
@@ -233,7 +234,7 @@ Without a dedicated runtime IO boundary, these call sites would continue to spre
 - `IO-P11: Remove Direct Synchronous IO Entrypoints` ✅
 - `IO-P12: Add Tests For Async IO Contracts` ✅
 - `IO-P13: Add Concurrency And Cancellation Policy` ✅
-- `IO-P14: Documentation And Migration Closure`
+- `IO-P14: Documentation And Migration Closure` ✅
 
 ### 8.4 IO Track Milestones
 

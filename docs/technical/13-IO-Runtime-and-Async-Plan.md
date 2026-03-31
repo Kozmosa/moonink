@@ -304,6 +304,17 @@ This stage does not yet implement parallel scheduling or active cancellation int
 
 Update architecture, contributor guidance, and the long-lived docs so the new model becomes the default engineering path.
 
+Status: completed.
+
+Closure result:
+
+- `docs/technical/00-Architecture.md` now treats `runtime_io.mbt`, `runtime_async.mbt`, `runtime_native.mbt`, and `runtime_policy.mbt` as the settled runtime layer;
+- `docs/agent-working/MoonInkCliArch.md` now reflects the current CLI execution stack and no longer treats runtime IO architecture as transitional;
+- `docs/technical/13-IO-Runtime-and-Async-Plan.md` records the completed IO-P0 through IO-P14 migration path;
+- `docs/Roadmap.md` now reflects the IO track as completed through policy/documentation closure.
+
+The IO refactor track should now be treated as the default engineering model for future MoonInk runtime work.
+
 ## 8. Milestones
 
 ### M1 - Decision And Boundary Freeze
