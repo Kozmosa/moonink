@@ -203,10 +203,12 @@ Current real features already touch the filesystem in multiple places:
 
 Without a dedicated runtime IO boundary, these call sites would continue to spread raw filesystem access across feature modules.
 
+`IO-P1` has now been executed and the current code-facing inventory lives in `docs/technical/15-IO-Surface-Inventory.md`.
+
 ### 8.3 Atomic Commit Roadmap
 
-- `IO-P0: Writing Plan`
-- `IO-P1: Inventory Existing IO Surface`
+- `IO-P0: Writing Plan` ✅
+- `IO-P1: Inventory Existing IO Surface` ✅
 - `IO-P2: Define IO Layer Boundaries`
 - `IO-P3: Introduce Unified IO Error Model`
 - `IO-P4: Introduce Path And Encoding Policy`
@@ -271,7 +273,7 @@ The roadmap should be considered effective if it leads to:
 ## 12. Immediate Next Actions
 
 - complete `IO-P0` and keep the IO technical plan current;
-- execute `IO-P1` as the first code-facing refactor preparation step;
+- treat `IO-P1` as completed and use its inventory output as the input to `IO-P2`;
 - execute the parser implementation track documented in `docs/technical/14-Doc-Flow-Parser-Impl-Plan.md`;
 - continue Phase 1 implementation through frontmatter, Markdown, and model stages;
 - convert RFC and roadmap into proposal language when ready.

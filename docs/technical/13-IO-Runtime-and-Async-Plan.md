@@ -101,9 +101,19 @@ This roadmap does not attempt to do the following immediately:
 
 Write and freeze the IO refactor plan, constraints, and migration guardrails.
 
+Status: completed.
+
 ### IO-P1: Inventory Existing IO Surface
 
 Catalog all filesystem and IO touch points, their callers, and their migration priority.
+
+Status: completed via `docs/technical/15-IO-Surface-Inventory.md`.
+
+Current inventory baseline:
+
+- `config.mbt`: raw read of `moonink.toml`;
+- `content.mbt`: recursive directory inspection and Markdown discovery;
+- `starter.mbt`: starter-project directory creation and file writes.
 
 ### IO-P2: Define IO Layer Boundaries
 
