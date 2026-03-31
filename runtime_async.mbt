@@ -43,10 +43,26 @@ pub fn load_config_task(config_path : String) -> RuntimeIOTask[Result[LoadedConf
 }
 
 ///|
+pub fn plan_content_discovery_task(
+  config : LoadedConfig,
+) -> RuntimeIOTask[Result[ContentDiscoveryPlan, ContentDiscoveryError]] {
+  Ready(try? plan_content_discovery(config))
+}
+
+///|
 pub fn discover_content_task(
   config : LoadedConfig,
 ) -> RuntimeIOTask[Result[ContentInventory, ContentDiscoveryError]] {
-  Ready(try? discover_content(config))
+  let plan_result = run_runtime_io_task(plan_content_discovery_task(config))
+  let inventory = match plan_result {
+    Ok(plan) => try discover_planned_content(plan) catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
+    Err(err) => Err(err)
+  }
+  Ready(inventory)
 }
 
 ///|
