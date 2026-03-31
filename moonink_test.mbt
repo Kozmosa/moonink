@@ -262,3 +262,89 @@ test "runtime cli build formats normalized io errors" {
   inspect(outcome.message.contains("operation: read_file"), content="true")
   inspect(outcome.message.contains("path: moonink.toml"), content="true")
 }
+
+
+///|
+test "docflow parser domain types support construction" {
+  let input : @moonink.SourceDocumentInput = {
+    path: "docs/getting-started.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "# Hello MoonInk",
+    uuid: "doc-001",
+  }
+  let diagnostics : @moonink.DocumentDiagnostics = {
+    entries: [
+      {
+        severity: @moonink.DiagnosticSeverity::Warn,
+        line: Some(1),
+        message: "Undefined Typst symbol.",
+        hint: Some("Check output of typst."),
+        backend_name: "typst-stub",
+      },
+    ],
+  }
+  let parsed : @moonink.ParsedDocument = {
+    backend_name: "markdown-backend",
+    source_format: input.format,
+    source_path: input.path,
+    source_uuid: input.uuid,
+    diagnostics,
+    backend_payload: Some("native-markdown-payload"),
+  }
+  inspect(input.format, content="Markdown")
+  inspect(parsed.backend_name, content="markdown-backend")
+  inspect(parsed.source_path, content="docs/getting-started.md")
+  inspect(parsed.source_uuid, content="doc-001")
+  inspect(parsed.backend_payload, content="Some(\"native-markdown-payload\")")
+}
+
+///|
+test "docflow diagnostic formatting supports line and hint details" {
+  let diagnostic : @moonink.DocumentDiagnostic = {
+    severity: @moonink.DiagnosticSeverity::Warn,
+    line: Some(1),
+    message: "Undefined Typst symbol.",
+    hint: Some("Check output of typst."),
+    backend_name: "typst-stub",
+  }
+  inspect(
+    @moonink.format_document_diagnostic(diagnostic),
+    content="(WARN) Line 1, Undefined Typst symbol. Check output of typst.",
+  )
+}
+
+///|
+test "docflow diagnostic formatting handles missing location and capability defaults" {
+  let info_diagnostic : @moonink.DocumentDiagnostic = {
+    severity: @moonink.DiagnosticSeverity::Info,
+    line: None,
+    message: "HTML passthrough engaged.",
+    hint: None,
+    backend_name: "html-passthrough",
+  }
+  let error_diagnostic : @moonink.DocumentDiagnostic = {
+    severity: @moonink.DiagnosticSeverity::Error,
+    line: Some(3),
+    message: "Parser backend missing.",
+    hint: None,
+    backend_name: "registry",
+  }
+  let diagnostics : @moonink.DocumentDiagnostics = {
+    entries: [info_diagnostic, error_diagnostic],
+  }
+  let default_capabilities = @moonink.default_parser_capabilities()
+  inspect(@moonink.format_document_diagnostic(info_diagnostic), content="(INFO) HTML passthrough engaged.")
+  inspect(
+    @moonink.format_document_diagnostics(diagnostics),
+    content=(
+      #|(INFO) HTML passthrough engaged.
+      #|(ERROR) Line 3, Parser backend missing.
+    ),
+  )
+  inspect(default_capabilities.supports_incremental_parsing, content="false")
+  inspect(default_capabilities.supports_html_passthrough, content="false")
+  inspect(@moonink.empty_document_diagnostics().entries.length(), content="0")
+  inspect(@moonink.SourceDocumentInput::{ path: "page.html", format: @moonink.SourceFormat::Html, content: "<p>x</p>", uuid: "page-001" }.format, content="Html")
+  inspect(@moonink.SourceDocumentInput::{ path: "draft.typ", format: @moonink.SourceFormat::Typst, content: "= Hello", uuid: "typ-001" }.format, content="Typst")
+  inspect(@moonink.SourceDocumentInput::{ path: "misc.bin", format: @moonink.SourceFormat::Unknown, content: "", uuid: "unknown-001" }.format, content="Unknown")
+}
