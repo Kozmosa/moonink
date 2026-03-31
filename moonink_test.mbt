@@ -861,3 +861,62 @@ test "docflow article pipeline keeps noop wikilinker transform explicit for list
     ),
   )
 }
+
+
+///|
+test "docflow downstream assembly accepts article output after templating" {
+  let parser = @moonink.markdown_parser_adapter()
+  let linker = @moonink.noop_wikilinker()
+  let renderer = @moonink.markdown_render_adapter()
+  let input : @moonink.SourceDocumentInput = {
+    path: "articles/downstream-article.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "# Downstream Article",
+    uuid: "downstream-001",
+  }
+  let pipeline = match @moonink.run_article_pipeline(parser, linker, renderer, input) {
+    Ok(result) => result
+    Err(_) => panic()
+  }
+  let templated = @moonink.apply_dummy_template(pipeline.rendered)
+  let assembly = @moonink.construct_site([@moonink.article_site_entry(templated)])
+  inspect(templated.route, content="/articles/downstream-article.md")
+  inspect(assembly.entries.length(), content="1")
+  inspect(assembly.entries[0].kind, content="article")
+  inspect(assembly.entries[0].route, content="/articles/downstream-article.md")
+  inspect(assembly.entries[0].html.contains("<h1>Downstream Article</h1>"), content="true")
+}
+
+///|
+test "docflow downstream assembly accepts page output in common structure" {
+  let page_rendered : @moonink.RenderedDocument = {
+    backend_name: "html-passthrough-render",
+    source_path: "pages/index.html",
+    source_uuid: "downstream-002",
+    html: "<main><h1>Page Home</h1></main>",
+    note: "Page passthrough render result for downstream assembly coverage.",
+  }
+  let page_templated = @moonink.apply_dummy_template(page_rendered)
+  let article_rendered : @moonink.RenderedDocument = {
+    backend_name: "markdown-render-adapter",
+    source_path: "articles/second.md",
+    source_uuid: "downstream-003",
+    html: "<h1>Article Second</h1>\n",
+    note: "Article render result for common assembly coverage.",
+  }
+  let article_templated = @moonink.apply_dummy_template(article_rendered)
+  let assembly = @moonink.construct_site([
+    @moonink.page_site_entry(page_templated),
+    @moonink.article_site_entry(article_templated),
+  ])
+  inspect(page_templated.route, content="/pages/index.html")
+  inspect(assembly.entries.length(), content="2")
+  inspect(assembly.entries[0].kind, content="page")
+  inspect(assembly.entries[1].kind, content="article")
+  inspect(assembly.entries[0].route, content="/pages/index.html")
+  inspect(assembly.entries[1].route, content="/articles/second.md")
+  inspect(
+    assembly.note,
+    content="dummy site constructor now collects article and page outputs into one shared assembly",
+  )
+}

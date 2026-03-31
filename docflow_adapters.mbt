@@ -55,6 +55,33 @@ pub(all) struct ArticlePipelineResult {
 } derive(Show, Eq)
 
 ///|
+/// Dummy templated page produced after rendering but before site construction.
+pub(all) struct TemplatedPage {
+  route : String
+  source_path : String
+  source_uuid : String
+  html : String
+  note : String
+} derive(Show, Eq)
+
+///|
+/// Common downstream site entry used by the dummy site constructor.
+pub(all) struct SiteEntry {
+  kind : String
+  route : String
+  source_path : String
+  source_uuid : String
+  html : String
+} derive(Show, Eq)
+
+///|
+/// Dummy site-constructor result that holds all assembled downstream entries.
+pub(all) struct SiteAssembly {
+  entries : Array[SiteEntry]
+  note : String
+} derive(Show, Eq)
+
+///|
 /// Parser backend registry keyed by source format.
 pub(all) struct ParserRegistry {
   markdown : ParserAdapter?
@@ -344,6 +371,58 @@ pub fn parse_with_adapter(adapter : ParserAdapter, input : SourceDocumentInput) 
 pub fn apply_wikilinker(linker : WikiLinker, parsed : ParsedDocument) -> ParsedDocument {
   ignore(linker)
   parsed
+}
+
+///|
+/// Build a stable route from a source path for dummy downstream assembly.
+pub fn route_from_source_path(source_path : String) -> String {
+  "/" + source_path
+}
+
+///|
+/// Dummy templater that wraps rendered HTML in a simple site shell.
+pub fn apply_dummy_template(rendered : RenderedDocument) -> TemplatedPage {
+  {
+    route: route_from_source_path(rendered.source_path),
+    source_path: rendered.source_path,
+    source_uuid: rendered.source_uuid,
+    html:
+      "<!doctype html>\n<html><body><main data-source=\"\{rendered.source_path}\">\{rendered.html}</main></body></html>",
+    note: "dummy templater keeps rendered content inside a simple site shell",
+  }
+}
+
+///|
+/// Convert a templated article page into the common downstream site-entry shape.
+pub fn article_site_entry(page : TemplatedPage) -> SiteEntry {
+  {
+    kind: "article",
+    route: page.route,
+    source_path: page.source_path,
+    source_uuid: page.source_uuid,
+    html: page.html,
+  }
+}
+
+///|
+/// Convert a templated page into the common downstream site-entry shape.
+pub fn page_site_entry(page : TemplatedPage) -> SiteEntry {
+  {
+    kind: "page",
+    route: page.route,
+    source_path: page.source_path,
+    source_uuid: page.source_uuid,
+    html: page.html,
+  }
+}
+
+///|
+/// Dummy site constructor that collects common downstream entries into one assembly.
+pub fn construct_site(entries : Array[SiteEntry]) -> SiteAssembly {
+  {
+    entries,
+    note: "dummy site constructor now collects article and page outputs into one shared assembly",
+  }
 }
 
 ///|
