@@ -155,28 +155,86 @@ Open carefully designed extension points after the core architecture has proven 
 - at least one non-core extension proves the architecture;
 - extension failure modes are diagnosable and bounded.
 
-## 8. Cross-Phase Technical Priorities
+## 8. Immediate Engineering Track - IO Runtime And Async Refactor
 
-### 8.1 Documentation
+### 8.1 Positioning
+
+MoonInk now has a concrete near-term engineering track for filesystem and runtime evolution:
+
+- use `moonbitlang/x/fs` as the current filesystem capability source;
+- treat `native` as the required first-class target;
+- refactor IO toward an async runtime boundary;
+- keep parsing, routing, modeling, and rendering logic synchronous where practical.
+
+This track is a delivery prerequisite for later `build` and `serve` maturity, not a detached side effort.
+
+### 8.2 Why This Track Exists Now
+
+Current real features already touch the filesystem in multiple places:
+
+- starter project emission in `new`;
+- configuration loading from `moonink.toml`;
+- recursive content discovery under `docs/` and `articles/`.
+
+Without a dedicated runtime IO boundary, these call sites would continue to spread raw filesystem access across feature modules.
+
+### 8.3 Atomic Commit Roadmap
+
+- `IO-P0: Writing Plan`
+- `IO-P1: Inventory Existing IO Surface`
+- `IO-P2: Define IO Layer Boundaries`
+- `IO-P3: Introduce Unified IO Error Model`
+- `IO-P4: Introduce Path And Encoding Policy`
+- `IO-P5: Add Sync Facade Over x fs`
+- `IO-P6: Introduce Async IO Interface`
+- `IO-P7: Migrate Read Operations First`
+- `IO-P8: Migrate Write Operations With Safety Guarantees`
+- `IO-P9: Migrate Directory And Workspace Loading`
+- `IO-P10: Introduce Native Runtime Adaptation Layer`
+- `IO-P11: Remove Direct Synchronous IO Entrypoints`
+- `IO-P12: Add Tests For Async IO Contracts`
+- `IO-P13: Add Concurrency And Cancellation Policy`
+- `IO-P14: Documentation And Migration Closure`
+
+### 8.4 IO Track Milestones
+
+- IO-M1: `IO-P0` to `IO-P4` freeze constraints, boundaries, and error policy;
+- IO-M2: `IO-P5` to `IO-P6` establish the runtime facade;
+- IO-M3: `IO-P7` to `IO-P10` migrate the main read, write, and discovery flows;
+- IO-M4: `IO-P11` to `IO-P14` remove legacy paths and stabilize the new model.
+
+### 8.5 Completion Signals
+
+The IO track should be considered effective when:
+
+- new work stops adding raw filesystem calls directly inside feature modules;
+- the native runtime has a project-owned IO boundary;
+- the first real async execution path exists for build-related operations;
+- the synchronous core remains modular and testable.
+
+## 9. Cross-Phase Technical Priorities
+
+### 9.1 Documentation
 
 Every phase should keep implementation documents aligned with actual code behavior. Documentation drift is a major long-term risk for a tool meant to demonstrate engineering clarity.
 
-### 8.2 Testing
+### 9.2 Testing
 
 Testing starts with unit coverage in Phase 1 and expands toward fixture-based and integration checks in later phases.
 
-### 8.3 Brand Consistency
+### 9.3 Brand Consistency
 
 The official theme, CLI messaging, and sample project should all reflect the brand direction of MoonInk: restrained, precise, and quietly modern.
 
-## 9. Risks Across The Roadmap
+## 10. Risks Across The Roadmap
 
 - MoonBit library support may constrain parser or template implementation choices.
 - Search and dev server features can grow quickly in complexity.
 - Knowledge-base expectations can push the product outside the intended first-release boundary.
 - Multilingual support may require revisiting route and content identity assumptions.
+- Runtime and async refactoring may spread through the codebase too broadly if the facade boundary is not enforced early.
 
-## 10. Success Metrics
+## 11. Success Metrics
 
 The roadmap should be considered effective if it leads to:
 
@@ -185,9 +243,9 @@ The roadmap should be considered effective if it leads to:
 - documentation good enough to guide implementation and future contributors;
 - a clear upgrade path from MVP to extensible ecosystem.
 
-## 11. Immediate Next Actions
+## 12. Immediate Next Actions
 
-- finish the technical documentation set;
-- break Phase 1 into implementation tasks;
-- prepare a sample MoonInk project layout;
+- complete `IO-P0` and keep the IO technical plan current;
+- execute `IO-P1` as the first code-facing refactor preparation step;
+- continue Phase 1 implementation through frontmatter, Markdown, and model stages;
 - convert RFC and roadmap into proposal language when ready.

@@ -155,28 +155,86 @@
 - 至少有一个非核心扩展能够证明架构有效；
 - 扩展失败模式可诊断且边界清晰。
 
-## 8. 跨阶段技术重点
+## 8. 当前重点工程主线 - IO 运行时与异步重构
 
-### 8.1 文档
+### 8.1 定位
+
+MoonInk 当前已经形成一条明确的近程工程主线：
+
+- 以 `moonbitlang/x/fs` 作为当前文件系统能力来源；
+- 将 `native` 作为必须支持的一等目标；
+- 把 IO 重构为 async 运行时边界；
+- 让解析、路由、建模、渲染等核心逻辑尽量保持同步。
+
+这条主线不是旁支工作，而是后续 `build` 与 `serve` 成熟化的前置条件。
+
+### 8.2 为什么现在就要做
+
+当前已经落地的真实功能，实际上已经在多个位置触及文件系统：
+
+- `new` 命令中的 starter project 写入；
+- `moonink.toml` 的加载；
+- `docs/` 与 `articles/` 下的递归内容发现。
+
+如果不尽早建立专门的 runtime IO 边界，这些调用点会继续把原始文件系统访问扩散到更多 feature module 中。
+
+### 8.3 原子提交路线图
+
+- `IO-P0: Writing Plan`
+- `IO-P1: Inventory Existing IO Surface`
+- `IO-P2: Define IO Layer Boundaries`
+- `IO-P3: Introduce Unified IO Error Model`
+- `IO-P4: Introduce Path And Encoding Policy`
+- `IO-P5: Add Sync Facade Over x fs`
+- `IO-P6: Introduce Async IO Interface`
+- `IO-P7: Migrate Read Operations First`
+- `IO-P8: Migrate Write Operations With Safety Guarantees`
+- `IO-P9: Migrate Directory And Workspace Loading`
+- `IO-P10: Introduce Native Runtime Adaptation Layer`
+- `IO-P11: Remove Direct Synchronous IO Entrypoints`
+- `IO-P12: Add Tests For Async IO Contracts`
+- `IO-P13: Add Concurrency And Cancellation Policy`
+- `IO-P14: Documentation And Migration Closure`
+
+### 8.4 IO 主线里程碑
+
+- IO-M1：`IO-P0` 到 `IO-P4`，冻结约束、边界与错误策略；
+- IO-M2：`IO-P5` 到 `IO-P6`，建立 runtime facade；
+- IO-M3：`IO-P7` 到 `IO-P10`，迁移主干读、写、发现流程；
+- IO-M4：`IO-P11` 到 `IO-P14`，清理遗留路径并稳定新模型。
+
+### 8.5 完成信号
+
+当以下条件成立时，可认为这条 IO 主线进入有效状态：
+
+- 新开发不再直接在 feature module 中新增原始文件系统调用；
+- native runtime 已具备项目自有的 IO 边界；
+- build 相关流程中已经出现第一条真实 async 执行路径；
+- 同步核心仍保持模块化与可测试性。
+
+## 9. 跨阶段技术重点
+
+### 9.1 文档
 
 每个阶段都应保持实现文档与实际代码行为一致。对于一个要展示工程清晰度的工具项目来说，文档漂移是重要的长期风险。
 
-### 8.2 测试
+### 9.2 测试
 
 测试从 Phase 1 的单元覆盖起步，并在后续阶段逐步扩展到基于 fixture 的回归检查与集成测试。
 
-### 8.3 品牌一致性
+### 9.3 品牌一致性
 
 官方主题、CLI 文案与样例项目都应体现 MoonInk 的品牌方向：克制、精确、安静而现代。
 
-## 9. 路线图层面的整体风险
+## 10. 路线图层面的整体风险
 
 - MoonBit 的库支持情况可能限制解析器或模板实现方案；
 - 搜索与开发服务器功能容易快速膨胀出复杂度；
 - 知识库产品的预期会推动项目越过第一版边界；
-- 多语言支持可能迫使我们重新审视路由与内容标识假设。
+- 多语言支持可能迫使我们重新审视路由与内容标识假设；
+- 如果不尽早强制 facade 边界，runtime 与 async 重构可能会过度扩散到整个代码库。
 
-## 10. 成功指标
+## 11. 成功指标
 
 如果路线图最终能够导向以下结果，则可视为有效：
 
@@ -185,9 +243,9 @@
 - 产出足以指导实现与未来协作者的文档；
 - 给出从 MVP 走向可扩展生态的清晰升级路径。
 
-## 11. 近期下一步动作
+## 12. 近期下一步动作
 
-- 完成技术文档集；
-- 将 Phase 1 进一步拆分为实现任务；
-- 准备一个 MoonInk 样例项目布局；
+- 完成 `IO-P0` 并持续维护 IO 技术计划；
+- 以 `IO-P1` 作为第一个面向代码的重构准备步骤；
+- 持续推进 Phase 1 中的 frontmatter、Markdown 与模型阶段实现；
 - 在合适时机将 RFC 与 Roadmap 转写为申报书语言。
