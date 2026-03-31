@@ -244,6 +244,17 @@ This stage moves directory and workspace loading intent to the runtime boundary 
 
 Isolate native-specific runtime wiring and keep higher layers target-agnostic.
 
+Status: completed.
+
+Current native adaptation shape:
+
+- `runtime_native.mbt` now defines `NativeRuntimeAdapter` as the explicit native runtime wiring surface;
+- `run_native_runtime_io_task(...)` isolates native task execution behind adapter helpers instead of exposing generic task execution directly at top-level runtime entrypoints;
+- `run_native_build_command()` and `run_native_new_command(...)` are now the native-specific command adapters used by `io_runtime.mbt`;
+- `io_runtime.mbt` now delegates side-effecting CLI build/new flows through the native adapter layer.
+
+This stage keeps higher-level runtime dispatch target-agnostic while making native-specific execution wiring explicit and replaceable.
+
 ### IO-P11: Remove Direct Synchronous IO Entrypoints
 
 Deprecate and remove remaining raw synchronous filesystem access from feature modules.

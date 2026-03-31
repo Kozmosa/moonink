@@ -231,6 +231,21 @@ test "emit starter project task keeps runtime interface shape" {
 }
 
 ///|
+test "native runtime adapter exposes explicit runtime identity" {
+  let adapter = @moonink.native_runtime_adapter()
+  inspect(adapter.name, content="native-runtime-adapter")
+  inspect(adapter.note.contains("Native runtime wiring"), content="true")
+}
+
+///|
+test "native runtime adapter executes runtime io tasks" {
+  let write_plan = @moonink.run_native_runtime_io_task(
+    @moonink.plan_starter_write_task(@moonink.plan_starter_project(Some("demo"))),
+  )
+  inspect(write_plan.overwrite_policy, content="abort_if_target_exists")
+}
+
+///|
 test "cli run keeps build behind runtime boundary" {
   inspect(
     @moonink.cli_run(["moonink", "build"]).message,
