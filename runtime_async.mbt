@@ -17,6 +17,11 @@ pub fn[T] run_runtime_io_task(task : RuntimeIOTask[T]) -> T {
 }
 
 ///|
+pub fn runtime_task_policy() -> RuntimeTaskPolicy {
+  default_runtime_task_policy()
+}
+
+///|
 pub fn read_config_source_task(
   config_path : String,
 ) -> RuntimeIOTask[Result[(String, String), ConfigError]] {
