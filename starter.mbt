@@ -18,9 +18,9 @@ pub(all) struct StarterTemplatePlan {
 } derive(Show, Eq)
 
 ///|
-fn resolve_project_name(project_name : String?) -> String {
+fn resolve_project_name(project_name : String?) -> String raise PathPolicyError {
   match project_name {
-    Some(name) => name
+    Some(name) => normalize_relative_path(name)
     None => "moonink-site"
   }
 }
@@ -161,7 +161,9 @@ fn starter_template_files(project_name : String) -> Array[StarterTemplateFile] {
 
 ///|
 pub fn plan_starter_project(project_name : String?) -> StarterTemplatePlan {
-  let resolved_name = resolve_project_name(project_name)
+  let resolved_name = resolve_project_name(project_name) catch {
+    _ => "moonink-site"
+  }
   {
     project_name: resolved_name,
     root_dir: resolved_name,
@@ -169,7 +171,7 @@ pub fn plan_starter_project(project_name : String?) -> StarterTemplatePlan {
     content_roots: ["docs", "articles"],
     theme_dir: "theme",
     note:
-      "Starter template now models the Phase 1 sample MoonInk site layout and can be emitted by the runtime CLI entry.",
+      "Starter template now models the Phase 1 sample MoonInk site layout and can be emitted by the runtime CLI entry with normalized relative paths and UTF-8 text files.",
   }
 }
 
@@ -182,18 +184,19 @@ fn append_unique_path(paths : Array[String], path : String) -> Unit {
 
 ///|
 fn directory_prefixes(path : String) -> Array[String] {
+  let normalized = normalize_relative_path(path) catch {
+    _ => path
+  }
   let prefixes = []
-  let segments = path.split("/")
-  let mut current = if path.has_prefix("/") { "/" } else { "" }
+  let segments = normalized.split("/")
+  let mut current = ""
   for segment_view in segments {
     let segment = segment_view.to_string()
-    if segment == "" || segment == "." {
+    if segment == "" {
       continue
     }
     current = if current == "" {
       segment
-    } else if current == "/" {
-      "/\{segment}"
     } else {
       "\{current}/\{segment}"
     }
@@ -206,15 +209,26 @@ fn directory_prefixes(path : String) -> Array[String] {
 fn starter_directories(plan : StarterTemplatePlan) -> Array[String] {
   let directories = directory_prefixes(plan.root_dir)
   append_unique_path(directories, plan.root_dir)
-  append_unique_path(directories, "\{plan.root_dir}/docs")
-  append_unique_path(directories, "\{plan.root_dir}/articles")
-  append_unique_path(directories, "\{plan.root_dir}/theme")
+  append_unique_path(
+    directories,
+    join_relative_path(plan.root_dir, "docs") catch { _ => "\{plan.root_dir}/docs" },
+  )
+  append_unique_path(
+    directories,
+    join_relative_path(plan.root_dir, "articles") catch { _ => "\{plan.root_dir}/articles" },
+  )
+  append_unique_path(
+    directories,
+    join_relative_path(plan.root_dir, "theme") catch { _ => "\{plan.root_dir}/theme" },
+  )
   directories
 }
 
 ///|
 fn scoped_output_path(root_dir : String, relative_path : String) -> String {
-  "\{root_dir}/\{relative_path}"
+  join_relative_path(root_dir, relative_path) catch {
+    _ => "\{root_dir}/\{relative_path}"
+  }
 }
 
 ///|
@@ -244,12 +258,13 @@ fn try_emit_starter_project(plan : StarterTemplatePlan) -> CliOutcome raise @fs.
     @fs.create_dir(directory)
   }
   for file in plan.created_files {
-    @fs.write_string_to_file(scoped_output_path(plan.root_dir, file.path), file.content)
+    let output_path = scoped_output_path(plan.root_dir, file.path)
+    @fs.write_string_to_file(output_path, file.content)
   }
   {
     exit_code: 0,
     message:
-      "[new] starter project created\nproject: \{plan.project_name}\nroot: \{plan.root_dir}\nfiles written: \{plan.created_files.length()}\nnext: edit moonink.toml and begin writing content",
+      "[new] starter project created\nproject: \{plan.project_name}\nroot: \{plan.root_dir}\nfiles written: \{plan.created_files.length()}\nencoding: \{TEXT_ENCODING_NAME}\nnext: edit moonink.toml and begin writing content",
   }
 }
 
@@ -259,6 +274,6 @@ fn run_new_command(project_name : String?) -> CliOutcome {
   {
     exit_code: 0,
     message:
-      "[new] starter template planned\nproject: \{plan.project_name}\nroot: \{plan.root_dir}\nfiles: \{plan.created_files.length()}\ncontent roots: docs, articles\ntheme dir: \{plan.theme_dir}\nstatus: ready for file emission",
+      "[new] starter template planned\nproject: \{plan.project_name}\nroot: \{plan.root_dir}\nfiles: \{plan.created_files.length()}\ncontent roots: docs, articles\ntheme dir: \{plan.theme_dir}\nencoding: \{TEXT_ENCODING_NAME}\nstatus: ready for file emission",
   }
 }

@@ -38,6 +38,14 @@ test "starter project plan models the phase 1 sample site layout" {
 }
 
 ///|
+test "starter project plan normalizes relative project names" {
+  let plan = @moonink.plan_starter_project(Some("./demo//site"))
+  inspect(plan.project_name, content="demo/site")
+  inspect(plan.root_dir, content="demo/site")
+  inspect(plan.note.contains("UTF-8"), content="true")
+}
+
+///|
 test "load_config reads the minimal build phase 1a fixture" {
   let config = @moonink.load_config(
     config_path="fixtures/build_phase1a/minimal/moonink.toml",
@@ -51,6 +59,28 @@ test "load_config reads the minimal build phase 1a fixture" {
   inspect(config.articles_dir, content="articles")
   inspect(config.output_dir, content="site")
   inspect(config.theme_name, content="default")
+  inspect(config.text_encoding, content="utf-8")
+}
+
+///|
+test "load_config normalizes relative config paths" {
+  let config = @moonink.load_config(
+    config_path="fixtures//build_phase1a/./minimal/moonink.toml",
+  ) catch {
+    _ => panic()
+  }
+  inspect(config.config_path, content="fixtures/build_phase1a/minimal/moonink.toml")
+  inspect(config.project_root, content="fixtures/build_phase1a/minimal")
+}
+
+///|
+test "load_config rejects parent traversal paths" {
+  inspect(
+    try? @moonink.load_config(config_path="../moonink.toml"),
+    content=(
+      #|Err(InvalidPath(path="../moonink.toml", reason="ParentTraversal(\"../moonink.toml\")"))
+    ),
+  )
 }
 
 ///|
@@ -98,6 +128,21 @@ test "discover_content scans docs and articles recursively" {
 }
 
 ///|
+test "discover_content uses normalized relative content roots" {
+  let config = @moonink.load_config(
+    config_path="fixtures/build_phase1a/minimal/moonink.toml",
+  ) catch {
+    _ => panic()
+  }
+  let normalized_config = { ..config, docs_dir: "./docs//guides", articles_dir: "articles/." }
+  let inventory = @moonink.discover_content(normalized_config) catch {
+    _ => panic()
+  }
+  inspect(inventory.docs_root, content="fixtures/build_phase1a/minimal/docs/guides")
+  inspect(inventory.articles_root, content="fixtures/build_phase1a/minimal/articles")
+}
+
+///|
 test "discover_content reports missing content roots clearly" {
   let config = @moonink.load_config(
     config_path="fixtures/build_phase1a/missing_articles_dir/moonink.toml",
@@ -121,6 +166,7 @@ test "cli run remains a pure planning entry for new" {
       #|files: 7
       #|content roots: docs, articles
       #|theme dir: theme
+      #|encoding: utf-8
       #|status: ready for file emission
     ),
   )

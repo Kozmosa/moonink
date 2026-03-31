@@ -2,6 +2,7 @@
 /// Configuration loading failures for build phase 1a.
 pub(all) suberror ConfigError {
   IOError(ProjectIOError)
+  InvalidPath(path~ : String, reason~ : String)
   InvalidLine(line~ : Int, content~ : String)
   InvalidSection(line~ : Int, section~ : String)
   MissingSection(String)
@@ -20,35 +21,12 @@ pub(all) struct LoadedConfig {
   articles_dir : String
   output_dir : String
   theme_name : String
+  text_encoding : String
 } derive(Show, Eq)
 
 ///|
-fn path_dirname(path : String) -> String {
-  let segments = path.split("/").map(StringView::to_string).collect()
-  if segments.length() <= 1 {
-    "."
-  } else {
-    let parents = []
-    let parent_count = segments.length() - 1
-    for i in 0..<parent_count {
-      let segment = segments[i]
-      if segment == "" {
-        continue
-      }
-      parents.push(segment)
-    }
-    if path.has_prefix("/") {
-      if parents.is_empty() {
-        "/"
-      } else {
-        "/" + parents.iter().join("/")
-      }
-    } else if parents.is_empty() {
-      "."
-    } else {
-      parents.iter().join("/")
-    }
-  }
+fn config_path_policy_error(path : String, err : PathPolicyError) -> ConfigError {
+  ConfigError::InvalidPath(path=path, reason=err.to_string())
 }
 
 ///|
@@ -165,17 +143,41 @@ fn optional_field(
 }
 
 ///|
+fn normalize_config_path(value : String) -> String raise ConfigError {
+  normalize_relative_path(value) catch {
+    err => raise config_path_policy_error(value, err)
+  }
+}
+
+///|
+fn normalized_content_path(
+  sections : Map[String, Map[String, String]],
+  section : String,
+  key : String,
+) -> String raise ConfigError {
+  let value = require_field(sections, section, key)
+  normalize_relative_path(value) catch {
+    err => raise config_path_policy_error(value, err)
+  }
+}
+
+///|
 pub fn load_config(config_path? : String = "moonink.toml") -> LoadedConfig raise ConfigError {
+  let config_path = normalize_config_path(config_path)
   let source = read_config_source(config_path)
   let sections = parse_toml_sections(source)
+  let project_root = dirname_relative_path(config_path) catch {
+    err => raise config_path_policy_error(config_path, err)
+  }
   {
     config_path,
-    project_root: path_dirname(config_path),
+    project_root,
     site_name: require_field(sections, "site", "name"),
     site_url: optional_field(sections, "site", "url"),
-    docs_dir: require_field(sections, "content", "docs"),
-    articles_dir: require_field(sections, "content", "articles"),
-    output_dir: require_field(sections, "build", "output"),
+    docs_dir: normalized_content_path(sections, "content", "docs"),
+    articles_dir: normalized_content_path(sections, "content", "articles"),
+    output_dir: normalized_content_path(sections, "build", "output"),
     theme_name: optional_field(sections, "theme", "name").unwrap_or("default"),
+    text_encoding: TEXT_ENCODING_NAME,
   }
 }

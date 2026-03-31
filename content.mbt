@@ -2,6 +2,7 @@
 /// Content discovery failures for build phase 1a.
 pub(all) suberror ContentDiscoveryError {
   IOError(ProjectIOError)
+  InvalidPath(path~ : String, reason~ : String)
   MissingDirectory(String)
   NotDirectory(String)
 } derive(Show, Eq)
@@ -21,19 +22,20 @@ pub(all) struct ContentInventory {
 } derive(Show, Eq)
 
 ///|
-fn join_path(base : String, child : String) -> String {
-  if base == "." || base == "" {
-    child
-  } else if base.has_suffix("/") {
-    "\{base}\{child}"
-  } else {
-    "\{base}/\{child}"
-  }
+fn path_operation_error(operation : String, path : String, err : @fs.IOError) -> ContentDiscoveryError {
+  ContentDiscoveryError::IOError(project_io_error(operation, path, err.to_string()))
 }
 
 ///|
-fn path_operation_error(operation : String, path : String, err : @fs.IOError) -> ContentDiscoveryError {
-  ContentDiscoveryError::IOError(project_io_error(operation, path, err.to_string()))
+fn content_path_policy_error(path : String, err : PathPolicyError) -> ContentDiscoveryError {
+  ContentDiscoveryError::InvalidPath(path=path, reason=err.to_string())
+}
+
+///|
+fn join_content_path(base : String, child : String) -> String raise ContentDiscoveryError {
+  join_relative_path(base, child) catch {
+    err => raise content_path_policy_error(child, err)
+  }
 }
 
 ///|
@@ -52,7 +54,7 @@ fn collect_markdown_files(root : String) -> Array[String] raise ContentDiscovery
     err => raise path_operation_error("read_directory", root, err)
   }
   for entry in entries {
-    let full_path = join_path(root, entry)
+    let full_path = join_content_path(root, entry)
     let is_dir = @fs.is_dir(full_path) catch {
       err => raise path_operation_error("inspect_path", full_path, err)
     }
@@ -76,8 +78,8 @@ fn collect_markdown_files(root : String) -> Array[String] raise ContentDiscovery
 
 ///|
 pub fn discover_content(config : LoadedConfig) -> ContentInventory raise ContentDiscoveryError {
-  let docs_root = join_path(config.project_root, config.docs_dir)
-  let articles_root = join_path(config.project_root, config.articles_dir)
+  let docs_root = join_content_path(config.project_root, config.docs_dir)
+  let articles_root = join_content_path(config.project_root, config.articles_dir)
   let docs_files = collect_markdown_files(docs_root)
   let article_files = collect_markdown_files(articles_root)
   let discovered_docs = docs_files.length()
@@ -91,6 +93,6 @@ pub fn discover_content(config : LoadedConfig) -> ContentInventory raise Content
     discovered_articles,
     discovered_documents: discovered_docs + discovered_articles,
     discovered_assets: 0,
-    note: "Content discovery now scans the docs/articles trees for Markdown files.",
+    note: "Content discovery now scans the docs/articles trees for Markdown files with normalized relative paths.",
   }
 }

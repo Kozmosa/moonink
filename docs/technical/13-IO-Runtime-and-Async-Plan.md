@@ -150,6 +150,21 @@ This stage does not yet add a full IO facade, but it ensures later facade layers
 
 Fix path normalization and text encoding assumptions before wider async migration.
 
+Status: completed.
+
+Current policy shape:
+
+- `io_policy.mbt` defines `normalize_relative_path(...)`, `dirname_relative_path(...)`, and `join_relative_path(...)`;
+- relative paths are normalized by removing repeated separators and `.` segments;
+- absolute paths are rejected at the current policy layer;
+- parent traversal via `..` is rejected at the current policy layer;
+- `config.mbt` now normalizes `config_path`, `docs_dir`, `articles_dir`, and `output_dir` before use;
+- `content.mbt` now resolves content roots through the shared relative-path join policy;
+- `starter.mbt` now normalizes project names and output paths through the same policy;
+- `TEXT_ENCODING_NAME = "utf-8"` is the current project text-encoding assumption for config and starter text files.
+
+This stage freezes the current relative-path and UTF-8 assumptions so later IO facade work can reuse one stable policy layer.
+
 ### IO-P5: Add Sync Facade Over `x/fs`
 
 Wrap current `x/fs` calls with MoonInk-owned helper APIs without changing the whole call graph yet.
