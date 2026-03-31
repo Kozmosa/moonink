@@ -6,6 +6,14 @@ pub(all) suberror AdapterRegistryError {
 } derive(Show, Eq)
 
 ///|
+/// Fatal parser failures for states where no meaningful ParsedDocument can be returned.
+pub(all) suberror FatalParseError {
+  InvalidAdapterState(adapter_name~ : String, reason~ : String)
+  UnsupportedFormat(adapter_name~ : String, expected~ : SourceFormat, actual~ : SourceFormat)
+  BackendFailure(adapter_name~ : String, detail~ : String)
+} derive(Show, Eq)
+
+///|
 /// Contract surface for parser backends in the document-flow pipeline.
 pub(all) struct ParserAdapter {
   name : String
@@ -164,6 +172,19 @@ pub fn html_passthrough_parser_adapter() -> ParserAdapter {
 }
 
 ///|
+/// Create an intentionally broken parser adapter for fatal-boundary tests.
+pub fn broken_parser_adapter(
+  name? : String = "broken-parser-adapter",
+  note? : String = "Intentional broken parser adapter for fatal-boundary tests.",
+) -> ParserAdapter {
+  {
+    name,
+    capabilities: default_parser_capabilities(),
+    note,
+  }
+}
+
+///|
 /// Create a fake render adapter for contract tests and early pipeline wiring.
 pub fn fake_render_adapter(
   name : String,
@@ -197,35 +218,84 @@ fn typst_stub_diagnostics() -> DocumentDiagnostics {
 }
 
 ///|
-/// Run a parser adapter so tests can freeze the adapter boundary before real backends land.
-pub fn parse_with_adapter(adapter : ParserAdapter, input : SourceDocumentInput) -> ParsedDocument {
-  if adapter.name == "unsupported-typst-parser" || input.format == SourceFormat::Typst {
-    {
+fn expected_format_for_adapter(adapter : ParserAdapter) -> SourceFormat? {
+  if adapter.name == "unsupported-typst-parser" {
+    Some(SourceFormat::Typst)
+  } else if adapter.name == "html-passthrough-parser" {
+    Some(SourceFormat::Html)
+  } else {
+    None
+  }
+}
+
+///|
+fn parse_document_with_adapter_result(
+  adapter : ParserAdapter,
+  input : SourceDocumentInput,
+) -> Result[ParsedDocument, FatalParseError] {
+  if adapter.name == "" {
+    return Err(FatalParseError::InvalidAdapterState(adapter_name="", reason="adapter name must not be empty"))
+  }
+  if adapter.name == "broken-parser-adapter" {
+    return Err(FatalParseError::BackendFailure(adapter_name=adapter.name, detail="intentional fatal parse failure"))
+  }
+  match expected_format_for_adapter(adapter) {
+    Some(expected) if expected != input.format => {
+      return Err(
+        FatalParseError::UnsupportedFormat(
+          adapter_name=adapter.name,
+          expected=expected,
+          actual=input.format,
+        ),
+      )
+    }
+    _ => ()
+  }
+  if adapter.name == "unsupported-typst-parser" {
+    Ok({
       backend_name: adapter.name,
       source_format: input.format,
       source_path: input.path,
       source_uuid: input.uuid,
       diagnostics: typst_stub_diagnostics(),
       backend_payload: None,
-    }
-  } else if adapter.name == "html-passthrough-parser" || input.format == SourceFormat::Html {
-    {
+    })
+  } else if adapter.name == "html-passthrough-parser" {
+    Ok({
       backend_name: adapter.name,
       source_format: input.format,
       source_path: input.path,
       source_uuid: input.uuid,
       diagnostics: empty_document_diagnostics(),
       backend_payload: Some(input.content),
-    }
+    })
   } else {
-    {
+    Ok({
       backend_name: adapter.name,
       source_format: input.format,
       source_path: input.path,
       source_uuid: input.uuid,
       diagnostics: empty_document_diagnostics(),
       backend_payload: Some("fake-parse:\{input.path}"),
-    }
+    })
+  }
+}
+
+///|
+/// Parse through the adapter boundary and preserve the split between recoverable diagnostics and fatal parser failures.
+pub fn parse_with_adapter_result(
+  adapter : ParserAdapter,
+  input : SourceDocumentInput,
+) -> Result[ParsedDocument, FatalParseError] {
+  parse_document_with_adapter_result(adapter, input)
+}
+
+///|
+/// Run a parser adapter so tests can freeze the adapter boundary before real backends land.
+pub fn parse_with_adapter(adapter : ParserAdapter, input : SourceDocumentInput) -> ParsedDocument {
+  match parse_with_adapter_result(adapter, input) {
+    Ok(parsed) => parsed
+    Err(_) => panic()
   }
 }
 

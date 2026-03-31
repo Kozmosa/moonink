@@ -529,3 +529,69 @@ test "docflow parser registry supports typst stub and html passthrough paths" {
     content="Ok({name: \"html-passthrough-parser\", capabilities: {supports_incremental_parsing: false, supports_html_passthrough: true}, note: \"HTML page input bypasses markup parsing while staying inside the parser adapter boundary.\"})",
   )
 }
+
+
+///|
+test "docflow fatal boundary preserves recoverable typst diagnostics" {
+  let adapter = @moonink.unsupported_typst_parser_adapter()
+  let input : @moonink.SourceDocumentInput = {
+    path: "articles/draft.typ",
+    format: @moonink.SourceFormat::Typst,
+    content: "= Draft",
+    uuid: "typst-002",
+  }
+  let result = @moonink.parse_with_adapter_result(adapter, input)
+  inspect(result is Ok(_), content="true")
+  let parsed = match result {
+    Ok(parsed) => parsed
+    Err(_) => panic()
+  }
+  inspect(parsed.backend_name, content="unsupported-typst-parser")
+  inspect(parsed.backend_payload, content="None")
+  inspect(parsed.diagnostics.entries.length(), content="1")
+}
+
+///|
+test "docflow fatal boundary reports backend failure for broken adapter" {
+  let adapter = @moonink.broken_parser_adapter()
+  let input : @moonink.SourceDocumentInput = {
+    path: "articles/hello.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "# Hello",
+    uuid: "article-002",
+  }
+  inspect(
+    @moonink.parse_with_adapter_result(adapter, input),
+    content="Err(BackendFailure(adapter_name=\"broken-parser-adapter\", detail=\"intentional fatal parse failure\"))",
+  )
+}
+
+///|
+test "docflow fatal boundary reports format mismatch for html passthrough adapter" {
+  let adapter = @moonink.html_passthrough_parser_adapter()
+  let input : @moonink.SourceDocumentInput = {
+    path: "articles/hello.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "# Hello",
+    uuid: "article-003",
+  }
+  inspect(
+    @moonink.parse_with_adapter_result(adapter, input),
+    content="Err(UnsupportedFormat(adapter_name=\"html-passthrough-parser\", expected=Html, actual=Markdown))",
+  )
+}
+
+///|
+test "docflow fatal boundary reports invalid adapter state when name is empty" {
+  let adapter = @moonink.fake_parser_adapter("", note="Invalid parser adapter for fatal-boundary coverage.")
+  let input : @moonink.SourceDocumentInput = {
+    path: "articles/hello.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "# Hello",
+    uuid: "article-004",
+  }
+  inspect(
+    @moonink.parse_with_adapter_result(adapter, input),
+    content="Err(InvalidAdapterState(adapter_name=\"\", reason=\"adapter name must not be empty\"))",
+  )
+}
