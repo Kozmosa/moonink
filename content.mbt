@@ -123,7 +123,15 @@ pub fn discover_planned_content(
 }
 
 ///|
-pub fn discover_content(config : LoadedConfig) -> ContentInventory raise ContentDiscoveryError {
-  let plan = plan_content_discovery(config)
-  discover_planned_content(plan)
+pub fn discover_content_result(
+  config : LoadedConfig,
+) -> Result[ContentInventory, ContentDiscoveryError] {
+  let plan = try plan_content_discovery(config) catch {
+    err => return Err(err)
+  }
+  try discover_planned_content(plan) catch {
+    err => Err(err)
+  } noraise {
+    inventory => Ok(inventory)
+  }
 }

@@ -174,10 +174,16 @@ fn normalized_content_path(
 }
 
 ///|
-pub fn load_config(config_path? : String = "moonink.toml") -> LoadedConfig raise ConfigError {
-  let config_path = normalize_config_path_or_error(config_path)
-  let source = io_read_file_to_string(config_path) catch {
-    err => raise ConfigError::IOError(err)
+pub fn load_config_result(config_path : String) -> Result[LoadedConfig, ConfigError] {
+  let config_path = try normalize_config_path_or_error(config_path) catch {
+    err => return Err(err)
   }
-  parse_loaded_config(config_path, source)
+  let source = io_read_file_to_string(config_path) catch {
+    err => return Err(ConfigError::IOError(err))
+  }
+  try parse_loaded_config(config_path, source) catch {
+    err => Err(err)
+  } noraise {
+    config => Ok(config)
+  }
 }

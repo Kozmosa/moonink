@@ -314,7 +314,7 @@ fn apply_starter_write_plan(write_plan : StarterWritePlan) -> CliOutcome raise P
 }
 
 ///|
-pub fn emit_starter_project_runtime(plan : StarterTemplatePlan) -> CliOutcome {
+pub fn emit_starter_project_result(plan : StarterTemplatePlan) -> CliOutcome {
   let write_plan = plan_starter_write(plan)
   match validate_starter_write_plan(write_plan) {
     Some(outcome) => outcome

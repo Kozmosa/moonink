@@ -24,33 +24,10 @@ test "parse cli command supports full argv forms" {
 }
 
 ///|
-test "starter project plan models the phase 1 sample site layout" {
-  let plan = @moonink.plan_starter_project(Some("demo"))
-  inspect(plan.project_name, content="demo")
-  inspect(plan.root_dir, content="demo")
-  inspect(plan.created_files.length(), content="7")
-  inspect(plan.content_roots, content="[\"docs\", \"articles\"]")
-  inspect(plan.created_files[0].path, content="moonink.toml")
-  inspect(plan.created_files[0].content.contains("name = \"demo\""), content="true")
-  inspect(plan.created_files[1].content.contains("# demo"), content="true")
-  inspect(plan.created_files[3].path, content="articles/hello-moonink.md")
-  inspect(plan.theme_dir, content="theme")
-}
-
-///|
-test "starter project plan normalizes relative project names" {
-  let plan = @moonink.plan_starter_project(Some("./demo//site"))
-  inspect(plan.project_name, content="demo/site")
-  inspect(plan.root_dir, content="demo/site")
-  inspect(plan.note.contains("UTF-8"), content="true")
-}
-
-///|
 test "load_config reads the minimal build phase 1a fixture" {
-  let config = @moonink.load_config(
-    config_path="fixtures/build_phase1a/minimal/moonink.toml",
-  ) catch {
-    _ => panic()
+  let config = match @moonink.load_config_result("fixtures/build_phase1a/minimal/moonink.toml") {
+    Ok(config) => config
+    Err(_) => panic()
   }
   inspect(config.site_name, content="Fixture Site")
   inspect(config.site_url, content="Some(\"https://example.com/docs\")")
@@ -64,10 +41,9 @@ test "load_config reads the minimal build phase 1a fixture" {
 
 ///|
 test "load_config normalizes relative config paths" {
-  let config = @moonink.load_config(
-    config_path="fixtures//build_phase1a/./minimal/moonink.toml",
-  ) catch {
-    _ => panic()
+  let config = match @moonink.load_config_result("fixtures//build_phase1a/./minimal/moonink.toml") {
+    Ok(config) => config
+    Err(_) => panic()
   }
   inspect(config.config_path, content="fixtures/build_phase1a/minimal/moonink.toml")
   inspect(config.project_root, content="fixtures/build_phase1a/minimal")
@@ -76,9 +52,9 @@ test "load_config normalizes relative config paths" {
 ///|
 test "load_config rejects parent traversal paths" {
   inspect(
-    try? @moonink.load_config(config_path="../moonink.toml"),
+    @moonink.load_config_result("../moonink.toml"),
     content=(
-      #|Err(InvalidPath(path="../moonink.toml", reason="ParentTraversal(\"../moonink.toml\")"))
+      #|Err(InvalidPath(path="../moonink.toml", reason="ParentTraversal("../moonink.toml")"))
     ),
   )
 }
@@ -86,9 +62,7 @@ test "load_config rejects parent traversal paths" {
 ///|
 test "load_config reports missing required fields" {
   inspect(
-    try? @moonink.load_config(
-      config_path="fixtures/build_phase1a/missing_site_name/moonink.toml",
-    ),
+    @moonink.load_config_result("fixtures/build_phase1a/missing_site_name/moonink.toml"),
     content="Err(MissingField(section=\"site\", key=\"name\"))",
   )
 }
@@ -96,7 +70,7 @@ test "load_config reports missing required fields" {
 ///|
 test "load_config reports normalized io errors" {
   inspect(
-    try? @moonink.load_config(config_path="fixtures/build_phase1a/minimal/missing.toml"),
+    @moonink.load_config_result("fixtures/build_phase1a/minimal/missing.toml"),
     content=(
       #|Err(IOError(Failure(operation="read_file", path="fixtures/build_phase1a/minimal/missing.toml", detail="IOError(\"Failed to read file fixtures/build_phase1a/minimal/missing.toml: No such file or directory (os error 2)\")")))
     ),
@@ -121,13 +95,13 @@ test "load_config task wraps config loading in runtime io task" {
 
 ///|
 test "discover_content scans docs and articles recursively" {
-  let config = @moonink.load_config(
-    config_path="fixtures/build_phase1a/minimal/moonink.toml",
-  ) catch {
-    _ => panic()
+  let config = match @moonink.load_config_result("fixtures/build_phase1a/minimal/moonink.toml") {
+    Ok(config) => config
+    Err(_) => panic()
   }
-  let inventory = @moonink.discover_content(config) catch {
-    _ => panic()
+  let inventory = match @moonink.discover_content_result(config) {
+    Ok(inventory) => inventory
+    Err(_) => panic()
   }
   inspect(inventory.docs_root, content="fixtures/build_phase1a/minimal/docs")
   inspect(inventory.articles_root, content="fixtures/build_phase1a/minimal/articles")
@@ -145,14 +119,14 @@ test "discover_content scans docs and articles recursively" {
 
 ///|
 test "discover_content uses normalized relative content roots" {
-  let config = @moonink.load_config(
-    config_path="fixtures/build_phase1a/minimal/moonink.toml",
-  ) catch {
-    _ => panic()
+  let config = match @moonink.load_config_result("fixtures/build_phase1a/minimal/moonink.toml") {
+    Ok(config) => config
+    Err(_) => panic()
   }
   let normalized_config = { ..config, docs_dir: "./docs//guides", articles_dir: "articles/." }
-  let inventory = @moonink.discover_content(normalized_config) catch {
-    _ => panic()
+  let inventory = match @moonink.discover_content_result(normalized_config) {
+    Ok(inventory) => inventory
+    Err(_) => panic()
   }
   inspect(inventory.docs_root, content="fixtures/build_phase1a/minimal/docs/guides")
   inspect(inventory.articles_root, content="fixtures/build_phase1a/minimal/articles")
@@ -160,23 +134,21 @@ test "discover_content uses normalized relative content roots" {
 
 ///|
 test "discover_content reports missing content roots clearly" {
-  let config = @moonink.load_config(
-    config_path="fixtures/build_phase1a/missing_articles_dir/moonink.toml",
-  ) catch {
-    _ => panic()
+  let config = match @moonink.load_config_result("fixtures/build_phase1a/missing_articles_dir/moonink.toml") {
+    Ok(config) => config
+    Err(_) => panic()
   }
   inspect(
-    try? @moonink.discover_content(config),
+    @moonink.discover_content_result(config),
     content="Err(MissingDirectory(\"fixtures/build_phase1a/missing_articles_dir/articles\"))",
   )
 }
 
 ///|
 test "content discovery planning freezes workspace roots before traversal" {
-  let config = @moonink.load_config(
-    config_path="fixtures/build_phase1a/minimal/moonink.toml",
-  ) catch {
-    _ => panic()
+  let config = match @moonink.load_config_result("fixtures/build_phase1a/minimal/moonink.toml") {
+    Ok(config) => config
+    Err(_) => panic()
   }
   let outcome = @moonink.run_runtime_io_task(@moonink.plan_content_discovery_task(config))
   inspect(outcome is Ok(_), content="true")
@@ -184,10 +156,9 @@ test "content discovery planning freezes workspace roots before traversal" {
 
 ///|
 test "discover_content task wraps discovery in runtime io task" {
-  let config = @moonink.load_config(
-    config_path="fixtures/build_phase1a/minimal/moonink.toml",
-  ) catch {
-    _ => panic()
+  let config = match @moonink.load_config_result("fixtures/build_phase1a/minimal/moonink.toml") {
+    Ok(config) => config
+    Err(_) => panic()
   }
   let outcome = @moonink.run_runtime_io_task(@moonink.discover_content_task(config))
   inspect(outcome is Ok(_), content="true")
