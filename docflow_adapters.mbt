@@ -152,6 +152,16 @@ pub fn fake_parser_adapter(
 }
 
 ///|
+/// Create the real Markdown parser adapter backed by mizchi/markdown.
+pub fn markdown_parser_adapter() -> ParserAdapter {
+  {
+    name: "markdown-parser-adapter",
+    capabilities: markdown_backend_capabilities(),
+    note: "Real Markdown parser adapter backed by mizchi/markdown.",
+  }
+}
+
+///|
 /// Create the explicit Typst stub adapter used before a real Typst backend exists.
 pub fn unsupported_typst_parser_adapter() -> ParserAdapter {
   {
@@ -219,7 +229,9 @@ fn typst_stub_diagnostics() -> DocumentDiagnostics {
 
 ///|
 fn expected_format_for_adapter(adapter : ParserAdapter) -> SourceFormat? {
-  if adapter.name == "unsupported-typst-parser" {
+  if adapter.name == "markdown-parser-adapter" {
+    Some(SourceFormat::Markdown)
+  } else if adapter.name == "unsupported-typst-parser" {
     Some(SourceFormat::Typst)
   } else if adapter.name == "html-passthrough-parser" {
     Some(SourceFormat::Html)
@@ -251,7 +263,17 @@ fn parse_document_with_adapter_result(
     }
     _ => ()
   }
-  if adapter.name == "unsupported-typst-parser" {
+  if adapter.name == "markdown-parser-adapter" {
+    let contract = parse_markdown_backend_contract(input.content)
+    Ok({
+      backend_name: adapter.name,
+      source_format: input.format,
+      source_path: input.path,
+      source_uuid: input.uuid,
+      diagnostics: contract.diagnostics,
+      backend_payload: Some(contract.serialized_markdown),
+    })
+  } else if adapter.name == "unsupported-typst-parser" {
     Ok({
       backend_name: adapter.name,
       source_format: input.format,

@@ -598,33 +598,78 @@ test "docflow fatal boundary reports invalid adapter state when name is empty" {
 
 
 ///|
-test "docflow markdown backend parses empty input" {
-  let result = @moonink.parse_markdown_backend_contract("")
-  inspect(result.block_count, content="0")
-  inspect(result.definition_count, content="0")
-  inspect(result.html_output, content="")
-  inspect(result.serialized_markdown, content="")
+test "docflow markdown parser adapter parses empty input" {
+  let adapter = @moonink.markdown_parser_adapter()
+  let input : @moonink.SourceDocumentInput = {
+    path: "articles/empty.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "",
+    uuid: "markdown-001",
+  }
+  let parsed = match @moonink.parse_with_adapter_result(adapter, input) {
+    Ok(parsed) => parsed
+    Err(_) => panic()
+  }
+  let contract = @moonink.parse_markdown_backend_contract("")
+  inspect(parsed.backend_name, content="markdown-parser-adapter")
+  inspect(parsed.diagnostics.entries.length(), content="0")
+  inspect(parsed.backend_payload, content="Some(\"\")")
+  inspect(contract.block_count, content="0")
+  inspect(contract.definition_count, content="0")
+  inspect(contract.html_output, content="")
 }
 
 ///|
-test "docflow markdown backend parses paragraph and heading" {
-  let heading = @moonink.parse_markdown_backend_contract("# Hello MoonInk")
-  inspect(heading.block_count, content="1")
-  inspect(heading.serialized_markdown, content="# Hello MoonInk\n")
-  inspect(heading.html_output, content="<h1>Hello MoonInk</h1>\n")
-  let paragraph = @moonink.parse_markdown_backend_contract("Hello paragraph")
-  inspect(paragraph.block_count, content="1")
-  inspect(paragraph.serialized_markdown, content="Hello paragraph\n")
-  inspect(paragraph.html_output, content="<p>Hello paragraph</p>\n")
+test "docflow markdown parser adapter parses paragraph and heading" {
+  let adapter = @moonink.markdown_parser_adapter()
+  let heading_input : @moonink.SourceDocumentInput = {
+    path: "articles/heading.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "# Hello MoonInk",
+    uuid: "markdown-002",
+  }
+  let heading = match @moonink.parse_with_adapter_result(adapter, heading_input) {
+    Ok(parsed) => parsed
+    Err(_) => panic()
+  }
+  let heading_contract = @moonink.parse_markdown_backend_contract("# Hello MoonInk")
+  inspect(heading.backend_payload, content="Some(\"# Hello MoonInk\\n\")")
+  inspect(heading_contract.block_count, content="1")
+  inspect(heading_contract.html_output, content="<h1>Hello MoonInk</h1>\n")
+  let paragraph_input : @moonink.SourceDocumentInput = {
+    path: "articles/paragraph.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "Hello paragraph",
+    uuid: "markdown-003",
+  }
+  let paragraph = match @moonink.parse_with_adapter_result(adapter, paragraph_input) {
+    Ok(parsed) => parsed
+    Err(_) => panic()
+  }
+  let paragraph_contract = @moonink.parse_markdown_backend_contract("Hello paragraph")
+  inspect(paragraph.backend_payload, content="Some(\"Hello paragraph\\n\")")
+  inspect(paragraph_contract.block_count, content="1")
+  inspect(paragraph_contract.html_output, content="<p>Hello paragraph</p>\n")
 }
 
 ///|
-test "docflow markdown backend parses list and link" {
-  let list_result = @moonink.parse_markdown_backend_contract("- one\n- two")
-  inspect(list_result.block_count, content="1")
-  inspect(list_result.serialized_markdown, content="* one\n* two\n")
+test "docflow markdown parser adapter parses list and link" {
+  let adapter = @moonink.markdown_parser_adapter()
+  let list_input : @moonink.SourceDocumentInput = {
+    path: "articles/list.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "- one\n- two",
+    uuid: "markdown-004",
+  }
+  let list_parsed = match @moonink.parse_with_adapter_result(adapter, list_input) {
+    Ok(parsed) => parsed
+    Err(_) => panic()
+  }
+  let list_contract = @moonink.parse_markdown_backend_contract("- one\n- two")
+  inspect(list_parsed.backend_payload, content="Some(\"* one\\n* two\\n\")")
+  inspect(list_contract.block_count, content="1")
   inspect(
-    list_result.html_output,
+    list_contract.html_output,
     content=(
       #|<ul>
       #|<li>one</li>
@@ -633,23 +678,43 @@ test "docflow markdown backend parses list and link" {
       #|
     ),
   )
-  let link_result = @moonink.parse_markdown_backend_contract("[MoonBit](https://www.moonbitlang.com)")
-  inspect(link_result.block_count, content="1")
-  inspect(link_result.serialized_markdown, content="[MoonBit](https://www.moonbitlang.com)\n")
-  inspect(link_result.html_output, content="<p><a href=\"https://www.moonbitlang.com\">MoonBit</a></p>\n")
+  let link_input : @moonink.SourceDocumentInput = {
+    path: "articles/link.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "[MoonBit](https://www.moonbitlang.com)",
+    uuid: "markdown-005",
+  }
+  let link_parsed = match @moonink.parse_with_adapter_result(adapter, link_input) {
+    Ok(parsed) => parsed
+    Err(_) => panic()
+  }
+  let link_contract = @moonink.parse_markdown_backend_contract("[MoonBit](https://www.moonbitlang.com)")
+  inspect(link_parsed.backend_payload, content="Some(\"[MoonBit](https://www.moonbitlang.com)\\n\")")
+  inspect(link_contract.block_count, content="1")
+  inspect(link_contract.html_output, content="<p><a href=\"https://www.moonbitlang.com\">MoonBit</a></p>\n")
 }
 
 ///|
-test "docflow markdown backend parses inline html and exposes backend contract shape" {
-  let html_result = @moonink.parse_markdown_backend_contract("Hello <span>inline</span> html")
-  inspect(html_result.block_count, content="1")
-  inspect(html_result.serialized_markdown, content="Hello <span>inline</span> html\n")
+test "docflow markdown parser adapter parses inline html and reports capabilities" {
+  let adapter = @moonink.markdown_parser_adapter()
+  let input : @moonink.SourceDocumentInput = {
+    path: "articles/html.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "Hello <span>inline</span> html",
+    uuid: "markdown-006",
+  }
+  let parsed = match @moonink.parse_with_adapter_result(adapter, input) {
+    Ok(parsed) => parsed
+    Err(_) => panic()
+  }
+  let contract = @moonink.parse_markdown_backend_contract("Hello <span>inline</span> html")
+  inspect(adapter.capabilities.supports_incremental_parsing, content="true")
+  inspect(adapter.capabilities.supports_html_passthrough, content="false")
+  inspect(parsed.diagnostics.entries.length(), content="0")
+  inspect(parsed.backend_payload, content="Some(\"Hello <span>inline</span> html\\n\")")
   inspect(
-    html_result.html_output,
+    contract.html_output,
     content="<p>Hello <a href=\"span\">span</a>inline<a href=\"/span\">/span</a> html</p>\n",
   )
-  inspect(html_result.capabilities.supports_incremental_parsing, content="true")
-  inspect(html_result.capabilities.supports_html_passthrough, content="false")
-  inspect(html_result.definition_count, content="0")
-  inspect(html_result.diagnostics.entries.length(), content="0")
+  inspect(contract.definition_count, content="0")
 }
