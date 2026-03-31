@@ -24,9 +24,10 @@ cmd/main
   -> normalize_runtime_argv(...)
   -> @moonink.cli_exec(argv)
   -> parse_cli_command
-  -> runtime dispatch
-  -> command handler
-  -> feature module
+  -> io_runtime.mbt runtime dispatch
+  -> runtime_native.mbt adapter
+  -> runtime_async.mbt task boundary
+  -> feature result API / pure planner
 ```
 
 ## Current Command Responsibilities
@@ -40,7 +41,7 @@ Returns static scaffold help text.
 The CLI now has two execution layers for `new`:
 
 - `cli_run(...)` remains pure and returns the starter-project plan status for tests;
-- `cli_exec(...)` performs real starter project emission at runtime.
+- `cli_exec(...)` delegates to `io_runtime.mbt`, then `runtime_native.mbt`, then the starter write task path.
 
 The emitted starter currently creates:
 
@@ -52,28 +53,38 @@ The emitted starter currently creates:
 - `theme/overrides.css`
 - `.gitignore`
 
-The runtime command refuses to overwrite an existing target directory.
-Filesystem access for starter emission now goes through `moonbitlang/x/fs`, and
-runtime IO failures are converted into `CliOutcome` error messages instead of
-being handled by JS-only extern bridges.
+The runtime command now applies explicit write safety rules before filesystem mutation:
+
+- starter emission is planned via `StarterWritePlan`;
+- overwrite policy is currently `abort_if_target_exists`;
+- directory/file writes happen only after preflight validation succeeds.
+
+Filesystem access now flows through the settled runtime stack:
+
+- `runtime_io.mbt` for sync filesystem facade calls;
+- `runtime_async.mbt` for starter write tasks;
+- `runtime_native.mbt` for native runtime adapter execution;
+- `runtime_policy.mbt` for conflict/cancellation policy defaults.
 
 ### build
 
-`build` now implements the first real input stage of the pipeline:
+`build` now implements the first real input stage of the pipeline through the settled runtime stack:
 
 ```text
-runtime io
-  -> load_config
-  -> validate required fields
-  -> discover_content
+io_runtime.mbt
+  -> runtime_native.mbt adapter
+  -> runtime_async.mbt read/discovery tasks
+  -> config result API / pure parsing helpers
+  -> content discovery planning + planned traversal
   -> build_site_model_dummy
   -> render_site_dummy
 ```
 
 Current real behavior includes:
 
-- reading `moonink.toml` from the current project;
+- reading `moonink.toml` through `read_config_source_task(...)`;
 - validating the required `site`, `content`, and `build` fields;
+- planning workspace roots before recursive traversal;
 - recursively scanning `docs/` and `articles/` for `.md` files;
 - reporting a real phase-1a summary before the later pipeline stages remain placeholders.
 
@@ -112,27 +123,27 @@ Delegates to placeholder serve session preparation.
 
 ## Runtime IO Direction
 
-The newly documented IO refactor track adds the following long-lived direction:
+The IO refactor track has now landed a concrete default execution model:
 
-- `native` is now the required first-class runtime target;
-- `moonbitlang/x/fs` remains the current filesystem capability source;
-- raw filesystem calls should converge toward a project-owned runtime or IO facade;
-- async should be introduced at IO boundaries first instead of spreading through parsing and modeling code.
+- `runtime_io.mbt` is the project-owned sync filesystem facade;
+- `runtime_async.mbt` is the async-capable task boundary for IO-backed workflows;
+- `runtime_native.mbt` is the default native runtime adapter for CLI-side side effects;
+- `runtime_policy.mbt` defines the current conflict and cancellation policy contract;
+- feature modules expose result-oriented APIs and pure planning/parsing helpers where practical.
 
-This means the current direct filesystem access inside feature modules is considered transitional architecture rather than the desired end state.
+This means direct synchronous feature entrypoints are no longer the intended public path for IO-backed behavior.
 
 ## Known Gaps
 
 - no structured option parser yet;
-- runtime filesystem handling is still embedded in feature modules rather than a dedicated IO package;
 - `build` still uses dummy site-model and render stages after config/discovery;
 - `serve` remains entirely placeholder;
-- no native async runtime boundary has been implemented yet.
+- runtime policy exists, but true parallel scheduling and active cancellation are not implemented yet.
 
 ## Next Planned Evolution
 
-1. execute `IO-P1` and inventory all current IO call sites;
-2. define and introduce a shared runtime IO facade before more commands gain real behavior;
-3. add structured command options and flags;
-4. implement frontmatter parsing and richer content typing after discovery;
-5. replace the remaining dummy model/render stages once the content input layer is stable.
+1. use the settled runtime stack as the default path for any new IO-backed feature work;
+2. add structured command options and flags;
+3. implement frontmatter parsing and richer content typing after discovery;
+4. replace the remaining dummy model/render stages once the content input layer is stable;
+5. evolve runtime policy into real scheduling and cancellation mechanics when needed.
