@@ -76,7 +76,32 @@ Deliver a usable static site generator with the minimum coherent feature set.
 - M4: renderer + official theme;
 - M5: search index + serve command + test stabilization.
 
-### 4.5 Exit Criteria
+### 4.5 Immediate Parsing Track Under M2
+
+M2 now includes a dedicated parser implementation track centered on explicit document-flow boundaries.
+
+The near-term target flow is:
+
+```text
+FrontMatterParser
+  -> ParserAdapter
+  -> WikiLinker
+  -> RenderAdapter
+  -> Templater
+  -> SiteConstructor
+```
+
+The first backend plan is:
+
+- use `mizchi/markdown` as the initial Markdown parser and HTML render backend;
+- keep parsing and rendering separated behind adapter boundaries;
+- add a `Typst` stub backend early to validate future format extensibility;
+- add an HTML passthrough adapter for page-oriented HTML input;
+- connect article/page branching into the build pipeline.
+
+This track is documented in `docs/technical/14-Doc-Flow-Parser-Impl-Plan.md` and should be executed as an atomic TDD-oriented commit sequence.
+
+### 4.6 Exit Criteria
 
 - sample site can build successfully;
 - generated site contains docs pages and article pages;
@@ -247,5 +272,6 @@ The roadmap should be considered effective if it leads to:
 
 - complete `IO-P0` and keep the IO technical plan current;
 - execute `IO-P1` as the first code-facing refactor preparation step;
+- execute the parser implementation track documented in `docs/technical/14-Doc-Flow-Parser-Impl-Plan.md`;
 - continue Phase 1 implementation through frontmatter, Markdown, and model stages;
 - convert RFC and roadmap into proposal language when ready.
