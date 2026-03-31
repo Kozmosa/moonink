@@ -209,6 +209,30 @@ test "native runtime adapter exposes explicit runtime identity" {
 }
 
 ///|
+test "native runtime adapter preserves config read contract" {
+  inspect(
+    @moonink.run_native_runtime_io_task(
+      @moonink.read_config_source_task("fixtures/build_phase1a/minimal/missing.toml"),
+    ),
+    content=(
+      #|Err(IOError(Failure(operation="read_file", path="fixtures/build_phase1a/minimal/missing.toml", detail="IOError(\"Failed to read file fixtures/build_phase1a/minimal/missing.toml: No such file or directory (os error 2)\")")))
+    ),
+  )
+}
+
+///|
+test "native runtime adapter preserves discovery contract" {
+  let config = match @moonink.load_config_result("fixtures/build_phase1a/missing_articles_dir/moonink.toml") {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  inspect(
+    @moonink.run_native_runtime_io_task(@moonink.discover_content_task(config)),
+    content="Err(MissingDirectory(\"fixtures/build_phase1a/missing_articles_dir/articles\"))",
+  )
+}
+
+///|
 test "cli run keeps build behind runtime boundary" {
   inspect(
     @moonink.cli_run(["moonink", "build"]).message,
