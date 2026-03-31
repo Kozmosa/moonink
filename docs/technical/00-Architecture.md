@@ -24,7 +24,14 @@ MoonInk V1 is divided into the following layers:
 6. site model layer
 7. rendering and output layer
 
-The runtime / IO boundary layer is responsible for filesystem access and later external IO concerns. It should become the single place where the project wraps `moonbitlang/x/fs` and future native async runtime hooks.
+The runtime / IO boundary layer is now concretely represented by:
+
+- `runtime_io.mbt` for the sync filesystem facade;
+- `runtime_async.mbt` for async-capable task descriptors and task constructors;
+- `runtime_native.mbt` for native runtime adaptation and policy-aware execution hooks;
+- `runtime_policy.mbt` for conflict handling and cancellation policy types.
+
+This layer is the single place where MoonInk should wrap `moonbitlang/x/fs`, surface runtime task execution, and hold future native scheduler/cancellation hooks.
 
 The document flow layer is the most important near-term refinement. It turns the earlier generic parsing stage into an explicit sequence of processing boundaries.
 
@@ -49,7 +56,11 @@ For V1, `Templater` and `SiteConstructor` may begin as narrow internal boundarie
 ## 5. Major Modules
 
 - `cli`: command parsing and user-facing execution entry
-- `runtime_io`: project-owned filesystem facade and future native runtime adapters
+- `io_runtime`: runtime command dispatch entry that hands side-effecting work to native runtime adapters
+- `runtime_io`: project-owned sync filesystem facade over `moonbitlang/x/fs`
+- `runtime_async`: async-capable task descriptors and task constructors for IO-backed flows
+- `runtime_native`: native runtime adapter and policy-aware task execution hooks
+- `runtime_policy`: runtime conflict and cancellation policy types
 - `config`: site configuration schema and validation
 - `content`: file scanning, classification, and source loading
 - `frontmatter`: metadata extraction and body separation
@@ -89,11 +100,14 @@ The intent is not to create two unrelated systems, but two explicit branches tha
 
 ## 8. Runtime And Async Guardrail
 
-MoonInk should avoid turning every layer into async by default. The intended direction is:
+MoonInk should avoid turning every layer into async by default. The current runtime model is:
 
-- IO boundaries may become async;
-- parsing, semantic normalization, and modeling should remain synchronous where practical;
-- native-specific runtime behavior should stay below the facade boundary instead of leaking into feature modules.
+- feature modules expose result-oriented APIs plus pure planning/parsing helpers where practical;
+- `runtime_async.mbt` provides async-capable `RuntimeIOTask[T]` wrappers around IO-backed workflows;
+- `runtime_native.mbt` is the default runtime execution adapter for CLI-side side effects;
+- `runtime_policy.mbt` defines the current conflict and cancellation policy contract;
+- parsing, semantic normalization, and modeling remain synchronous where practical;
+- native-specific runtime behavior stays below the facade boundary instead of leaking into feature modules.
 
 ## 9. Why This Architecture
 
