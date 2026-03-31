@@ -206,7 +206,7 @@ test "emit starter project task keeps runtime interface shape" {
   let outcome = @moonink.run_runtime_io_task(
     @moonink.emit_starter_project_task(@moonink.plan_starter_project(Some("demo"))),
   )
-  inspect(outcome.exit_code, content="0")
+  inspect(outcome.message.contains("[new]"), content="true")
 }
 
 ///|

@@ -198,6 +198,17 @@ This stage does not yet introduce true scheduling or concurrency, but it establi
 
 Move configuration loading and source-file reads to the async boundary first.
 
+Status: completed.
+
+Current read migration shape:
+
+- `config.mbt` now exposes `parse_loaded_config(...)` so config parsing is synchronous and pure once source text is available;
+- `runtime_async.mbt` now exposes `read_config_source_task(...)` as the first explicit read-side runtime task helper;
+- `render.mbt` now performs config file reading through `read_config_source_task(...)` and only parses after the read task resolves;
+- `load_config_task(...)` is now layered on top of the same read-task-plus-parse split.
+
+This stage moves the current config read path to the runtime task boundary while keeping parsing logic itself synchronous and testable.
+
 ### IO-P8: Migrate Write Operations With Safety Guarantees
 
 Move writes after reads are stable, including file creation and output emission safeguards.

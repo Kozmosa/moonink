@@ -209,6 +209,7 @@ Without a dedicated runtime IO boundary, these call sites would continue to spre
 `IO-P4` has now introduced shared relative-path normalization and a UTF-8 text policy in `io_policy.mbt`, freezing the current path and text assumptions before facade work begins.
 `IO-P5` has now introduced `runtime_io.mbt` as the project-owned sync facade over `x/fs`.
 `IO-P6` has now introduced `runtime_async.mbt` with `RuntimeIOTask[T]` as the first async-capable runtime interface shape.
+`IO-P7` has now moved configuration file reads onto the runtime task boundary, separating config source reading from synchronous parsing.
 
 ### 8.3 Atomic Commit Roadmap
 
@@ -219,7 +220,7 @@ Without a dedicated runtime IO boundary, these call sites would continue to spre
 - `IO-P4: Introduce Path And Encoding Policy` ✅
 - `IO-P5: Add Sync Facade Over x fs` ✅
 - `IO-P6: Introduce Async IO Interface` ✅
-- `IO-P7: Migrate Read Operations First`
+- `IO-P7: Migrate Read Operations First` ✅
 - `IO-P8: Migrate Write Operations With Safety Guarantees`
 - `IO-P9: Migrate Directory And Workspace Loading`
 - `IO-P10: Introduce Native Runtime Adaptation Layer`
