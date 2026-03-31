@@ -117,3 +117,21 @@ test "cli run remains a pure planning entry for new" {
   inspect(@moonink.cli_run(["moonink", "serve"]).exit_code, content="0")
   inspect(@moonink.cli_run(["moonink", "doctor"]).exit_code, content="1")
 }
+
+///|
+test "cli run keeps build behind runtime boundary" {
+  inspect(
+    @moonink.cli_run(["moonink", "build"]).message,
+    content=(
+      #|[build] runtime execution required
+      #|status: use cli_exec or the runtime IO boundary to load config and discover content
+    ),
+  )
+}
+
+///|
+test "runtime cli build crosses IO boundary and performs real IO" {
+  let outcome = @moonink.cli_exec(["moonink", "build"])
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("[build] failed during config loading"), content="true")
+}

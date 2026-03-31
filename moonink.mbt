@@ -65,10 +65,10 @@ pub fn cli_run(argv : Array[String]) -> CliOutcome {
 }
 
 ///|
-/// Execute the runtime CLI entry. This may perform side effects for commands
-/// such as `moonink new`.
+/// Execute the runtime CLI entry. Side-effecting commands must cross the
+/// explicit runtime IO boundary before touching filesystem-backed features.
 pub fn cli_exec(argv : Array[String]) -> CliOutcome {
-  dispatch_runtime_cli_command(parse_cli_command(argv))
+  run_runtime_cli_command(parse_cli_command(argv))
 }
 
 ///|
@@ -76,17 +76,6 @@ fn dispatch_cli_command(command : CliCommand) -> CliOutcome {
   match command {
     CliCommand::Help => run_help_command()
     CliCommand::New(project_name) => run_new_command(project_name)
-    CliCommand::Build => run_build_command()
-    CliCommand::Serve => run_serve_command()
-    CliCommand::Unknown(command_name) => run_unknown_command(command_name)
-  }
-}
-
-///|
-fn dispatch_runtime_cli_command(command : CliCommand) -> CliOutcome {
-  match command {
-    CliCommand::Help => run_help_command()
-    CliCommand::New(project_name) => run_new_command_runtime(project_name)
     CliCommand::Build => run_build_command()
     CliCommand::Serve => run_serve_command()
     CliCommand::Unknown(command_name) => run_unknown_command(command_name)

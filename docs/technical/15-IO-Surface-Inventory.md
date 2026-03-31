@@ -15,13 +15,13 @@ At the time of this inventory, MoonInk has raw `moonbitlang/x/fs` usage in three
 - `content.mbt` for directory existence checks and recursive Markdown discovery;
 - `starter.mbt` for starter-project directory creation and file writes.
 
-These modules are reached through the current CLI runtime chain:
+These modules are now reached through the explicit runtime boundary introduced in `IO-P2`:
 
 ```text
 cmd/main/main.mbt
   -> @moonink.cli_exec(...)
-  -> moonink.mbt dispatch_runtime_cli_command(...)
-  -> feature command runner
+  -> run_runtime_cli_command(...) in io_runtime.mbt
+  -> runtime feature function
   -> raw @fs calls inside feature modules
 ```
 
@@ -35,9 +35,9 @@ There are currently 10 direct raw `@fs` call sites:
 
 | Area | File | Function | Raw IO call sites | Runtime caller chain | Priority | Why it matters now |
 | --- | --- | --- | --- | --- | --- | --- |
-| Config read | `config.mbt` | `read_config_source` -> `load_config` | `@fs.read_file_to_string(config_path)` | `cmd/main/main.mbt` -> `@moonink.cli_exec` -> `run_build_command` -> `load_config` -> `read_config_source` | P1-High | Read-path migration should happen before writes; this is the narrowest and safest first facade target. |
-| Content discovery | `content.mbt` | `collect_markdown_files` -> `discover_content` | `@fs.path_exists(root)`, `@fs.is_dir(root)`, `@fs.read_dir(root)`, `@fs.is_dir(full_path)`, `@fs.is_file(full_path)` | `cmd/main/main.mbt` -> `@moonink.cli_exec` -> `run_build_command` -> `discover_content` -> `collect_markdown_files` | P1-High | Recursive traversal is already real build behavior and is the main place where IO spread would grow without a facade. |
-| Starter write flow | `starter.mbt` | `try_emit_starter_project` -> `emit_starter_project` -> `run_new_command_runtime` | `@fs.path_exists(plan.root_dir)`, `@fs.create_dir(directory)`, `@fs.write_string_to_file(...)` | `cmd/main/main.mbt` -> `@moonink.cli_exec` -> `run_new_command_runtime` -> `emit_starter_project` -> `try_emit_starter_project` | P2-Medium | Important, but should follow read-path stabilization because write safety and overwrite policy need a clearer boundary first. |
+| Config read | `config.mbt` | `read_config_source` -> `load_config` | `@fs.read_file_to_string(config_path)` | `cmd/main/main.mbt` -> `@moonink.cli_exec` -> `run_runtime_cli_command` -> `run_build_command_runtime` -> `load_config` -> `read_config_source` | P1-High | Read-path migration should happen before writes; this is the narrowest and safest first facade target. |
+| Content discovery | `content.mbt` | `collect_markdown_files` -> `discover_content` | `@fs.path_exists(root)`, `@fs.is_dir(root)`, `@fs.read_dir(root)`, `@fs.is_dir(full_path)`, `@fs.is_file(full_path)` | `cmd/main/main.mbt` -> `@moonink.cli_exec` -> `run_runtime_cli_command` -> `run_build_command_runtime` -> `discover_content` -> `collect_markdown_files` | P1-High | Recursive traversal is already real build behavior and is the main place where IO spread would grow without a facade. |
+| Starter write flow | `starter.mbt` | `emit_starter_project_runtime` -> `try_emit_starter_project` | `@fs.path_exists(plan.root_dir)`, `@fs.create_dir(directory)`, `@fs.write_string_to_file(...)` | `cmd/main/main.mbt` -> `@moonink.cli_exec` -> `run_runtime_cli_command` -> `emit_starter_project_runtime` -> `try_emit_starter_project` | P2-Medium | Important, but should follow read-path stabilization because write safety and overwrite policy need a clearer boundary first. |
 
 ## 4. Module-By-Module Notes
 
@@ -79,7 +79,7 @@ Current behavior:
 - checks whether the destination root already exists;
 - creates required directories for the starter template;
 - writes all starter files directly;
-- converts raw filesystem failures into CLI-facing text in `emit_starter_project`.
+- converts raw filesystem failures into CLI-facing text in `emit_starter_project_runtime`.
 
 Migration implication:
 
@@ -92,30 +92,30 @@ Migration implication:
 The following files participate in the caller graph but do not currently perform raw filesystem IO themselves:
 
 - `cmd/main/main.mbt`: normalizes argv and invokes `@moonink.cli_exec`;
-- `moonink.mbt`: dispatches between pure and runtime command paths;
-- `render.mbt`: orchestrates `load_config` and `discover_content`, but current render output is still simulated.
+- `moonink.mbt`: keeps `cli_run` pure and routes `cli_exec` into the runtime boundary;
+- `io_runtime.mbt`: owns the side-effecting runtime dispatch seam for CLI commands;
+- `render.mbt`: exposes `run_build_command_runtime()` for real build-time IO and keeps `run_build_command()` as a pure planning response.
 
-This means the project already has a partial execution split between:
+This means the project now has an explicit execution split between:
 
 - a runtime CLI path that is allowed to cause side effects; and
 - higher-level orchestration code that can be kept mostly synchronous once IO moves behind a facade.
 
-That split should be preserved and strengthened in `IO-P2`.
+That split is the main deliverable of `IO-P2` and should be preserved in `IO-P3` through `IO-P6`.
 
 ## 6. Priority Ordering For The Next Stages
 
 Recommended migration order after this inventory:
 
-1. `IO-P2`: define the project-owned runtime / IO boundary;
-2. `IO-P3`: unify filesystem-related errors under shared project vocabulary;
-3. `IO-P4`: freeze path normalization and text encoding expectations;
-4. `IO-P5`: introduce a sync facade over current `x/fs` calls;
-5. `IO-P7`: migrate config and source-file reads first;
-6. `IO-P8`: migrate starter writes with explicit safety guarantees;
-7. `IO-P9`: migrate recursive directory and workspace loading.
+1. `IO-P3`: unify filesystem-related errors under shared project vocabulary;
+2. `IO-P4`: freeze path normalization and text encoding expectations;
+3. `IO-P5`: introduce a sync facade over current `x/fs` calls;
+4. `IO-P7`: migrate config and source-file reads first;
+5. `IO-P8`: migrate starter writes with explicit safety guarantees;
+6. `IO-P9`: migrate recursive directory and workspace loading.
 
 ## 7. Completion Result For IO-P1
 
 `IO-P1` is satisfied when the repository has a current, reviewable inventory of real IO touch points and their caller chains.
 
-This document now provides that baseline and should be treated as the source inventory for the next boundary-definition commit.
+This document now provides that baseline and should be treated as the source inventory for the next error-model and policy commits.

@@ -119,6 +119,18 @@ Current inventory baseline:
 
 Document and introduce a dedicated runtime or IO facade boundary so feature modules stop growing raw filesystem calls.
 
+Status: completed.
+
+Current boundary shape:
+
+- `moonink.mbt` keeps `cli_run` as the pure command entry;
+- `moonink.mbt` routes `cli_exec` into `run_runtime_cli_command(...)`;
+- `io_runtime.mbt` is the explicit runtime boundary module for side-effecting CLI flows;
+- `render.mbt` exposes `run_build_command_runtime()` for real build-time IO work while `run_build_command()` stays a pure planning result;
+- `starter.mbt` exposes `emit_starter_project_runtime(...)` so starter emission is reached only through the runtime boundary.
+
+This does not yet replace raw `x/fs` usage, but it freezes where side-effecting execution is allowed to enter the system.
+
 ### IO-P3: Introduce Unified IO Error Model
 
 Normalize filesystem-related errors into project-owned error types.

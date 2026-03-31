@@ -218,6 +218,17 @@ fn scoped_output_path(root_dir : String, relative_path : String) -> String {
 }
 
 ///|
+pub fn emit_starter_project_runtime(plan : StarterTemplatePlan) -> CliOutcome {
+  try_emit_starter_project(plan) catch {
+    err => {
+      exit_code: 1,
+      message:
+        "[new] failed to create starter project\nroot: \{plan.root_dir}\nerror: \{err}",
+    }
+  }
+}
+
+///|
 fn try_emit_starter_project(plan : StarterTemplatePlan) -> CliOutcome raise @fs.IOError {
   if @fs.path_exists(plan.root_dir) {
     return {
@@ -240,17 +251,6 @@ fn try_emit_starter_project(plan : StarterTemplatePlan) -> CliOutcome raise @fs.
 }
 
 ///|
-fn emit_starter_project(plan : StarterTemplatePlan) -> CliOutcome {
-  try_emit_starter_project(plan) catch {
-    err => {
-      exit_code: 1,
-      message:
-        "[new] failed to create starter project\nroot: \{plan.root_dir}\nerror: \{err}",
-    }
-  }
-}
-
-///|
 fn run_new_command(project_name : String?) -> CliOutcome {
   let plan = plan_starter_project(project_name)
   {
@@ -258,9 +258,4 @@ fn run_new_command(project_name : String?) -> CliOutcome {
     message:
       "[new] starter template planned\nproject: \{plan.project_name}\nroot: \{plan.root_dir}\nfiles: \{plan.created_files.length()}\ncontent roots: docs, articles\ntheme dir: \{plan.theme_dir}\nstatus: ready for file emission",
   }
-}
-
-///|
-fn run_new_command_runtime(project_name : String?) -> CliOutcome {
-  emit_starter_project(plan_starter_project(project_name))
 }
