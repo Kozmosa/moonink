@@ -274,6 +274,17 @@ This stage removes the remaining direct synchronous feature entrypoints from the
 
 Cover success paths, missing-file behavior, traversal failures, and error mapping.
 
+Status: completed.
+
+Current async contract coverage:
+
+- config read tasks now have explicit tests for success, missing-file behavior, and parse-error propagation;
+- discovery tasks now have explicit tests for success, missing-directory behavior, and runtime planning coverage;
+- starter write tasks now have explicit tests for overwrite-protection behavior after one successful emission;
+- native adapter contract tests now verify that read and discovery failures propagate through `run_native_runtime_io_task(...)` unchanged.
+
+This stage strengthens the runtime task boundary by ensuring async-capable task wrappers preserve success and failure contracts consistently across read, discovery, and write paths.
+
 ### IO-P13: Add Concurrency And Cancellation Policy
 
 Define conflict handling, cancellation semantics, and future runtime scheduling rules.

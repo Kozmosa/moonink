@@ -214,6 +214,7 @@ Without a dedicated runtime IO boundary, these call sites would continue to spre
 `IO-P9` has now added explicit content discovery planning and workspace-root tasks before recursive traversal begins.
 `IO-P10` has now introduced `runtime_native.mbt` so native-specific task execution and CLI runtime wiring are explicit below the generic runtime facade.
 `IO-P11` has now removed direct synchronous feature entrypoints from the public surface in favor of result-oriented runtime APIs plus task/native adapter paths.
+`IO-P12` has now added explicit async IO contract coverage for read, discovery, write, and native adapter failure propagation.
 
 ### 8.3 Atomic Commit Roadmap
 
@@ -229,7 +230,7 @@ Without a dedicated runtime IO boundary, these call sites would continue to spre
 - `IO-P9: Migrate Directory And Workspace Loading` ✅
 - `IO-P10: Introduce Native Runtime Adaptation Layer` ✅
 - `IO-P11: Remove Direct Synchronous IO Entrypoints` ✅
-- `IO-P12: Add Tests For Async IO Contracts`
+- `IO-P12: Add Tests For Async IO Contracts` ✅
 - `IO-P13: Add Concurrency And Cancellation Policy`
 - `IO-P14: Documentation And Migration Closure`
 
