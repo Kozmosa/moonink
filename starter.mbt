@@ -18,6 +18,25 @@ pub(all) struct StarterTemplatePlan {
 } derive(Show, Eq)
 
 ///|
+/// A single concrete write target derived from the starter template plan.
+pub(all) struct StarterWriteTarget {
+  output_path : String
+  summary : String
+  content : String
+} derive(Show, Eq)
+
+///|
+/// Safe write plan for starter emission introduced by IO-P8.
+pub(all) struct StarterWritePlan {
+  root_dir : String
+  directories : Array[String]
+  files : Array[StarterWriteTarget]
+  file_count : Int
+  encoding : String
+  overwrite_policy : String
+} derive(Show, Eq)
+
+///|
 fn resolve_project_name(project_name : String?) -> String raise PathPolicyError {
   match project_name {
     Some(name) => normalize_relative_path(name)
@@ -232,47 +251,92 @@ fn scoped_output_path(root_dir : String, relative_path : String) -> String {
 }
 
 ///|
-pub fn emit_starter_project_runtime(plan : StarterTemplatePlan) -> CliOutcome {
-  try_emit_starter_project(plan) catch {
-    err => {
-      {
+fn starter_write_targets(plan : StarterTemplatePlan) -> Array[StarterWriteTarget] {
+  let targets = []
+  for file in plan.created_files {
+    targets.push({
+      output_path: scoped_output_path(plan.root_dir, file.path),
+      summary: file.summary,
+      content: file.content,
+    })
+  }
+  targets
+}
+
+///|
+pub fn plan_starter_write(plan : StarterTemplatePlan) -> StarterWritePlan {
+  let directories = starter_directories(plan)
+  let files = starter_write_targets(plan)
+  {
+    root_dir: plan.root_dir,
+    directories,
+    files,
+    file_count: files.length(),
+    encoding: TEXT_ENCODING_NAME,
+    overwrite_policy: "abort_if_target_exists",
+  }
+}
+
+///|
+fn validate_starter_write_plan(write_plan : StarterWritePlan) -> CliOutcome? {
+  if io_path_exists(write_plan.root_dir) {
+    return Some({
+      exit_code: 1,
+      message:
+        "[new] target directory already exists\nroot: \{write_plan.root_dir}\nstatus: aborted to avoid overwriting existing files",
+    })
+  }
+  for file in write_plan.files {
+    if io_path_exists(file.output_path) {
+      return Some({
         exit_code: 1,
         message:
-          "[new] failed to create starter project\nroot: \{plan.root_dir}\nio error:\n\{format_project_io_error(err)}",
+          "[new] target file already exists\nroot: \{write_plan.root_dir}\npath: \{file.output_path}\nstatus: aborted before writes to preserve existing content",
+      })
+    }
+  }
+  None
+}
+
+///|
+fn apply_starter_write_plan(write_plan : StarterWritePlan) -> CliOutcome raise ProjectIOError {
+  for directory in write_plan.directories {
+    io_create_dir(directory)
+  }
+  for file in write_plan.files {
+    io_write_string(file.output_path, file.content)
+  }
+  {
+    exit_code: 0,
+    message:
+      "[new] starter project created\nroot: \{write_plan.root_dir}\nfiles written: \{write_plan.file_count}\nencoding: \{write_plan.encoding}\noverwrite policy: \{write_plan.overwrite_policy}\nnext: edit moonink.toml and begin writing content",
+  }
+}
+
+///|
+pub fn emit_starter_project_runtime(plan : StarterTemplatePlan) -> CliOutcome {
+  let write_plan = plan_starter_write(plan)
+  match validate_starter_write_plan(write_plan) {
+    Some(outcome) => outcome
+    None => {
+      apply_starter_write_plan(write_plan) catch {
+        err => {
+          exit_code: 1,
+          message:
+            "[new] failed to create starter project\nroot: \{plan.root_dir}\nio error:\n\{format_project_io_error(err)}\nwrite safety: preflight completed before directory creation and file writes",
+        }
       }
     }
   }
 }
 
 ///|
-fn try_emit_starter_project(plan : StarterTemplatePlan) -> CliOutcome raise ProjectIOError {
-  if io_path_exists(plan.root_dir) {
-    return {
-      exit_code: 1,
-      message:
-        "[new] target directory already exists\nroot: \{plan.root_dir}\nstatus: aborted to avoid overwriting existing files",
-    }
-  }
-  for directory in starter_directories(plan) {
-    io_create_dir(directory)
-  }
-  for file in plan.created_files {
-    let output_path = scoped_output_path(plan.root_dir, file.path)
-    io_write_string(output_path, file.content)
-  }
-  {
-    exit_code: 0,
-    message:
-      "[new] starter project created\nproject: \{plan.project_name}\nroot: \{plan.root_dir}\nfiles written: \{plan.created_files.length()}\nencoding: \{TEXT_ENCODING_NAME}\nnext: edit moonink.toml and begin writing content",
-  }
-}
-
-///|
 fn run_new_command(project_name : String?) -> CliOutcome {
   let plan = plan_starter_project(project_name)
+  let write_plan = plan_starter_write(plan)
   {
     exit_code: 0,
     message:
-      "[new] starter template planned\nproject: \{plan.project_name}\nroot: \{plan.root_dir}\nfiles: \{plan.created_files.length()}\ncontent roots: docs, articles\ntheme dir: \{plan.theme_dir}\nencoding: \{TEXT_ENCODING_NAME}\nstatus: ready for file emission",
+      "[new] starter template planned\nproject: \{plan.project_name}\nroot: \{plan.root_dir}\nfiles: \{write_plan.file_count}\ncontent roots: docs, articles\ntheme dir: \{plan.theme_dir}\nencoding: \{write_plan.encoding}\noverwrite policy: \{write_plan.overwrite_policy}\nstatus: ready for file emission",
   }
 }
