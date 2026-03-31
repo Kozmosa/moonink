@@ -801,3 +801,63 @@ test "docflow markdown render adapter renders inline html according to backend b
     content="<p>Hello <a href=\"span\">span</a>inline<a href=\"/span\">/span</a> html</p>\n",
   )
 }
+
+
+///|
+test "docflow article pipeline keeps parser wikilinker and render order explicit" {
+  let parser = @moonink.markdown_parser_adapter()
+  let linker = @moonink.noop_wikilinker(
+    name="article-semantic-noop",
+    note="Explicit no-op wikilinker for article pipeline coverage.",
+  )
+  let renderer = @moonink.markdown_render_adapter()
+  let input : @moonink.SourceDocumentInput = {
+    path: "articles/pipeline-heading.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "# Pipeline Heading",
+    uuid: "pipeline-001",
+  }
+  let pipeline = match @moonink.run_article_pipeline(parser, linker, renderer, input) {
+    Ok(result) => result
+    Err(_) => panic()
+  }
+  inspect(pipeline.parsed.backend_name, content="markdown-parser-adapter")
+  inspect(pipeline.linked.backend_name, content="markdown-parser-adapter")
+  inspect(pipeline.rendered.backend_name, content="markdown-render-adapter")
+  inspect(pipeline.parsed.backend_payload, content="Some(\"# Pipeline Heading\\n\")")
+  inspect(pipeline.linked.backend_payload, content="Some(\"# Pipeline Heading\\n\")")
+  inspect(pipeline.rendered.html, content="<h1>Pipeline Heading</h1>\n")
+  inspect(
+    pipeline.pipeline_note,
+    content="article pipeline now keeps parser, wikilinker, and render order explicit",
+  )
+}
+
+///|
+test "docflow article pipeline keeps noop wikilinker transform explicit for list content" {
+  let parser = @moonink.markdown_parser_adapter()
+  let linker = @moonink.noop_wikilinker()
+  let renderer = @moonink.markdown_render_adapter()
+  let input : @moonink.SourceDocumentInput = {
+    path: "articles/pipeline-list.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "- one\n- two",
+    uuid: "pipeline-002",
+  }
+  let pipeline = match @moonink.run_article_pipeline(parser, linker, renderer, input) {
+    Ok(result) => result
+    Err(_) => panic()
+  }
+  inspect(pipeline.parsed == pipeline.linked, content="true")
+  inspect(pipeline.linked.source_path, content="articles/pipeline-list.md")
+  inspect(
+    pipeline.rendered.html,
+    content=(
+      #|<ul>
+      #|<li>one</li>
+      #|<li>two</li>
+      #|</ul>
+      #|
+    ),
+  )
+}

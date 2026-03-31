@@ -46,6 +46,15 @@ pub(all) struct RenderedDocument {
 } derive(Show, Eq)
 
 ///|
+/// Explicit article-flow summary that keeps parser, WikiLinker, and render stages visible.
+pub(all) struct ArticlePipelineResult {
+  parsed : ParsedDocument
+  linked : ParsedDocument
+  rendered : RenderedDocument
+  pipeline_note : String
+} derive(Show, Eq)
+
+///|
 /// Parser backend registry keyed by source format.
 pub(all) struct ParserRegistry {
   markdown : ParserAdapter?
@@ -335,6 +344,28 @@ pub fn parse_with_adapter(adapter : ParserAdapter, input : SourceDocumentInput) 
 pub fn apply_wikilinker(linker : WikiLinker, parsed : ParsedDocument) -> ParsedDocument {
   ignore(linker)
   parsed
+}
+
+///|
+/// Run the article pipeline explicitly through parser, WikiLinker, and render stages.
+pub fn run_article_pipeline(
+  parser : ParserAdapter,
+  linker : WikiLinker,
+  renderer : RenderAdapter,
+  input : SourceDocumentInput,
+) -> Result[ArticlePipelineResult, FatalParseError] {
+  let parsed = match parse_with_adapter_result(parser, input) {
+    Ok(parsed) => parsed
+    Err(err) => return Err(err)
+  }
+  let linked = apply_wikilinker(linker, parsed)
+  let rendered = render_with_adapter(renderer, linked)
+  Ok({
+    parsed,
+    linked,
+    rendered,
+    pipeline_note: "article pipeline now keeps parser, wikilinker, and render order explicit",
+  })
 }
 
 ///|
