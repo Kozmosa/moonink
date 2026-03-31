@@ -206,6 +206,7 @@ test "native runtime adapter exposes explicit runtime identity" {
   let adapter = @moonink.native_runtime_adapter()
   inspect(adapter.name, content="native-runtime-adapter")
   inspect(adapter.note.contains("Native runtime wiring"), content="true")
+  inspect(adapter.policy.conflict_policy, content="AbortOnConflict")
 }
 
 ///|
@@ -218,6 +219,15 @@ test "native runtime adapter preserves config read contract" {
       #|Err(IOError(Failure(operation="read_file", path="fixtures/build_phase1a/minimal/missing.toml", detail="IOError(\"Failed to read file fixtures/build_phase1a/minimal/missing.toml: No such file or directory (os error 2)\")")))
     ),
   )
+}
+
+///|
+test "native runtime adapter policy hook preserves task result" {
+  let write_plan = @moonink.run_native_runtime_io_task_with_policy(
+    @moonink.plan_starter_write_task(@moonink.plan_starter_project(Some("demo"))),
+    @moonink.default_runtime_task_policy(),
+  )
+  inspect(write_plan.overwrite_policy, content="abort_if_target_exists")
 }
 
 ///|
