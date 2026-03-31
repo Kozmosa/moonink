@@ -718,3 +718,86 @@ test "docflow markdown parser adapter parses inline html and reports capabilitie
   )
   inspect(contract.definition_count, content="0")
 }
+
+
+///|
+test "docflow markdown render adapter renders heading html through render boundary" {
+  let parser = @moonink.markdown_parser_adapter()
+  let renderer = @moonink.markdown_render_adapter()
+  let input : @moonink.SourceDocumentInput = {
+    path: "articles/render-heading.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "# Hello MoonInk",
+    uuid: "render-001",
+  }
+  let parsed = match @moonink.parse_with_adapter_result(parser, input) {
+    Ok(parsed) => parsed
+    Err(_) => panic()
+  }
+  let rendered = @moonink.render_with_adapter(renderer, parsed)
+  inspect(rendered.backend_name, content="markdown-render-adapter")
+  inspect(rendered.source_path, content="articles/render-heading.md")
+  inspect(rendered.source_uuid, content="render-001")
+  inspect(rendered.html, content="<h1>Hello MoonInk</h1>\n")
+  inspect(rendered.note, content="Real Markdown render adapter backed by mizchi/markdown.")
+}
+
+///|
+test "docflow markdown render adapter renders list and link html through render boundary" {
+  let parser = @moonink.markdown_parser_adapter()
+  let renderer = @moonink.markdown_render_adapter()
+  let list_input : @moonink.SourceDocumentInput = {
+    path: "articles/render-list.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "- one\n- two",
+    uuid: "render-002",
+  }
+  let list_parsed = match @moonink.parse_with_adapter_result(parser, list_input) {
+    Ok(parsed) => parsed
+    Err(_) => panic()
+  }
+  let list_rendered = @moonink.render_with_adapter(renderer, list_parsed)
+  inspect(
+    list_rendered.html,
+    content=(
+      #|<ul>
+      #|<li>one</li>
+      #|<li>two</li>
+      #|</ul>
+      #|
+    ),
+  )
+  let link_input : @moonink.SourceDocumentInput = {
+    path: "articles/render-link.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "[MoonBit](https://www.moonbitlang.com)",
+    uuid: "render-003",
+  }
+  let link_parsed = match @moonink.parse_with_adapter_result(parser, link_input) {
+    Ok(parsed) => parsed
+    Err(_) => panic()
+  }
+  let link_rendered = @moonink.render_with_adapter(renderer, link_parsed)
+  inspect(link_rendered.html, content="<p><a href=\"https://www.moonbitlang.com\">MoonBit</a></p>\n")
+}
+
+///|
+test "docflow markdown render adapter renders inline html according to backend behavior" {
+  let parser = @moonink.markdown_parser_adapter()
+  let renderer = @moonink.markdown_render_adapter()
+  let input : @moonink.SourceDocumentInput = {
+    path: "articles/render-inline-html.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "Hello <span>inline</span> html",
+    uuid: "render-004",
+  }
+  let parsed = match @moonink.parse_with_adapter_result(parser, input) {
+    Ok(parsed) => parsed
+    Err(_) => panic()
+  }
+  let rendered = @moonink.render_with_adapter(renderer, parsed)
+  inspect(
+    rendered.html,
+    content="<p>Hello <a href=\"span\">span</a>inline<a href=\"/span\">/span</a> html</p>\n",
+  )
+}

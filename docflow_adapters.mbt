@@ -204,6 +204,15 @@ pub fn fake_render_adapter(
 }
 
 ///|
+/// Create the real Markdown render adapter backed by mizchi/markdown.
+pub fn markdown_render_adapter() -> RenderAdapter {
+  {
+    name: "markdown-render-adapter",
+    note: "Real Markdown render adapter backed by mizchi/markdown.",
+  }
+}
+
+///|
 /// Create a no-op WikiLinker stage that leaves parsed documents unchanged.
 pub fn noop_wikilinker(
   name? : String = "noop-wikilinker",
@@ -329,17 +338,26 @@ pub fn apply_wikilinker(linker : WikiLinker, parsed : ParsedDocument) -> ParsedD
 }
 
 ///|
-/// Run a fake render adapter so tests can freeze the HTML render contract before real backends land.
+/// Run a render adapter so tests can freeze the HTML render contract before real backends land.
 pub fn render_with_adapter(adapter : RenderAdapter, parsed : ParsedDocument) -> RenderedDocument {
-  let html_body = match parsed.backend_payload {
-    Some(payload) => payload
-    None => parsed.source_path
+  let html_body = if adapter.name == "markdown-render-adapter" && parsed.source_format == SourceFormat::Markdown {
+    let markdown_payload = match parsed.backend_payload {
+      Some(payload) => payload
+      None => ""
+    }
+    render_markdown_backend_payload(markdown_payload)
+  } else {
+    let payload = match parsed.backend_payload {
+      Some(payload) => payload
+      None => parsed.source_path
+    }
+    "<article data-renderer=\"\{adapter.name}\" data-source-format=\"\{parsed.source_format}\">\{payload}</article>"
   }
   {
     backend_name: adapter.name,
     source_path: parsed.source_path,
     source_uuid: parsed.source_uuid,
-    html: "<article data-renderer=\"\{adapter.name}\" data-source-format=\"\{parsed.source_format}\">\{html_body}</article>",
+    html: html_body,
     note: adapter.note,
   }
 }
