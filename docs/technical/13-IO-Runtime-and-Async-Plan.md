@@ -135,6 +135,17 @@ This does not yet replace raw `x/fs` usage, but it freezes where side-effecting 
 
 Normalize filesystem-related errors into project-owned error types.
 
+Status: completed.
+
+Current shared error shape:
+
+- `io_error.mbt` defines `ProjectIOError { operation, path, detail }`;
+- `config.mbt` now maps filesystem reads to `ConfigError::IOError(ProjectIOError)`;
+- `content.mbt` now maps traversal and inspection failures to `ContentDiscoveryError::IOError(ProjectIOError)`;
+- runtime CLI messaging formats IO failures through `format_project_io_error(...)` so command output exposes operation and path context consistently.
+
+This stage does not yet add a full IO facade, but it ensures later facade layers inherit one project-owned error vocabulary.
+
 ### IO-P4: Introduce Path And Encoding Policy
 
 Fix path normalization and text encoding assumptions before wider async migration.

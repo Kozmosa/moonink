@@ -205,13 +205,14 @@ Without a dedicated runtime IO boundary, these call sites would continue to spre
 
 `IO-P1` has now been executed and the current code-facing inventory lives in `docs/technical/15-IO-Surface-Inventory.md`.
 `IO-P2` has now introduced the first explicit runtime boundary in `io_runtime.mbt`, with `cli_exec` routed through that module before reaching side-effecting commands.
+`IO-P3` has now introduced a shared `ProjectIOError` model in `io_error.mbt`, so runtime and feature layers report filesystem failures with normalized operation/path/detail context.
 
 ### 8.3 Atomic Commit Roadmap
 
 - `IO-P0: Writing Plan` ✅
 - `IO-P1: Inventory Existing IO Surface` ✅
 - `IO-P2: Define IO Layer Boundaries` ✅
-- `IO-P3: Introduce Unified IO Error Model`
+- `IO-P3: Introduce Unified IO Error Model` ✅
 - `IO-P4: Introduce Path And Encoding Policy`
 - `IO-P5: Add Sync Facade Over x fs`
 - `IO-P6: Introduce Async IO Interface`

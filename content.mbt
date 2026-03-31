@@ -1,7 +1,7 @@
 ///|
 /// Content discovery failures for build phase 1a.
 pub(all) suberror ContentDiscoveryError {
-  IOError(String)
+  IOError(ProjectIOError)
   MissingDirectory(String)
   NotDirectory(String)
 } derive(Show, Eq)
@@ -32,24 +32,29 @@ fn join_path(base : String, child : String) -> String {
 }
 
 ///|
+fn path_operation_error(operation : String, path : String, err : @fs.IOError) -> ContentDiscoveryError {
+  ContentDiscoveryError::IOError(project_io_error(operation, path, err.to_string()))
+}
+
+///|
 fn collect_markdown_files(root : String) -> Array[String] raise ContentDiscoveryError {
   if !@fs.path_exists(root) {
     raise ContentDiscoveryError::MissingDirectory(root)
   }
   let is_dir = @fs.is_dir(root) catch {
-    err => raise ContentDiscoveryError::IOError(err.to_string())
+    err => raise path_operation_error("inspect_directory", root, err)
   }
   if !is_dir {
     raise ContentDiscoveryError::NotDirectory(root)
   }
   let discovered = []
   let entries = @fs.read_dir(root) catch {
-    err => raise ContentDiscoveryError::IOError(err.to_string())
+    err => raise path_operation_error("read_directory", root, err)
   }
   for entry in entries {
     let full_path = join_path(root, entry)
     let is_dir = @fs.is_dir(full_path) catch {
-      err => raise ContentDiscoveryError::IOError(err.to_string())
+      err => raise path_operation_error("inspect_path", full_path, err)
     }
     if is_dir {
       let nested = collect_markdown_files(full_path)
@@ -59,7 +64,7 @@ fn collect_markdown_files(root : String) -> Array[String] raise ContentDiscovery
       continue
     }
     let is_file = @fs.is_file(full_path) catch {
-      err => raise ContentDiscoveryError::IOError(err.to_string())
+      err => raise path_operation_error("inspect_path", full_path, err)
     }
     if is_file && full_path.has_suffix(".md") {
       discovered.push(full_path)

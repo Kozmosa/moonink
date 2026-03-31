@@ -107,12 +107,11 @@ That split is the main deliverable of `IO-P2` and should be preserved in `IO-P3`
 
 Recommended migration order after this inventory:
 
-1. `IO-P3`: unify filesystem-related errors under shared project vocabulary;
-2. `IO-P4`: freeze path normalization and text encoding expectations;
-3. `IO-P5`: introduce a sync facade over current `x/fs` calls;
-4. `IO-P7`: migrate config and source-file reads first;
-5. `IO-P8`: migrate starter writes with explicit safety guarantees;
-6. `IO-P9`: migrate recursive directory and workspace loading.
+1. `IO-P4`: freeze path normalization and text encoding expectations;
+2. `IO-P5`: introduce a sync facade over current `x/fs` calls;
+3. `IO-P7`: migrate config and source-file reads first;
+4. `IO-P8`: migrate starter writes with explicit safety guarantees;
+5. `IO-P9`: migrate recursive directory and workspace loading.
 
 ## 7. Completion Result For IO-P1
 

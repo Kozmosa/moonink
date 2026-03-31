@@ -1,7 +1,7 @@
 ///|
 /// Configuration loading failures for build phase 1a.
 pub(all) suberror ConfigError {
-  IOError(String)
+  IOError(ProjectIOError)
   InvalidLine(line~ : Int, content~ : String)
   InvalidSection(line~ : Int, section~ : String)
   MissingSection(String)
@@ -54,7 +54,10 @@ fn path_dirname(path : String) -> String {
 ///|
 fn read_config_source(config_path : String) -> String raise ConfigError {
   @fs.read_file_to_string(config_path) catch {
-    err => raise ConfigError::IOError(err.to_string())
+    err =>
+      raise ConfigError::IOError(
+        project_io_error("read_file", config_path, err.to_string()),
+      )
   }
 }
 

@@ -18,12 +18,30 @@ pub fn render_site_dummy(config : LoadedConfig, model : SiteModel) -> RenderPlan
 }
 
 ///|
+fn format_runtime_config_error(err : ConfigError) -> String {
+  match err {
+    ConfigError::IOError(io_error) =>
+      "[build] failed during config loading\nio error:\n\{format_project_io_error(io_error)}"
+    _ => "[build] failed during config loading\nerror: \{err}"
+  }
+}
+
+///|
+fn format_runtime_content_error(err : ContentDiscoveryError) -> String {
+  match err {
+    ContentDiscoveryError::IOError(io_error) =>
+      "[build] failed during content discovery\nio error:\n\{format_project_io_error(io_error)}"
+    _ => "[build] failed during content discovery\nerror: \{err}"
+  }
+}
+
+///|
 pub fn run_build_command_runtime() -> CliOutcome {
   let config = try load_config() catch {
     err => {
       return {
         exit_code: 1,
-        message: "[build] failed during config loading\nerror: \{err}",
+        message: format_runtime_config_error(err),
       }
     }
   }
@@ -31,7 +49,7 @@ pub fn run_build_command_runtime() -> CliOutcome {
     err => {
       return {
         exit_code: 1,
-        message: "[build] failed during content discovery\nerror: \{err}",
+        message: format_runtime_content_error(err),
       }
     }
   }

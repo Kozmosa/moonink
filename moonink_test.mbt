@@ -64,6 +64,16 @@ test "load_config reports missing required fields" {
 }
 
 ///|
+test "load_config reports normalized io errors" {
+  inspect(
+    try? @moonink.load_config(config_path="fixtures/build_phase1a/minimal/missing.toml"),
+    content=(
+      #|Err(IOError({operation: "read_file", path: "fixtures/build_phase1a/minimal/missing.toml", detail: "IOError(\"Failed to read file fixtures/build_phase1a/minimal/missing.toml: No such file or directory (os error 2)\")"}))
+    ),
+  )
+}
+
+///|
 test "discover_content scans docs and articles recursively" {
   let config = @moonink.load_config(
     config_path="fixtures/build_phase1a/minimal/moonink.toml",
@@ -130,8 +140,11 @@ test "cli run keeps build behind runtime boundary" {
 }
 
 ///|
-test "runtime cli build crosses IO boundary and performs real IO" {
+test "runtime cli build formats normalized io errors" {
   let outcome = @moonink.cli_exec(["moonink", "build"])
   inspect(outcome.exit_code, content="1")
   inspect(outcome.message.contains("[build] failed during config loading"), content="true")
+  inspect(outcome.message.contains("io error:"), content="true")
+  inspect(outcome.message.contains("operation: read_file"), content="true")
+  inspect(outcome.message.contains("path: moonink.toml"), content="true")
 }

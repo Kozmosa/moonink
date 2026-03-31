@@ -221,9 +221,12 @@ fn scoped_output_path(root_dir : String, relative_path : String) -> String {
 pub fn emit_starter_project_runtime(plan : StarterTemplatePlan) -> CliOutcome {
   try_emit_starter_project(plan) catch {
     err => {
-      exit_code: 1,
-      message:
-        "[new] failed to create starter project\nroot: \{plan.root_dir}\nerror: \{err}",
+      let io_error = project_io_error("create_starter_project", plan.root_dir, err.to_string())
+      {
+        exit_code: 1,
+        message:
+          "[new] failed to create starter project\nroot: \{plan.root_dir}\nio error:\n\{format_project_io_error(io_error)}",
+      }
     }
   }
 }
