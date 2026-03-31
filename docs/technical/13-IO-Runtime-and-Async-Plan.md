@@ -229,6 +229,17 @@ This stage does not yet implement rollback or atomic rename-based commits, but i
 
 Move recursive discovery and project-root scanning into the runtime IO boundary.
 
+Status: completed.
+
+Current directory/workspace migration shape:
+
+- `content.mbt` now defines `ContentDiscoveryPlan` so workspace roots are made explicit before traversal;
+- `plan_content_discovery(...)` computes `docs_root`, `articles_root`, and `workspace_roots` before any recursive directory scanning occurs;
+- `discover_planned_content(...)` performs traversal from the planned roots rather than recomputing roots inline;
+- `runtime_async.mbt` now exposes `plan_content_discovery_task(...)` and layers `discover_content_task(...)` on top of planning plus planned traversal.
+
+This stage moves directory and workspace loading intent to the runtime boundary while keeping traversal logic itself reusable and synchronous after planning resolves.
+
 ### IO-P10: Introduce Native Runtime Adaptation Layer
 
 Isolate native-specific runtime wiring and keep higher layers target-agnostic.

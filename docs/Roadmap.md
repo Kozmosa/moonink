@@ -211,6 +211,7 @@ Without a dedicated runtime IO boundary, these call sites would continue to spre
 `IO-P6` has now introduced `runtime_async.mbt` with `RuntimeIOTask[T]` as the first async-capable runtime interface shape.
 `IO-P7` has now moved configuration file reads onto the runtime task boundary, separating config source reading from synchronous parsing.
 `IO-P8` has now added starter write planning and overwrite preflight validation before filesystem mutation begins.
+`IO-P9` has now added explicit content discovery planning and workspace-root tasks before recursive traversal begins.
 
 ### 8.3 Atomic Commit Roadmap
 
@@ -223,7 +224,7 @@ Without a dedicated runtime IO boundary, these call sites would continue to spre
 - `IO-P6: Introduce Async IO Interface` ✅
 - `IO-P7: Migrate Read Operations First` ✅
 - `IO-P8: Migrate Write Operations With Safety Guarantees` ✅
-- `IO-P9: Migrate Directory And Workspace Loading`
+- `IO-P9: Migrate Directory And Workspace Loading` ✅
 - `IO-P10: Introduce Native Runtime Adaptation Layer`
 - `IO-P11: Remove Direct Synchronous IO Entrypoints`
 - `IO-P12: Add Tests For Async IO Contracts`

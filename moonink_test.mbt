@@ -172,6 +172,17 @@ test "discover_content reports missing content roots clearly" {
 }
 
 ///|
+test "content discovery planning freezes workspace roots before traversal" {
+  let config = @moonink.load_config(
+    config_path="fixtures/build_phase1a/minimal/moonink.toml",
+  ) catch {
+    _ => panic()
+  }
+  let outcome = @moonink.run_runtime_io_task(@moonink.plan_content_discovery_task(config))
+  inspect(outcome is Ok(_), content="true")
+}
+
+///|
 test "discover_content task wraps discovery in runtime io task" {
   let config = @moonink.load_config(
     config_path="fixtures/build_phase1a/minimal/moonink.toml",
