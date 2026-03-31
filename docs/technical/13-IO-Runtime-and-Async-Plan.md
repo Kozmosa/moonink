@@ -213,6 +213,18 @@ This stage moves the current config read path to the runtime task boundary while
 
 Move writes after reads are stable, including file creation and output emission safeguards.
 
+Status: completed.
+
+Current write migration shape:
+
+- `starter.mbt` now defines `StarterWriteTarget` and `StarterWritePlan` to make write intent explicit before runtime emission;
+- `plan_starter_write(...)` builds the directory/file write plan before any filesystem mutation occurs;
+- `validate_starter_write_plan(...)` performs overwrite preflight checks on the root and planned file targets before writes begin;
+- `apply_starter_write_plan(...)` applies directory creation and file writes only after preflight succeeds;
+- `runtime_async.mbt` now exposes `plan_starter_write_task(...)` so write planning also crosses the runtime task boundary.
+
+This stage does not yet implement rollback or atomic rename-based commits, but it adds explicit preflight validation and write-plan framing before starter emission proceeds.
+
 ### IO-P9: Migrate Directory And Workspace Loading
 
 Move recursive discovery and project-root scanning into the runtime IO boundary.
