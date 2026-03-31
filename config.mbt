@@ -30,9 +30,31 @@ fn config_path_policy_error(path : String, err : PathPolicyError) -> ConfigError
 }
 
 ///|
-fn read_config_source(config_path : String) -> String raise ConfigError {
-  io_read_file_to_string(config_path) catch {
-    err => raise ConfigError::IOError(err)
+pub fn normalize_config_path_or_error(value : String) -> String raise ConfigError {
+  normalize_relative_path(value) catch {
+    err => raise config_path_policy_error(value, err)
+  }
+}
+
+///|
+pub fn parse_loaded_config(
+  config_path : String,
+  source : String,
+) -> LoadedConfig raise ConfigError {
+  let sections = parse_toml_sections(source)
+  let project_root = dirname_relative_path(config_path) catch {
+    err => raise config_path_policy_error(config_path, err)
+  }
+  {
+    config_path,
+    project_root,
+    site_name: require_field(sections, "site", "name"),
+    site_url: optional_field(sections, "site", "url"),
+    docs_dir: normalized_content_path(sections, "content", "docs"),
+    articles_dir: normalized_content_path(sections, "content", "articles"),
+    output_dir: normalized_content_path(sections, "build", "output"),
+    theme_name: optional_field(sections, "theme", "name").unwrap_or("default"),
+    text_encoding: TEXT_ENCODING_NAME,
   }
 }
 
@@ -140,13 +162,6 @@ fn optional_field(
 }
 
 ///|
-fn normalize_config_path(value : String) -> String raise ConfigError {
-  normalize_relative_path(value) catch {
-    err => raise config_path_policy_error(value, err)
-  }
-}
-
-///|
 fn normalized_content_path(
   sections : Map[String, Map[String, String]],
   section : String,
@@ -160,21 +175,9 @@ fn normalized_content_path(
 
 ///|
 pub fn load_config(config_path? : String = "moonink.toml") -> LoadedConfig raise ConfigError {
-  let config_path = normalize_config_path(config_path)
-  let source = read_config_source(config_path)
-  let sections = parse_toml_sections(source)
-  let project_root = dirname_relative_path(config_path) catch {
-    err => raise config_path_policy_error(config_path, err)
+  let config_path = normalize_config_path_or_error(config_path)
+  let source = io_read_file_to_string(config_path) catch {
+    err => raise ConfigError::IOError(err)
   }
-  {
-    config_path,
-    project_root,
-    site_name: require_field(sections, "site", "name"),
-    site_url: optional_field(sections, "site", "url"),
-    docs_dir: normalized_content_path(sections, "content", "docs"),
-    articles_dir: normalized_content_path(sections, "content", "articles"),
-    output_dir: normalized_content_path(sections, "build", "output"),
-    theme_name: optional_field(sections, "theme", "name").unwrap_or("default"),
-    text_encoding: TEXT_ENCODING_NAME,
-  }
+  parse_loaded_config(config_path, source)
 }
