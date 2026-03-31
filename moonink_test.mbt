@@ -54,7 +54,7 @@ test "load_config rejects parent traversal paths" {
   inspect(
     @moonink.load_config_result("../moonink.toml"),
     content=(
-      #|Err(InvalidPath(path="../moonink.toml", reason="ParentTraversal("../moonink.toml")"))
+      #|Err(InvalidPath(path="../moonink.toml", reason="ParentTraversal(\"../moonink.toml\")"))
     ),
   )
 }

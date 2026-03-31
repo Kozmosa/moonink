@@ -259,6 +259,17 @@ This stage keeps higher-level runtime dispatch target-agnostic while making nati
 
 Deprecate and remove remaining raw synchronous filesystem access from feature modules.
 
+Status: completed.
+
+Current cleanup shape:
+
+- `config.mbt` now exposes `load_config_result(...)` instead of a public sync throwing entrypoint;
+- `content.mbt` now exposes `discover_content_result(...)` instead of a public sync throwing entrypoint;
+- `starter.mbt` now exposes `emit_starter_project_result(...)` instead of a public sync runtime entrypoint for feature-level callers;
+- `runtime_async.mbt` now layers task constructors directly on top of these result-oriented runtime-safe APIs.
+
+This stage removes the remaining direct synchronous feature entrypoints from the public surface so runtime/native task or adapter paths become the intended execution model.
+
 ### IO-P12: Add Tests For Async IO Contracts
 
 Cover success paths, missing-file behavior, traversal failures, and error mapping.
