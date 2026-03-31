@@ -289,6 +289,17 @@ This stage strengthens the runtime task boundary by ensuring async-capable task 
 
 Define conflict handling, cancellation semantics, and future runtime scheduling rules.
 
+Status: completed.
+
+Current policy shape:
+
+- `runtime_policy.mbt` now defines `RuntimeConflictPolicy`, `RuntimeCancellationPolicy`, and `RuntimeTaskPolicy`;
+- `default_runtime_task_policy()` freezes the current native runtime defaults as `AbortOnConflict` plus `CancelBeforeSideEffects`;
+- `runtime_async.mbt` now exposes `runtime_task_policy()` so generic task code can reference the shared policy surface;
+- `runtime_native.mbt` now carries `policy` inside `NativeRuntimeAdapter` and exposes `run_native_runtime_io_task_with_policy(...)` as the explicit native policy hook.
+
+This stage does not yet implement parallel scheduling or active cancellation interrupts, but it makes conflict handling and cancellation semantics explicit in the runtime surface so later schedulers have a concrete policy contract to honor.
+
 ### IO-P14: Documentation And Migration Closure
 
 Update architecture, contributor guidance, and the long-lived docs so the new model becomes the default engineering path.
