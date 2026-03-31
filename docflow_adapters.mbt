@@ -144,6 +144,26 @@ pub fn fake_parser_adapter(
 }
 
 ///|
+/// Create the explicit Typst stub adapter used before a real Typst backend exists.
+pub fn unsupported_typst_parser_adapter() -> ParserAdapter {
+  {
+    name: "unsupported-typst-parser",
+    capabilities: { supports_incremental_parsing: false, supports_html_passthrough: false },
+    note: "Typst parsing is not implemented yet; this adapter returns a structured warning diagnostic.",
+  }
+}
+
+///|
+/// Create the explicit HTML passthrough adapter for page-origin HTML sources.
+pub fn html_passthrough_parser_adapter() -> ParserAdapter {
+  {
+    name: "html-passthrough-parser",
+    capabilities: { supports_incremental_parsing: false, supports_html_passthrough: true },
+    note: "HTML page input bypasses markup parsing while staying inside the parser adapter boundary.",
+  }
+}
+
+///|
 /// Create a fake render adapter for contract tests and early pipeline wiring.
 pub fn fake_render_adapter(
   name : String,
@@ -162,15 +182,50 @@ pub fn noop_wikilinker(
 }
 
 ///|
-/// Run a fake parser adapter so tests can freeze the adapter boundary before real backends land.
-pub fn parse_with_adapter(adapter : ParserAdapter, input : SourceDocumentInput) -> ParsedDocument {
+fn typst_stub_diagnostics() -> DocumentDiagnostics {
   {
-    backend_name: adapter.name,
-    source_format: input.format,
-    source_path: input.path,
-    source_uuid: input.uuid,
-    diagnostics: empty_document_diagnostics(),
-    backend_payload: Some("fake-parse:\{input.path}"),
+    entries: [
+      {
+        severity: DiagnosticSeverity::Warn,
+        line: Some(1),
+        message: "Typst parsing is not implemented yet.",
+        hint: Some("Use the stub diagnostic until the real Typst backend lands."),
+        backend_name: "unsupported-typst-parser",
+      },
+    ],
+  }
+}
+
+///|
+/// Run a parser adapter so tests can freeze the adapter boundary before real backends land.
+pub fn parse_with_adapter(adapter : ParserAdapter, input : SourceDocumentInput) -> ParsedDocument {
+  if adapter.name == "unsupported-typst-parser" || input.format == SourceFormat::Typst {
+    {
+      backend_name: adapter.name,
+      source_format: input.format,
+      source_path: input.path,
+      source_uuid: input.uuid,
+      diagnostics: typst_stub_diagnostics(),
+      backend_payload: None,
+    }
+  } else if adapter.name == "html-passthrough-parser" || input.format == SourceFormat::Html {
+    {
+      backend_name: adapter.name,
+      source_format: input.format,
+      source_path: input.path,
+      source_uuid: input.uuid,
+      diagnostics: empty_document_diagnostics(),
+      backend_payload: Some(input.content),
+    }
+  } else {
+    {
+      backend_name: adapter.name,
+      source_format: input.format,
+      source_path: input.path,
+      source_uuid: input.uuid,
+      diagnostics: empty_document_diagnostics(),
+      backend_payload: Some("fake-parse:\{input.path}"),
+    }
   }
 }
 

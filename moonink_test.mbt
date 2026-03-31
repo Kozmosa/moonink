@@ -469,3 +469,63 @@ test "docflow registry reports missing parser and render registrations" {
     content="Err(MissingRenderAdapter(Html))",
   )
 }
+
+
+///|
+test "docflow typst stub adapter returns warning diagnostics" {
+  let adapter = @moonink.unsupported_typst_parser_adapter()
+  let input : @moonink.SourceDocumentInput = {
+    path: "articles/draft.typ",
+    format: @moonink.SourceFormat::Typst,
+    content: "= Draft",
+    uuid: "typst-001",
+  }
+  let parsed = @moonink.parse_with_adapter(adapter, input)
+  inspect(adapter.name, content="unsupported-typst-parser")
+  inspect(adapter.capabilities.supports_html_passthrough, content="false")
+  inspect(parsed.backend_payload, content="None")
+  inspect(parsed.diagnostics.entries.length(), content="1")
+  inspect(
+    @moonink.format_document_diagnostics(parsed.diagnostics),
+    content="(WARN) Line 1, Typst parsing is not implemented yet. Use the stub diagnostic until the real Typst backend lands.",
+  )
+}
+
+///|
+test "docflow html passthrough adapter preserves html input" {
+  let adapter = @moonink.html_passthrough_parser_adapter()
+  let input : @moonink.SourceDocumentInput = {
+    path: "pages/index.html",
+    format: @moonink.SourceFormat::Html,
+    content: "<main><h1>Home</h1></main>",
+    uuid: "page-001",
+  }
+  let parsed = @moonink.parse_with_adapter(adapter, input)
+  inspect(adapter.name, content="html-passthrough-parser")
+  inspect(adapter.capabilities.supports_html_passthrough, content="true")
+  inspect(parsed.diagnostics.entries.length(), content="0")
+  inspect(parsed.backend_payload, content="Some(\"<main><h1>Home</h1></main>\")")
+}
+
+///|
+test "docflow parser registry supports typst stub and html passthrough paths" {
+  let registry0 = @moonink.empty_parser_registry()
+  let registry1 = @moonink.register_parser_adapter(
+    registry0,
+    @moonink.SourceFormat::Typst,
+    @moonink.unsupported_typst_parser_adapter(),
+  )
+  let registry = @moonink.register_parser_adapter(
+    registry1,
+    @moonink.SourceFormat::Html,
+    @moonink.html_passthrough_parser_adapter(),
+  )
+  inspect(
+    @moonink.lookup_parser_adapter(registry, @moonink.SourceFormat::Typst),
+    content="Ok({name: \"unsupported-typst-parser\", capabilities: {supports_incremental_parsing: false, supports_html_passthrough: false}, note: \"Typst parsing is not implemented yet; this adapter returns a structured warning diagnostic.\"})",
+  )
+  inspect(
+    @moonink.lookup_parser_adapter(registry, @moonink.SourceFormat::Html),
+    content="Ok({name: \"html-passthrough-parser\", capabilities: {supports_incremental_parsing: false, supports_html_passthrough: true}, note: \"HTML page input bypasses markup parsing while staying inside the parser adapter boundary.\"})",
+  )
+}
