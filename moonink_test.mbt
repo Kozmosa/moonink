@@ -348,3 +348,77 @@ test "docflow diagnostic formatting handles missing location and capability defa
   inspect(@moonink.SourceDocumentInput::{ path: "draft.typ", format: @moonink.SourceFormat::Typst, content: "= Hello", uuid: "typ-001" }.format, content="Typst")
   inspect(@moonink.SourceDocumentInput::{ path: "misc.bin", format: @moonink.SourceFormat::Unknown, content: "", uuid: "unknown-001" }.format, content="Unknown")
 }
+
+
+///|
+test "docflow parser adapter contract preserves identity and source metadata" {
+  let capabilities : @moonink.ParserCapabilities = {
+    supports_incremental_parsing: true,
+    supports_html_passthrough: false,
+  }
+  let adapter = @moonink.fake_parser_adapter(
+    "fake-markdown-parser",
+    capabilities=capabilities,
+    note="Fake parser adapter for contract coverage.",
+  )
+  let input : @moonink.SourceDocumentInput = {
+    path: "articles/hello.md",
+    format: @moonink.SourceFormat::Markdown,
+    content: "# Hello",
+    uuid: "article-001",
+  }
+  let parsed = @moonink.parse_with_adapter(adapter, input)
+  inspect(adapter.name, content="fake-markdown-parser")
+  inspect(adapter.capabilities.supports_incremental_parsing, content="true")
+  inspect(parsed.backend_name, content="fake-markdown-parser")
+  inspect(parsed.source_format, content="Markdown")
+  inspect(parsed.source_path, content="articles/hello.md")
+  inspect(parsed.source_uuid, content="article-001")
+  inspect(parsed.diagnostics.entries.length(), content="0")
+  inspect(parsed.backend_payload, content="Some(\"fake-parse:articles/hello.md\")")
+}
+
+///|
+test "docflow wikilinker contract remains explicit no-op" {
+  let parsed : @moonink.ParsedDocument = {
+    backend_name: "fake-markdown-parser",
+    source_format: @moonink.SourceFormat::Markdown,
+    source_path: "articles/hello.md",
+    source_uuid: "article-001",
+    diagnostics: @moonink.empty_document_diagnostics(),
+    backend_payload: Some("fake-parse:articles/hello.md"),
+  }
+  let linker = @moonink.noop_wikilinker(
+    name="semantic-noop",
+    note="No-op semantic stage for contract coverage.",
+  )
+  let linked = @moonink.apply_wikilinker(linker, parsed)
+  inspect(linker.name, content="semantic-noop")
+  inspect(linked, content="{backend_name: \"fake-markdown-parser\", source_format: Markdown, source_path: \"articles/hello.md\", source_uuid: \"article-001\", diagnostics: {entries: []}, backend_payload: Some(\"fake-parse:articles/hello.md\")}")
+}
+
+///|
+test "docflow render adapter contract produces html from parsed document" {
+  let parsed : @moonink.ParsedDocument = {
+    backend_name: "fake-markdown-parser",
+    source_format: @moonink.SourceFormat::Markdown,
+    source_path: "articles/hello.md",
+    source_uuid: "article-001",
+    diagnostics: @moonink.empty_document_diagnostics(),
+    backend_payload: Some("<h1>Hello</h1>"),
+  }
+  let renderer = @moonink.fake_render_adapter(
+    "fake-html-renderer",
+    note="Fake render adapter for contract coverage.",
+  )
+  let rendered = @moonink.render_with_adapter(renderer, parsed)
+  inspect(renderer.name, content="fake-html-renderer")
+  inspect(rendered.backend_name, content="fake-html-renderer")
+  inspect(rendered.source_path, content="articles/hello.md")
+  inspect(rendered.source_uuid, content="article-001")
+  inspect(
+    rendered.html,
+    content="<article data-renderer=\"fake-html-renderer\" data-source-format=\"Markdown\"><h1>Hello</h1></article>",
+  )
+  inspect(rendered.note, content="Fake render adapter for contract coverage.")
+}
