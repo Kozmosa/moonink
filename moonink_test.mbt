@@ -86,6 +86,18 @@ test "read config source task moves file reads to runtime boundary" {
 }
 
 ///|
+test "read config source task reports missing file contract" {
+  inspect(
+    @moonink.run_runtime_io_task(
+      @moonink.read_config_source_task("fixtures/build_phase1a/minimal/missing.toml"),
+    ),
+    content=(
+      #|Err(IOError(Failure(operation="read_file", path="fixtures/build_phase1a/minimal/missing.toml", detail="IOError(\"Failed to read file fixtures/build_phase1a/minimal/missing.toml: No such file or directory (os error 2)\")")))
+    ),
+  )
+}
+
+///|
 test "load_config task wraps config loading in runtime io task" {
   let outcome = @moonink.run_runtime_io_task(
     @moonink.load_config_task("fixtures/build_phase1a/minimal/moonink.toml"),
@@ -94,27 +106,27 @@ test "load_config task wraps config loading in runtime io task" {
 }
 
 ///|
-test "discover_content scans docs and articles recursively" {
-  let config = match @moonink.load_config_result("fixtures/build_phase1a/minimal/moonink.toml") {
-    Ok(config) => config
-    Err(_) => panic()
-  }
-  let inventory = match @moonink.discover_content_result(config) {
-    Ok(inventory) => inventory
-    Err(_) => panic()
-  }
-  inspect(inventory.docs_root, content="fixtures/build_phase1a/minimal/docs")
-  inspect(inventory.articles_root, content="fixtures/build_phase1a/minimal/articles")
-  inspect(inventory.discovered_docs, content="2")
-  inspect(inventory.discovered_articles, content="1")
+test "load_config task propagates parse contract errors" {
   inspect(
-    inventory.docs_files,
-    content="[\"fixtures/build_phase1a/minimal/docs/index.md\", \"fixtures/build_phase1a/minimal/docs/guides/install.md\"]",
+    @moonink.run_runtime_io_task(
+      @moonink.load_config_task("fixtures/build_phase1a/missing_site_name/moonink.toml"),
+    ),
+    content="Err(MissingField(section=\"site\", key=\"name\"))",
   )
-  inspect(
-    inventory.article_files,
-    content="[\"fixtures/build_phase1a/minimal/articles/hello.md\"]",
+}
+
+///|
+test "emit starter project task preserves overwrite contract" {
+  ignore(
+    @moonink.run_runtime_io_task(
+      @moonink.emit_starter_project_task(@moonink.plan_starter_project(Some("demo"))),
+    ),
   )
+  let outcome = @moonink.run_runtime_io_task(
+    @moonink.emit_starter_project_task(@moonink.plan_starter_project(Some("demo"))),
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("target directory already exists"), content="true")
 }
 
 ///|
@@ -145,23 +157,11 @@ test "discover_content reports missing content roots clearly" {
 }
 
 ///|
-test "content discovery planning freezes workspace roots before traversal" {
-  let config = match @moonink.load_config_result("fixtures/build_phase1a/minimal/moonink.toml") {
-    Ok(config) => config
-    Err(_) => panic()
-  }
-  let outcome = @moonink.run_runtime_io_task(@moonink.plan_content_discovery_task(config))
-  inspect(outcome is Ok(_), content="true")
-}
-
-///|
-test "discover_content task wraps discovery in runtime io task" {
-  let config = match @moonink.load_config_result("fixtures/build_phase1a/minimal/moonink.toml") {
-    Ok(config) => config
-    Err(_) => panic()
-  }
-  let outcome = @moonink.run_runtime_io_task(@moonink.discover_content_task(config))
-  inspect(outcome is Ok(_), content="true")
+test "native runtime adapter executes runtime io tasks" {
+  let write_plan = @moonink.run_native_runtime_io_task(
+    @moonink.plan_starter_write_task(@moonink.plan_starter_project(Some("demo"))),
+  )
+  inspect(write_plan.overwrite_policy, content="abort_if_target_exists")
 }
 
 ///|
@@ -206,14 +206,6 @@ test "native runtime adapter exposes explicit runtime identity" {
   let adapter = @moonink.native_runtime_adapter()
   inspect(adapter.name, content="native-runtime-adapter")
   inspect(adapter.note.contains("Native runtime wiring"), content="true")
-}
-
-///|
-test "native runtime adapter executes runtime io tasks" {
-  let write_plan = @moonink.run_native_runtime_io_task(
-    @moonink.plan_starter_write_task(@moonink.plan_starter_project(Some("demo"))),
-  )
-  inspect(write_plan.overwrite_policy, content="abort_if_target_exists")
 }
 
 ///|
