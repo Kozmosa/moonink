@@ -50,8 +50,16 @@ pub fn discover_content_task(
 }
 
 ///|
+pub fn plan_starter_write_task(
+  plan : StarterTemplatePlan,
+) -> RuntimeIOTask[StarterWritePlan] {
+  Ready(plan_starter_write(plan))
+}
+
+///|
 pub fn emit_starter_project_task(
   plan : StarterTemplatePlan,
 ) -> RuntimeIOTask[CliOutcome] {
+  ignore(run_runtime_io_task(plan_starter_write_task(plan)))
   Ready(emit_starter_project_runtime(plan))
 }

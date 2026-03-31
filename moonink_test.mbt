@@ -194,11 +194,21 @@ test "cli run remains a pure planning entry for new" {
       #|content roots: docs, articles
       #|theme dir: theme
       #|encoding: utf-8
+      #|overwrite policy: abort_if_target_exists
       #|status: ready for file emission
     ),
   )
   inspect(@moonink.cli_run(["moonink", "serve"]).exit_code, content="0")
   inspect(@moonink.cli_run(["moonink", "doctor"]).exit_code, content="1")
+}
+
+///|
+test "starter write plan exposes overwrite protection" {
+  let write_plan = @moonink.run_runtime_io_task(
+    @moonink.plan_starter_write_task(@moonink.plan_starter_project(Some("demo"))),
+  )
+  inspect(write_plan.file_count, content="7")
+  inspect(write_plan.overwrite_policy, content="abort_if_target_exists")
 }
 
 ///|
