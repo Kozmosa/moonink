@@ -422,3 +422,50 @@ test "docflow render adapter contract produces html from parsed document" {
   )
   inspect(rendered.note, content="Fake render adapter for contract coverage.")
 }
+
+
+///|
+test "docflow parser registry resolves adapters by source format" {
+  let parser = @moonink.fake_parser_adapter(
+    "fake-markdown-parser",
+    capabilities={ supports_incremental_parsing: true, supports_html_passthrough: false },
+  )
+  let registry = @moonink.register_parser_adapter(
+    @moonink.empty_parser_registry(),
+    @moonink.SourceFormat::Markdown,
+    parser,
+  )
+  inspect(
+    @moonink.lookup_parser_adapter(registry, @moonink.SourceFormat::Markdown),
+    content="Ok({name: \"fake-markdown-parser\", capabilities: {supports_incremental_parsing: true, supports_html_passthrough: false}, note: \"Fake parser adapter for contract tests.\"})",
+  )
+}
+
+///|
+test "docflow render registry resolves adapters by source format" {
+  let renderer = @moonink.fake_render_adapter(
+    "fake-html-renderer",
+    note="Fake render adapter for registry coverage.",
+  )
+  let registry = @moonink.register_render_adapter(
+    @moonink.empty_render_registry(),
+    @moonink.SourceFormat::Markdown,
+    renderer,
+  )
+  inspect(
+    @moonink.lookup_render_adapter(registry, @moonink.SourceFormat::Markdown),
+    content="Ok({name: \"fake-html-renderer\", note: \"Fake render adapter for registry coverage.\"})",
+  )
+}
+
+///|
+test "docflow registry reports missing parser and render registrations" {
+  inspect(
+    @moonink.lookup_parser_adapter(@moonink.empty_parser_registry(), @moonink.SourceFormat::Typst),
+    content="Err(MissingParserAdapter(Typst))",
+  )
+  inspect(
+    @moonink.lookup_render_adapter(@moonink.empty_render_registry(), @moonink.SourceFormat::Html),
+    content="Err(MissingRenderAdapter(Html))",
+  )
+}

@@ -1,4 +1,11 @@
 ///|
+/// Registry errors for parser/render backend lookup.
+pub(all) suberror AdapterRegistryError {
+  MissingParserAdapter(SourceFormat)
+  MissingRenderAdapter(SourceFormat)
+} derive(Show, Eq)
+
+///|
 /// Contract surface for parser backends in the document-flow pipeline.
 pub(all) struct ParserAdapter {
   name : String
@@ -29,6 +36,102 @@ pub(all) struct RenderedDocument {
   html : String
   note : String
 } derive(Show, Eq)
+
+///|
+/// Parser backend registry keyed by source format.
+pub(all) struct ParserRegistry {
+  markdown : ParserAdapter?
+  typst : ParserAdapter?
+  html : ParserAdapter?
+  unknown : ParserAdapter?
+} derive(Show, Eq)
+
+///|
+/// Render backend registry keyed by source format.
+pub(all) struct RenderRegistry {
+  markdown : RenderAdapter?
+  typst : RenderAdapter?
+  html : RenderAdapter?
+  unknown : RenderAdapter?
+} derive(Show, Eq)
+
+///|
+/// Create an empty parser registry before individual backends are registered.
+pub fn empty_parser_registry() -> ParserRegistry {
+  { markdown: None, typst: None, html: None, unknown: None }
+}
+
+///|
+/// Create an empty render registry before individual backends are registered.
+pub fn empty_render_registry() -> RenderRegistry {
+  { markdown: None, typst: None, html: None, unknown: None }
+}
+
+///|
+/// Register a parser adapter for a specific source format.
+pub fn register_parser_adapter(
+  registry : ParserRegistry,
+  format : SourceFormat,
+  adapter : ParserAdapter,
+) -> ParserRegistry {
+  match format {
+    SourceFormat::Markdown => { ..registry, markdown: Some(adapter) }
+    SourceFormat::Typst => { ..registry, typst: Some(adapter) }
+    SourceFormat::Html => { ..registry, html: Some(adapter) }
+    SourceFormat::Unknown => { ..registry, unknown: Some(adapter) }
+  }
+}
+
+///|
+/// Register a render adapter for a specific source format.
+pub fn register_render_adapter(
+  registry : RenderRegistry,
+  format : SourceFormat,
+  adapter : RenderAdapter,
+) -> RenderRegistry {
+  match format {
+    SourceFormat::Markdown => { ..registry, markdown: Some(adapter) }
+    SourceFormat::Typst => { ..registry, typst: Some(adapter) }
+    SourceFormat::Html => { ..registry, html: Some(adapter) }
+    SourceFormat::Unknown => { ..registry, unknown: Some(adapter) }
+  }
+}
+
+///|
+/// Resolve a parser adapter for the requested source format.
+pub fn lookup_parser_adapter(
+  registry : ParserRegistry,
+  format : SourceFormat,
+) -> Result[ParserAdapter, AdapterRegistryError] {
+  let resolved = match format {
+    SourceFormat::Markdown => registry.markdown
+    SourceFormat::Typst => registry.typst
+    SourceFormat::Html => registry.html
+    SourceFormat::Unknown => registry.unknown
+  }
+  match resolved {
+    Some(adapter) => Ok(adapter)
+    None => Err(AdapterRegistryError::MissingParserAdapter(format))
+  }
+}
+
+///|
+/// Resolve a render adapter for the requested source format.
+pub fn lookup_render_adapter(
+  registry : RenderRegistry,
+  format : SourceFormat,
+) -> Result[RenderAdapter, AdapterRegistryError] {
+  let resolved = match format {
+    SourceFormat::Markdown => registry.markdown
+    SourceFormat::Typst => registry.typst
+    SourceFormat::Html => registry.html
+    SourceFormat::Unknown => registry.unknown
+  }
+  match resolved {
+    Some(adapter) => Ok(adapter)
+    None => Err(AdapterRegistryError::MissingRenderAdapter(format))
+  }
+}
 
 ///|
 /// Create a fake parser adapter for contract tests and early pipeline wiring.
