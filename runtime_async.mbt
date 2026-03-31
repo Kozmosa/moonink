@@ -5,10 +5,11 @@ pub(all) enum RuntimeIOTask[T] {
 } derive(Show, Eq)
 
 ///|
-/// Execute an async-capable runtime IO task.
+/// Execute an async-capable runtime IO task generically.
 ///
-/// The current native-first implementation is eager, but the `RuntimeIOTask`
-/// wrapper freezes the interface shape needed for a later true async runtime.
+/// Higher-level runtime entrypoints should prefer the native adapter helpers in
+/// `runtime_native.mbt`, while this function remains the backend-agnostic task
+/// executor used by adapter implementations.
 pub fn[T] run_runtime_io_task(task : RuntimeIOTask[T]) -> T {
   match task {
     Ready(value) => value
