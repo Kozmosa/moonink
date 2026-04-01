@@ -31,7 +31,7 @@ fn find_substring(haystack : String, needle : String) -> Int? {
   if n_len > h_len {
     return None
   }
-  for i in 0..=(h_len - n_len) {
+  for i in 0..<=(h_len - n_len) {
     let slice = haystack[i:i + n_len].to_string()
     if slice == needle {
       return Some(i)

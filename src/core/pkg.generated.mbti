@@ -1,0 +1,146 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonink/core"
+
+// Values
+pub const TEXT_ENCODING_NAME : String = "utf-8"
+
+pub fn build_site_model_dummy(MooninkConfig, ContentInventory) -> SiteModel
+
+pub fn classify_content_kind(SourceFormat, String?) -> ContentKind
+
+pub fn classify_source_format(String) -> SourceFormat
+
+pub fn dirname_relative_path(String) -> String raise PathPolicyError
+
+pub fn extract_frontmatter_raw(String) -> (String?, String)
+
+pub fn format_config_error(ConfigError) -> String
+
+pub fn format_content_discovery_error(ContentDiscoveryError) -> String
+
+pub fn format_project_io_error(ProjectIOError) -> String
+
+pub fn generate_route(String, RouteStyle) -> String
+
+pub fn join_relative_path(String, String) -> String raise PathPolicyError
+
+pub fn normalize_config_path_or_error(String) -> String raise ConfigError
+
+pub fn normalize_relative_path(String) -> String raise PathPolicyError
+
+pub fn parse_config_json(String, String) -> MooninkConfig raise ConfigError
+
+pub fn parse_frontmatter(String) -> Frontmatter
+
+pub fn parse_frontmatter_from_source(String) -> (Frontmatter, String)
+
+pub fn project_io_error(String, String, String) -> ProjectIOError
+
+pub fn should_exclude(String, Array[String]) -> Bool
+
+// Errors
+pub(all) suberror ConfigError {
+  IOError(ProjectIOError)
+  InvalidPath(path~ : String, reason~ : String)
+  InvalidJson(detail~ : String)
+  MissingField(key~ : String)
+} derive(Eq, Show)
+
+pub(all) suberror ContentDiscoveryError {
+  IOError(ProjectIOError)
+  InvalidPath(path~ : String, reason~ : String)
+  MissingDirectory(String)
+  NotDirectory(String)
+} derive(Eq, Show)
+
+pub(all) suberror PathPolicyError {
+  EmptyPath(String)
+  AbsolutePath(String)
+  ParentTraversal(String)
+} derive(Eq, Show)
+
+pub(all) suberror ProjectIOError {
+  Failure(operation~ : String, path~ : String, detail~ : String)
+} derive(Eq, Show)
+
+// Types and methods
+pub(all) struct BuildContext {
+  config : MooninkConfig
+  pages : Array[PageMeta]
+  inventory : ContentInventory
+} derive(Eq, Show)
+
+pub(all) struct ContentFile {
+  path : String
+  content_kind : ContentKind
+  format : SourceFormat
+} derive(Eq, Show)
+
+pub(all) struct ContentInventory {
+  root : String
+  files : Array[ContentFile]
+  total_articles : Int
+  total_pages : Int
+  note : String
+} derive(Eq, Show)
+
+pub(all) enum ContentKind {
+  Article
+  Page
+} derive(Eq, Show)
+
+pub(all) struct Frontmatter {
+  title : String?
+  description : String?
+  content_type : String?
+  date : String?
+  tags : Array[String]
+  draft : Bool
+  extra : Map[String, String]
+} derive(Eq, Show)
+pub fn Frontmatter::default() -> Self
+
+pub(all) struct MooninkConfig {
+  config_path : String
+  project_root : String
+  site_name : String
+  site_url : String?
+  content_dir : String
+  output_dir : String
+  exclude : Array[String]
+  route_style : RouteStyle
+  text_encoding : String
+} derive(Eq, Show)
+
+pub(all) struct PageMeta {
+  source_path : String
+  url_path : String
+  content_kind : ContentKind
+  format : SourceFormat
+  frontmatter : Frontmatter
+  sort_key : String
+} derive(Eq, Show)
+pub fn PageMeta::new(String, ContentKind, SourceFormat, Frontmatter, RouteStyle) -> Self
+
+pub(all) enum RouteStyle {
+  Pretty
+  Direct
+} derive(Eq, Show)
+
+pub(all) struct SiteModel {
+  page_count : Int
+  article_count : Int
+  navigation_items : Int
+  note : String
+} derive(Eq, Show)
+
+pub(all) enum SourceFormat {
+  Markdown
+  Html
+  Unknown
+} derive(Eq, Show)
+
+// Type aliases
+
+// Traits
+

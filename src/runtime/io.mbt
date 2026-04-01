@@ -1,6 +1,8 @@
 ///|
 /// Sync runtime IO facade introduced by IO-P5.
-pub fn io_read_file_to_string(path : String) -> String raise @core.ProjectIOError {
+pub fn io_read_file_to_string(
+  path : String,
+) -> String raise @core.ProjectIOError {
   @fs.read_file_to_string(path) catch {
     err => raise @core.project_io_error("read_file", path, err.to_string())
   }
@@ -29,8 +31,7 @@ pub fn io_is_file(path : String) -> Bool raise @core.ProjectIOError {
 ///|
 pub fn io_read_dir(path : String) -> Array[String] raise @core.ProjectIOError {
   @fs.read_dir(path) catch {
-    err =>
-      raise @core.project_io_error("read_directory", path, err.to_string())
+    err => raise @core.project_io_error("read_directory", path, err.to_string())
   }
 }
 

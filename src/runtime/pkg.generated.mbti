@@ -1,0 +1,77 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonink/runtime"
+
+import {
+  "username/moonink/core",
+}
+
+// Values
+pub fn default_runtime_task_policy() -> RuntimeTaskPolicy
+
+pub fn discover_content_result(@core.MooninkConfig) -> Result[@core.ContentInventory, @core.ContentDiscoveryError]
+
+pub fn discover_content_task(@core.MooninkConfig) -> RuntimeIOTask[Result[@core.ContentInventory, @core.ContentDiscoveryError]]
+
+pub fn io_create_dir(String) -> Unit raise @core.ProjectIOError
+
+pub fn io_is_dir(String) -> Bool raise @core.ProjectIOError
+
+pub fn io_is_file(String) -> Bool raise @core.ProjectIOError
+
+pub fn io_path_exists(String) -> Bool
+
+pub fn io_read_dir(String) -> Array[String] raise @core.ProjectIOError
+
+pub fn io_read_file_to_string(String) -> String raise @core.ProjectIOError
+
+pub fn io_write_string(String, String) -> Unit raise @core.ProjectIOError
+
+pub fn load_config_result(String) -> Result[@core.MooninkConfig, @core.ConfigError]
+
+pub fn load_config_task(String) -> RuntimeIOTask[Result[@core.MooninkConfig, @core.ConfigError]]
+
+pub fn native_runtime_adapter() -> NativeRuntimeAdapter
+
+pub fn read_config_source_task(String) -> RuntimeIOTask[Result[(String, String), @core.ConfigError]]
+
+pub fn[T] run_native_runtime_io_task(RuntimeIOTask[T]) -> T
+
+pub fn[T] run_native_runtime_io_task_with_policy(RuntimeIOTask[T], RuntimeTaskPolicy) -> T
+
+pub fn[T] run_runtime_io_task(RuntimeIOTask[T]) -> T
+
+pub fn runtime_task_policy() -> RuntimeTaskPolicy
+
+// Errors
+
+// Types and methods
+pub(all) struct NativeRuntimeAdapter {
+  name : String
+  note : String
+  policy : RuntimeTaskPolicy
+} derive(Eq, Show)
+
+pub(all) enum RuntimeCancellationPolicy {
+  NonCancelable
+  CancelBeforeSideEffects
+} derive(Eq, Show)
+
+pub(all) enum RuntimeConflictPolicy {
+  AbortOnConflict
+  AllowRepeatableRead
+} derive(Eq, Show)
+
+pub(all) enum RuntimeIOTask[T] {
+  Ready(T)
+} derive(Eq, Show)
+
+pub(all) struct RuntimeTaskPolicy {
+  conflict_policy : RuntimeConflictPolicy
+  cancellation_policy : RuntimeCancellationPolicy
+  scheduling_note : String
+} derive(Eq, Show)
+
+// Type aliases
+
+// Traits
+

@@ -1,0 +1,201 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonink/docflow"
+
+import {
+  "username/moonink/core",
+}
+
+// Values
+pub fn apply_dummy_template(RenderedDocument) -> TemplatedPage
+
+pub fn apply_wikilinker(WikiLinker, ParsedDocument) -> ParsedDocument
+
+pub fn article_site_entry(TemplatedPage) -> SiteEntry
+
+pub fn broken_parser_adapter(name? : String, note? : String) -> ParserAdapter
+
+pub fn construct_site(Array[SiteEntry]) -> SiteAssembly
+
+pub fn default_parser_capabilities() -> ParserCapabilities
+
+pub fn empty_document_diagnostics() -> DocumentDiagnostics
+
+pub fn empty_parser_registry() -> ParserRegistry
+
+pub fn empty_render_registry() -> RenderRegistry
+
+pub fn fake_parser_adapter(String, capabilities? : ParserCapabilities, note? : String) -> ParserAdapter
+
+pub fn fake_render_adapter(String, note? : String) -> RenderAdapter
+
+pub fn format_document_diagnostic(DocumentDiagnostic) -> String
+
+pub fn format_document_diagnostics(DocumentDiagnostics) -> String
+
+pub fn html_passthrough_parser_adapter() -> ParserAdapter
+
+pub fn lookup_parser_adapter(ParserRegistry, @core.SourceFormat) -> Result[ParserAdapter, AdapterRegistryError]
+
+pub fn lookup_render_adapter(RenderRegistry, @core.SourceFormat) -> Result[RenderAdapter, AdapterRegistryError]
+
+pub fn markdown_backend_capabilities() -> ParserCapabilities
+
+pub fn markdown_parser_adapter() -> ParserAdapter
+
+pub fn markdown_render_adapter() -> RenderAdapter
+
+pub fn noop_wikilinker(name? : String, note? : String) -> WikiLinker
+
+pub fn page_site_entry(TemplatedPage) -> SiteEntry
+
+pub fn parse_markdown_backend_contract(String) -> MarkdownBackendContract
+
+pub fn parse_with_adapter(ParserAdapter, SourceDocumentInput) -> ParsedDocument
+
+pub fn parse_with_adapter_result(ParserAdapter, SourceDocumentInput) -> Result[ParsedDocument, FatalParseError]
+
+pub fn register_parser_adapter(ParserRegistry, @core.SourceFormat, ParserAdapter) -> ParserRegistry
+
+pub fn register_render_adapter(RenderRegistry, @core.SourceFormat, RenderAdapter) -> RenderRegistry
+
+pub fn render_markdown_backend_payload(String) -> String
+
+pub fn render_with_adapter(RenderAdapter, ParsedDocument) -> RenderedDocument
+
+pub fn route_from_source_path(String) -> String
+
+pub fn run_article_pipeline(ParserAdapter, WikiLinker, RenderAdapter, SourceDocumentInput) -> Result[ArticlePipelineResult, FatalParseError]
+
+pub fn run_docflow_build_pipeline(Array[String], ParserAdapter, WikiLinker, RenderAdapter) -> SiteAssembly
+
+// Errors
+pub(all) suberror AdapterRegistryError {
+  MissingParserAdapter(@core.SourceFormat)
+  MissingRenderAdapter(@core.SourceFormat)
+} derive(Eq, Show)
+
+pub(all) suberror FatalParseError {
+  InvalidAdapterState(adapter_name~ : String, reason~ : String)
+  UnsupportedFormat(adapter_name~ : String, expected~ : @core.SourceFormat, actual~ : @core.SourceFormat)
+  BackendFailure(adapter_name~ : String, detail~ : String)
+} derive(Eq, Show)
+
+// Types and methods
+pub(all) struct ArticlePipelineResult {
+  parsed : ParsedDocument
+  linked : ParsedDocument
+  rendered : RenderedDocument
+  pipeline_note : String
+} derive(Eq, Show)
+
+pub(all) enum DiagnosticSeverity {
+  Info
+  Warn
+  Error
+} derive(Eq, Show)
+
+pub(all) struct DocumentDiagnostic {
+  severity : DiagnosticSeverity
+  line : Int?
+  message : String
+  hint : String?
+  backend_name : String
+} derive(Eq, Show)
+
+pub(all) struct DocumentDiagnostics {
+  entries : Array[DocumentDiagnostic]
+} derive(Eq, Show)
+
+pub(all) struct MarkdownBackendContract {
+  html_output : String
+  serialized_markdown : String
+  block_count : Int
+  definition_count : Int
+  diagnostics : DocumentDiagnostics
+  capabilities : ParserCapabilities
+} derive(Eq, Show)
+
+pub(all) struct ParsedDocument {
+  backend_name : String
+  source_format : @core.SourceFormat
+  source_path : String
+  source_uuid : String
+  diagnostics : DocumentDiagnostics
+  backend_payload : String?
+} derive(Eq, Show)
+
+pub(all) struct ParserAdapter {
+  name : String
+  capabilities : ParserCapabilities
+  note : String
+} derive(Eq, Show)
+
+pub(all) struct ParserCapabilities {
+  supports_incremental_parsing : Bool
+  supports_html_passthrough : Bool
+} derive(Eq, Show)
+
+pub(all) struct ParserRegistry {
+  markdown : ParserAdapter?
+  typst : ParserAdapter?
+  html : ParserAdapter?
+  unknown : ParserAdapter?
+} derive(Eq, Show)
+
+pub(all) struct RenderAdapter {
+  name : String
+  note : String
+} derive(Eq, Show)
+
+pub(all) struct RenderRegistry {
+  markdown : RenderAdapter?
+  typst : RenderAdapter?
+  html : RenderAdapter?
+  unknown : RenderAdapter?
+} derive(Eq, Show)
+
+pub(all) struct RenderedDocument {
+  backend_name : String
+  source_path : String
+  source_uuid : String
+  html : String
+  note : String
+} derive(Eq, Show)
+
+pub(all) struct SiteAssembly {
+  entries : Array[SiteEntry]
+  note : String
+} derive(Eq, Show)
+
+pub(all) struct SiteEntry {
+  kind : String
+  route : String
+  source_path : String
+  source_uuid : String
+  html : String
+} derive(Eq, Show)
+
+pub(all) struct SourceDocumentInput {
+  path : String
+  format : @core.SourceFormat
+  content : String
+  uuid : String
+} derive(Eq, Show)
+
+pub(all) struct TemplatedPage {
+  route : String
+  source_path : String
+  source_uuid : String
+  html : String
+  note : String
+} derive(Eq, Show)
+
+pub(all) struct WikiLinker {
+  name : String
+  note : String
+} derive(Eq, Show)
+
+// Type aliases
+
+// Traits
+

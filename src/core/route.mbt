@@ -7,7 +7,7 @@
 pub fn generate_route(source_path : String, style : RouteStyle) -> String {
   let stripped = strip_extension(source_path)
   match style {
-    RouteStyle::Pretty => {
+    RouteStyle::Pretty =>
       if stripped == "index" {
         "/"
       } else if stripped.has_suffix("/index") {
@@ -16,7 +16,6 @@ pub fn generate_route(source_path : String, style : RouteStyle) -> String {
       } else {
         "/\{stripped}/"
       }
-    }
     RouteStyle::Direct => "/\{stripped}.html"
   }
 }

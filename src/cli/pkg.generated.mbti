@@ -1,0 +1,58 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonink/cli"
+
+import {
+  "username/moonink/core",
+}
+
+// Values
+pub fn cli_exec(Array[String]) -> CliOutcome
+
+pub fn cli_help_text() -> String
+
+pub fn cli_run(Array[String]) -> CliOutcome
+
+pub fn parse_cli_command(Array[String]) -> CliCommand
+
+pub fn prepare_serve_dummy() -> ServeSession
+
+pub fn render_site_dummy(@core.MooninkConfig, @core.SiteModel) -> RenderPlan
+
+pub fn run_build_command_runtime() -> CliOutcome
+
+pub fn run_runtime_cli_command(CliCommand) -> CliOutcome
+
+// Errors
+
+// Types and methods
+pub enum CliCommand {
+  Help
+  Onboard
+  Build
+  Serve
+  Unknown(String)
+} derive(Eq, Show)
+
+pub(all) struct CliOutcome {
+  exit_code : Int
+  message : String
+} derive(Eq, Show)
+
+pub(all) struct RenderPlan {
+  output_dir : String
+  emitted_html_files : Int
+  emitted_assets : Int
+  note : String
+} derive(Eq, Show)
+
+pub(all) struct ServeSession {
+  host : String
+  port : Int
+  mode : String
+  note : String
+} derive(Eq, Show)
+
+// Type aliases
+
+// Traits
+

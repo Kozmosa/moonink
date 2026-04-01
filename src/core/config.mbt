@@ -59,7 +59,10 @@ fn extract_json_string(obj : Map[String, Json], key : String) -> String? {
 }
 
 ///|
-fn extract_json_string_array(obj : Map[String, Json], key : String) -> Array[String] {
+fn extract_json_string_array(
+  obj : Map[String, Json],
+  key : String,
+) -> Array[String] {
   match obj.get(key) {
     Some(Array(arr)) => {
       let result : Array[String] = []
@@ -81,9 +84,7 @@ pub fn parse_config_json(
   config_path : String,
   source : String,
 ) -> MooninkConfig raise ConfigError {
-  let json = try {
-    @json.parse(source.view())
-  } catch {
+  let json = @json.parse(source.view()) catch {
     err => raise ConfigError::InvalidJson(detail=err.to_string())
   }
   guard json is Object(obj) else {
@@ -135,9 +136,7 @@ pub fn format_config_error(err : ConfigError) -> String {
       "[config] io error:\n\{format_project_io_error(io_error)}"
     ConfigError::InvalidPath(path~, reason~) =>
       "[config] invalid path: \{path}\nreason: \{reason}"
-    ConfigError::InvalidJson(detail~) =>
-      "[config] invalid JSON: \{detail}"
-    ConfigError::MissingField(key~) =>
-      "[config] missing required field: \{key}"
+    ConfigError::InvalidJson(detail~) => "[config] invalid JSON: \{detail}"
+    ConfigError::MissingField(key~) => "[config] missing required field: \{key}"
   }
 }

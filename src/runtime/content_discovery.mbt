@@ -63,7 +63,7 @@ fn collect_content_files(
     }
     let format = @core.classify_source_format(full_path)
     match format {
-      @core.SourceFormat::Markdown => {
+      @core.SourceFormat::Markdown =>
         // Need to read file to check frontmatter for type classification
         // For initial discovery, default to Article; will be refined after frontmatter parsing
         discovered.push({
@@ -71,14 +71,12 @@ fn collect_content_files(
           content_kind: @core.ContentKind::Article,
           format,
         })
-      }
-      @core.SourceFormat::Html => {
+      @core.SourceFormat::Html =>
         discovered.push({
           path: full_path,
           content_kind: @core.ContentKind::Page,
           format,
         })
-      }
       _ => ()
     }
   }
