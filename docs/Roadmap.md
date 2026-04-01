@@ -218,6 +218,23 @@ Without a dedicated runtime IO boundary, these call sites would continue to spre
 `IO-P13` now defines explicit conflict and cancellation policy types and threads them through the native runtime adapter layer.
 `IO-P14` now closes the migration by updating the long-lived architecture and contributor docs so the runtime IO model is the default engineering path.
 
+### 8.3 DocFlow Parser Adapter Track
+
+DocFlow implements the document-flow parser adapter chain documented in `docs/technical/14-Doc-Flow-Parser-Impl-Plan.md`. The following milestones are now complete:
+
+- `DocFlow-P1` has introduced core parser domain types: `SourceFormat`, `SourceDocumentInput`, `ParsedDocument`, `DocumentDiagnostics`, `ParserCapabilities`;
+- `DocFlow-P2` has frozen adapter contracts for `ParserAdapter`, `RenderAdapter`, and `WikiLinker` with fake backends and no-op semantic stages;
+- `DocFlow-P3` has added `ParserRegistry` and `RenderRegistry` with format-keyed lookup and explicit missing-registration errors;
+- `DocFlow-P4` has added `UnsupportedTypstParserAdapter` and `HtmlPassthroughParserAdapter` so multiple format paths exist before real Typst integration;
+- `DocFlow-P5` has added a controlled split between recoverable diagnostics and fatal parser errors through `FatalParseError` and `parse_with_adapter_result`;
+- `DocFlow-P6` has added backend-facing contract tests for `mizchi/markdown` integration covering empty input, paragraphs, headings, lists, links, inline HTML, and capability reporting;
+- `DocFlow-P7` has integrated the real Markdown parser adapter backed by `mizchi/markdown`;
+- `DocFlow-P8` has integrated the real Markdown render adapter so parsed content becomes HTML through the render boundary;
+- `DocFlow-P9` has inserted an explicit no-op `WikiLinker` pipeline stage into the article flow;
+- `DocFlow-P10` has added dummy `Templater` and `SiteConstructor` stages so article/page outputs enter a common downstream `SiteAssembly`;
+- `DocFlow-P11` has wired the article/page branching and adapter flow into the build pipeline so fixtures pass through the new content-processing closure;
+- `DocFlow-P12` now closes the track by stabilizing documentation and ensuring the public adapter surface is ready for Phase 2 extensions.
+
 ### 8.3 Atomic Commit Roadmap
 
 - `IO-P0: Writing Plan` ✅

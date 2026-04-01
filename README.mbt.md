@@ -2,7 +2,7 @@
 
 ## MoonInk CLI Scaffold
 
-This repository is currently in the early implementation phase.
+This repository implements the MoonInk static site generator.
 
 Implemented pieces:
 
@@ -14,10 +14,15 @@ Implemented pieces:
 Current status:
 
 - command parsing is wired through the root package;
-- `cmd/main` now reads real runtime argv;
-- `new` has both a pure planning path for tests and a real runtime path that creates a starter project on disk;
-- starter-project filesystem IO is handled through `moonbitlang/x/fs`;
-- the starter scaffold writes `moonink.toml`, sample docs/articles content, theme overrides, and `.gitignore`;
-- `build` now implements phase 1a input handling: real `moonink.toml` loading, minimal validation, and recursive Markdown discovery under `docs/` and `articles/`;
-- rendering and `serve` still remain placeholder modules after the input stage;
-- frontmatter parsing, Markdown rendering, routing, and search are not implemented yet.
+- `cmd/main` reads real runtime argv;
+- `new` creates starter projects with normalized paths and UTF-8 files;
+- `build` implements phase 1a input handling: configuration loading, content discovery, and DocFlow pipeline integration;
+- DocFlow parser adapter chain is now complete:
+  - `ParserAdapter` boundary with `mizchi/markdown` integration;
+  - `RenderAdapter` boundary with Markdown-to-HTML rendering;
+  - `WikiLinker` no-op semantic stage;
+  - downstream `Templater` and `SiteConstructor` stages;
+  - article/page branching and build pipeline closure;
+- rendering is exercised through the DocFlow test surface;
+- `serve` remains a placeholder module;
+- frontmatter parsing, routing, and search are planned for Phase 2.
