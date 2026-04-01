@@ -1,0 +1,4 @@
+import {
+  "username/moonink/core" @core,
+  "moonbitlang/x/fs" @fs,
+}
