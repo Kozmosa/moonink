@@ -426,6 +426,43 @@ pub fn construct_site(entries : Array[SiteEntry]) -> SiteAssembly {
 }
 
 ///|
+/// DocFlow build closure that routes discovered Markdown files through the article pipeline.
+pub fn run_docflow_build_pipeline(
+  files : Array[String],
+  parser : ParserAdapter,
+  linker : WikiLinker,
+  renderer : RenderAdapter,
+) -> SiteAssembly {
+  let entries = []
+  for file in files {
+    let input : SourceDocumentInput = {
+      path: file,
+      format: SourceFormat::Markdown,
+      content: "[docflow placeholder content for \{file}]",
+      uuid: file,
+    }
+    match run_article_pipeline(parser, linker, renderer, input) {
+      Ok(result) => {
+        let templated = apply_dummy_template(result.rendered)
+        entries.push(article_site_entry(templated))
+      }
+      Err(_) => {
+        let failed_rendered : RenderedDocument = {
+          backend_name: "docflow-build-failed",
+          source_path: file,
+          source_uuid: file,
+          html: "<!-- docflow build failed for \{file} -->",
+          note: "docflow build placeholder for failed article pipeline",
+        }
+        let templated = apply_dummy_template(failed_rendered)
+        entries.push(article_site_entry(templated))
+      }
+    }
+  }
+  construct_site(entries)
+}
+
+///|
 /// Run the article pipeline explicitly through parser, WikiLinker, and render stages.
 pub fn run_article_pipeline(
   parser : ParserAdapter,

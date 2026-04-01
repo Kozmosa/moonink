@@ -920,3 +920,44 @@ test "docflow downstream assembly accepts page output in common structure" {
     content="dummy site constructor now collects article and page outputs into one shared assembly",
   )
 }
+
+///|
+test "docflow build pipeline processes discovered article files into site assembly" {
+  let parser = @moonink.markdown_parser_adapter()
+  let linker = @moonink.noop_wikilinker()
+  let renderer = @moonink.markdown_render_adapter()
+  let assembly = @moonink.run_docflow_build_pipeline(
+    ["articles/first.md", "articles/second.md"],
+    parser,
+    linker,
+    renderer,
+  )
+  inspect(assembly.entries.length(), content="2")
+  inspect(assembly.entries[0].kind, content="article")
+  inspect(assembly.entries[0].source_path, content="articles/first.md")
+  inspect(assembly.entries[1].kind, content="article")
+  inspect(assembly.entries[1].source_path, content="articles/second.md")
+  inspect(
+    assembly.note,
+    content="dummy site constructor now collects article and page outputs into one shared assembly",
+  )
+}
+
+///|
+test "docflow build pipeline closure integrates with content discovery result" {
+  let config = match @moonink.load_config_result("fixtures/build_phase1a/minimal/moonink.toml") {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let inventory = match @moonink.discover_content_result(config) {
+    Ok(inventory) => inventory
+    Err(_) => panic()
+  }
+  let parser = @moonink.markdown_parser_adapter()
+  let linker = @moonink.noop_wikilinker()
+  let renderer = @moonink.markdown_render_adapter()
+  let combined_files = inventory.docs_files + inventory.article_files
+  let assembly = @moonink.run_docflow_build_pipeline(combined_files, parser, linker, renderer)
+  inspect(combined_files.length(), content="\{inventory.discovered_docs + inventory.discovered_articles}")
+  inspect(assembly.entries.length(), content="\{combined_files.length()}")
+}
