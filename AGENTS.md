@@ -13,7 +13,14 @@ You can browse and install extra skills here:
   `_wbtest.mbt`).
 
 - In the toplevel directory, there is a `moon.mod.json` file listing module
-  metadata.
+  metadata. Source code lives under `src/` (configured via `"source": "src"`).
+
+- The project uses four packages under `src/`:
+  - `core` — pure types, config, content model, frontmatter, route, path policy (no external deps)
+  - `docflow` — document pipeline: parser/render adapters, wikilinker, markdown backend
+  - `runtime` — IO boundary: filesystem facade, config loader, content discovery
+  - `cli` — command parsing and dispatch; depends on all three above
+  - `cmd/main` — binary entry point (`is-main: true`)
 
 ## Binding Project Policy
 

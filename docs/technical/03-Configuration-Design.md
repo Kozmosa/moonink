@@ -2,58 +2,57 @@
 
 ## 1. Format Choice
 
-MoonInk V1 uses TOML as its main project configuration format.
+MoonInk uses JSON as its project configuration format (`moonink.json`).
 
 ## 2. Design Principles
 
-- easy to read manually;
-- deterministic to parse;
+- easy to read and edit manually;
+- deterministic to parse using MoonBit's built-in `@json.parse()`;
 - explicit over magical defaults;
-- small schema in V1.
+- small schema focused on V1 needs.
 
-## 3. Expected Core Sections
+## 3. Configuration Schema
 
-```toml
-[site]
-name = "MoonInk Example"
-url = "https://example.com"
-
-[content]
-docs = "docs"
-articles = "articles"
-
-[theme]
-name = "default"
-
-[build]
-output = "site"
+```json
+{
+  "site_name": "My Site",
+  "site_url": "https://example.com",
+  "content_dir": ".",
+  "output_dir": "dist",
+  "exclude": [".obsidian", "templates", "dist", "node_modules"],
+  "route_style": "pretty",
+  "text_encoding": "utf-8"
+}
 ```
 
-## 4. Required And Optional Fields
+## 4. Field Reference
 
 ### Required
 
-- site name
-- content roots or default content root
-- build output directory
+- `site_name` — display name for the site
 
-### Optional
+### Optional (with defaults)
 
-- site URL
-- theme settings
-- navigation override
-- search settings
+- `site_url` — canonical site URL (no default)
+- `content_dir` — root directory to scan for content (default: `"."`)
+- `output_dir` — build output directory (default: `"dist"`)
+- `exclude` — directories to skip during recursive scan (default: `[".obsidian", ".git", "node_modules", "dist"]`)
+- `route_style` — URL shape: `"pretty"` (trailing-slash directories) or `"direct"` (`.html` extension); default: `"pretty"`
+- `text_encoding` — encoding declaration in emitted HTML (default: `"utf-8"`)
 
-## 5. Validation Rules
+## 5. Route Style
 
-Validation should catch:
+- `pretty`: `guides/intro.md` → `/guides/intro/`; `index.md` → `/`
+- `direct`: `guides/intro.md` → `/guides/intro.html`
 
-- missing required sections;
-- invalid path references;
-- duplicate route definitions;
-- malformed navigation entries;
-- conflicting page identifiers.
+## 6. Validation Rules
 
-## 6. Compatibility Position
+Validation catches:
 
-MoonInk does not attempt first-release compatibility with `mkdocs.yml`, but it should preserve familiar concepts such as site metadata, navigation, theme settings, and output directory definition.
+- missing required fields (`site_name`);
+- invalid or parent-traversal paths;
+- malformed JSON.
+
+## 7. Obsidian Vault Compatibility
+
+When MoonInk runs inside an Obsidian vault, add `.obsidian` to `exclude`. The `content_dir: "."` default means MoonInk scans the current directory, which is the vault root. Frontmatter fields in Obsidian notes are compatible with MoonInk's frontmatter schema.

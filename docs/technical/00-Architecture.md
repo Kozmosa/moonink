@@ -24,14 +24,14 @@ MoonInk V1 is divided into the following layers:
 6. site model layer
 7. rendering and output layer
 
-The runtime / IO boundary layer is now concretely represented by:
+The runtime / IO boundary layer is now concretely represented by the `src/runtime/` package:
 
-- `runtime_io.mbt` for the sync filesystem facade;
-- `runtime_async.mbt` for async-capable task descriptors and task constructors;
-- `runtime_native.mbt` for native runtime adaptation and policy-aware execution hooks;
-- `runtime_policy.mbt` for conflict handling and cancellation policy types.
+- `runtime/io.mbt` for the sync filesystem facade;
+- `runtime/async.mbt` for async-capable task descriptors and task constructors;
+- `runtime/native.mbt` for native runtime adaptation and policy-aware execution hooks;
+- `runtime/policy.mbt` for conflict handling and cancellation policy types.
 
-This layer is the single place where MoonInk should wrap `moonbitlang/x/fs`, surface runtime task execution, and hold future native scheduler/cancellation hooks.
+This package is the single place where MoonInk wraps `moonbitlang/x/fs`, surfaces runtime task execution, and holds future native scheduler/cancellation hooks.
 
 The document flow layer is the most important near-term refinement. It turns the earlier generic parsing stage into an explicit sequence of processing boundaries.
 
@@ -53,27 +53,43 @@ CLI Command
 
 For V1, `Templater` and `SiteConstructor` may begin as narrow internal boundaries rather than fully featured systems, but the flow should still be expressed explicitly.
 
-## 5. Major Modules
+## 5. Major Packages And Modules
 
-- `cli`: command parsing and user-facing execution entry
-- `io_runtime`: runtime command dispatch entry that hands side-effecting work to native runtime adapters
-- `runtime_io`: project-owned sync filesystem facade over `moonbitlang/x/fs`
-- `runtime_async`: async-capable task descriptors and task constructors for IO-backed flows
-- `runtime_native`: native runtime adapter and policy-aware task execution hooks
-- `runtime_policy`: runtime conflict and cancellation policy types
-- `config`: site configuration schema and validation
-- `content`: file scanning, classification, and source loading
-- `frontmatter`: metadata extraction and body separation
-- `parser_adapter`: format-facing parsing boundary for Markdown, future Typst, and HTML passthrough
-- `wikilink`: semantic document linking stage, including future WikiLink and backlink logic
-- `render_adapter`: conversion from parsed document form into render-ready HTML
-- `templater`: theme shell and page framing
-- `site_constructor`: assembly of processed pages into final site-oriented structures
-- `routing`: route generation and canonical URL decisions
-- `nav`: navigation model generation
-- `model`: global site model and page model
-- `search`: static search index generation
-- `serve`: local development server
+The codebase is organized into four packages under `src/`:
+
+**`src/core/`** — pure types and logic, no external dependencies
+- `config.mbt`: `MooninkConfig` schema, JSON parsing, `RouteStyle`
+- `content.mbt`: `ContentFile`, `ContentInventory`, `ContentKind`, `SourceFormat`, classification helpers
+- `frontmatter.mbt`: `Frontmatter` schema, YAML-like extraction and parsing
+- `route.mbt`: route generation (`pretty` and `direct` styles)
+- `page_meta.mbt`: `PageMeta` type combining source path, URL path, frontmatter, and kind
+- `model.mbt`: `BuildContext`, `SiteModel`
+- `io_error.mbt`: `ProjectIOError`
+- `io_policy.mbt`: path normalization and parent-traversal policy
+
+**`src/docflow/`** — document pipeline
+- `parser.mbt`: `SourceDocumentInput`, `ParsedDocument`, diagnostics types
+- `adapters.mbt`: `ParserAdapter`/`RenderAdapter` registry keyed by `SourceFormat`
+- `markdown.mbt`: Markdown backend integrating `mizchi/markdown`
+- `wikilinker.mbt`: `WikiLinker` (currently no-op stub)
+- `pipeline.mbt`: article pipeline, build pipeline, templater, site assembly
+
+**`src/runtime/`** — IO boundary
+- `io.mbt`: sync filesystem facade over `moonbitlang/x/fs`
+- `async.mbt`: `RuntimeIOTask[T]` wrapper
+- `native.mbt`: `NativeRuntimeAdapter`
+- `policy.mbt`: conflict and cancellation policy types
+- `config_loader.mbt`: `load_config_result`, `load_config_task`
+- `content_discovery.mbt`: recursive content file discovery with exclude patterns
+
+**`src/cli/`** — CLI entry and command dispatch
+- `moonink.mbt`: `CliCommand` enum, `parse_cli_command`, `cli_run`, `cli_exec`
+- `cli_output.mbt`: help text
+- `cmd_build.mbt`: build command implementation
+- `cmd_onboard.mbt`: onboard command implementation
+- `cmd_serve.mbt`: serve placeholder
+
+**`src/cmd/main/`** — binary entry point (`is-main: true`)
 
 ## 6. Data Model Progression
 
@@ -91,12 +107,13 @@ This progression allows each stage to be tested independently.
 
 ## 7. Article And Page Branching
 
-MoonInk should distinguish at least two content paths:
+MoonInk uses a dual-track content model. Classification is by file extension and frontmatter, not by directory structure:
 
-- `article`: markup-origin content such as Markdown and future Typst;
-- `page`: HTML-origin content that can use an HTML passthrough adapter.
+- `.html` files → `Page` (HTML passthrough adapter)
+- `.md` files with frontmatter `type: page` → `Page`
+- other `.md` files → `Article` (Markdown parser adapter)
 
-The intent is not to create two unrelated systems, but two explicit branches that still converge before final site assembly.
+Both tracks converge at the Templater and SiteConstructor stages before final assembly. This enables MoonInk to operate inside existing Markdown folders (including Obsidian vaults) without requiring a specific directory layout.
 
 ## 8. Runtime And Async Guardrail
 

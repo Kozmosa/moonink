@@ -4,146 +4,138 @@
 
 This document is a maintained global architecture note for the MoonInk CLI.
 It must be updated whenever the CLI surface, execution flow, or structural
-module boundaries change materially.
+package boundaries change materially.
+
+**Last updated:** 2026-04-01 — reflects multi-package restructuring (core/docflow/runtime/cli).
 
 ## Current CLI Surface
 
-The current scaffold supports the following command model:
-
-- `help`
-- `new [project-name]`
-- `build`
-- `serve`
+- `moonink help`
+- `moonink onboard` — first-time setup: generates `moonink.json`, injects default frontmatter into `.md` files that lack it
+- `moonink build`
+- `moonink serve` (placeholder)
 - unknown command fallback
+
+`new` has been replaced by `onboard`.
+
+## Current Package Structure
+
+```
+src/
+  core/       — pure types and logic; zero external deps
+  docflow/    — document pipeline adapters and backends
+  runtime/    — filesystem IO boundary; wraps moonbitlang/x/fs
+  cli/        — command dispatch and user-facing execution
+  cmd/main/   — binary entry point
+```
+
+Dependency graph:
+
+```
+cmd/main → cli → core
+                 runtime → core
+                 docflow → core
+```
 
 ## Current Execution Flow
 
 ```text
-cmd/main
+src/cmd/main/main.mbt
   -> @env.args()
   -> normalize_runtime_argv(...)
-  -> @moonink.cli_exec(argv)
-  -> parse_cli_command
-  -> io_runtime.mbt runtime dispatch
-  -> runtime_native.mbt adapter
-  -> runtime_async.mbt task boundary
-  -> feature result API / pure planner
+  -> @cli.cli_exec(argv)
+  -> parse_cli_command          [src/cli/moonink.mbt]
+  -> runtime task dispatch      [src/cli/cmd_build.mbt / cmd_onboard.mbt]
+  -> runtime/native.mbt adapter
+  -> runtime/async.mbt task boundary
+  -> feature result APIs in core / runtime
 ```
+
+`cli_run()` is the pure path (used by tests). `cli_exec()` drives real IO through the runtime stack.
 
 ## Current Command Responsibilities
 
 ### help
 
-Returns static scaffold help text.
+Returns static help text.
 
-### new
+### onboard
 
-The CLI now has two execution layers for `new`:
-
-- `cli_run(...)` remains pure and returns the starter-project plan status for tests;
-- `cli_exec(...)` delegates to `io_runtime.mbt`, then `runtime_native.mbt`, then the starter write task path.
-
-The emitted starter currently creates:
-
-- `moonink.toml`
-- `docs/index.md`
-- `docs/getting-started.md`
-- `articles/hello-moonink.md`
-- `theme/README.md`
-- `theme/overrides.css`
-- `.gitignore`
-
-The runtime command now applies explicit write safety rules before filesystem mutation:
-
-- starter emission is planned via `StarterWritePlan`;
-- overwrite policy is currently `abort_if_target_exists`;
-- directory/file writes happen only after preflight validation succeeds.
-
-Filesystem access now flows through the settled runtime stack:
-
-- `runtime_io.mbt` for sync filesystem facade calls;
-- `runtime_async.mbt` for starter write tasks;
-- `runtime_native.mbt` for native runtime adapter execution;
-- `runtime_policy.mbt` for conflict/cancellation policy defaults.
+1. Checks if `moonink.json` already exists.
+2. If not: inspects current directory name to infer `site_name`, emits a default `moonink.json`.
+3. Scans all `.md` files; for those missing a frontmatter block, injects minimal frontmatter (`title` inferred from filename or first heading, `type: article`).
+4. Reports a summary of what was created and modified.
 
 ### build
 
-`build` now implements the first real input stage of the pipeline through the settled runtime stack:
+Current real behavior:
+
+1. Reads `moonink.json` via `runtime/config_loader.mbt` → `parse_config_json`.
+2. Discovers content via `runtime/content_discovery.mbt` → recursive scan with exclude patterns.
+3. Reports phase-1a summary (config + discovery ready).
+4. Rendering/emit stages remain scaffold placeholders.
+
+Pipeline target (explicit stages):
 
 ```text
-io_runtime.mbt
-  -> runtime_native.mbt adapter
-  -> runtime_async.mbt read/discovery tasks
-  -> config result API / pure parsing helpers
-  -> content discovery planning + planned traversal
-  -> build_site_model_dummy
-  -> render_site_dummy
+Config load
+  -> Content discovery (recursive scan + exclude)
+  -> Frontmatter parse (classify article/page)
+  -> DocFlow: ParserAdapter -> WikiLinker -> RenderAdapter
+  -> Templater -> SiteConstructor -> emit to dist/
 ```
-
-Current real behavior includes:
-
-- reading `moonink.toml` through `read_config_source_task(...)`;
-- validating the required `site`, `content`, and `build` fields;
-- planning workspace roots before recursive traversal;
-- recursively scanning `docs/` and `articles/` for `.md` files;
-- reporting a real phase-1a summary before the later pipeline stages remain placeholders.
 
 ### serve
 
-Delegates to placeholder serve session preparation.
+Placeholder; delegates to stub serve session.
 
-## Current Structural Boundaries
+## Content Model
 
-### CLI Core
+Dual-track classification (no separate directories required):
 
-- `moonink.mbt`
-- `cli_output.mbt`
+| File type | Classification |
+|-----------|---------------|
+| `.html` | Page |
+| `.md` with `type: page` in frontmatter | Page |
+| other `.md` | Article |
 
-### Feature Modules
+Default exclude patterns: `.obsidian`, `.git`, `node_modules`, `dist`, any hidden directory.
 
-- `starter.mbt`
-- `config.mbt`
-- `content.mbt`
-- `model.mbt`
-- `render.mbt`
-- `serve_runtime.mbt`
+## Configuration
 
-### Executable Wrapper
+Config file: `moonink.json` (JSON format). Parsed via MoonBit's built-in `@json.parse()`.
 
-- `cmd/main/main.mbt`
-- `cmd/main/moon.pkg`
-
-## Architectural Constraints
-
-- keep `cmd/main` thin;
-- keep a pure command core path for tests where possible;
-- preserve explicit boundaries between CLI, config, content, model, render, and serve;
-- keep starter planning and starter emission in the same feature module without collapsing them into CLI parsing;
-- replace dummy implementations incrementally without changing the public command surface too early.
+Key fields: `site_name`, `site_url`, `content_dir` (default `"."`), `output_dir` (default `"dist"`), `exclude`, `route_style` (`"pretty"` or `"direct"`).
 
 ## Runtime IO Direction
 
-The IO refactor track has now landed a concrete default execution model:
+- `runtime/io.mbt` — project-owned sync filesystem facade over `moonbitlang/x/fs`
+- `runtime/async.mbt` — `RuntimeIOTask[T]` wrapper (currently synchronous `Ready(T)`)
+- `runtime/native.mbt` — default native runtime adapter for CLI-side side effects
+- `runtime/policy.mbt` — conflict and cancellation policy types
 
-- `runtime_io.mbt` is the project-owned sync filesystem facade;
-- `runtime_async.mbt` is the async-capable task boundary for IO-backed workflows;
-- `runtime_native.mbt` is the default native runtime adapter for CLI-side side effects;
-- `runtime_policy.mbt` defines the current conflict and cancellation policy contract;
-- feature modules expose result-oriented APIs and pure planning/parsing helpers where practical.
+Feature modules in `core` and `docflow` expose result-oriented APIs and remain IO-free. Only `runtime` and `cli` touch the filesystem.
 
-This means direct synchronous feature entrypoints are no longer the intended public path for IO-backed behavior.
+## Structural Constraints
+
+- keep `cmd/main` thin (argv normalization only);
+- keep `cli_run()` pure for testability;
+- `core` must remain dependency-free (no `x/fs`, no `markdown`);
+- preserve explicit stage boundaries: config → discovery → parse → render → emit;
+- replace dummy/scaffold stages incrementally without changing the public command surface prematurely.
 
 ## Known Gaps
 
-- no structured option parser yet;
-- `build` still uses dummy site-model and render stages after config/discovery;
-- `serve` remains entirely placeholder;
-- runtime policy exists, but true parallel scheduling and active cancellation are not implemented yet.
+- no structured option parser yet (flags and options are not parsed);
+- `build` still uses dummy site-model and render/emit stages after config/discovery;
+- `serve` is entirely placeholder;
+- frontmatter-based `type: page` classification happens during content discovery without reading file contents (initial discovery defaults all `.md` to Article; refinement after frontmatter parse is a planned next step);
+- WikiLink resolution (`wikilinker.mbt`) is a no-op stub.
 
 ## Next Planned Evolution
 
-1. use the settled runtime stack as the default path for any new IO-backed feature work;
-2. add structured command options and flags;
-3. implement frontmatter parsing and richer content typing after discovery;
-4. replace the remaining dummy model/render stages once the content input layer is stable;
-5. evolve runtime policy into real scheduling and cancellation mechanics when needed.
+1. implement frontmatter reading during content discovery to enable `type: page` reclassification;
+2. wire DocFlow pipeline into real `build` command output (replace dummy render stages);
+3. emit actual HTML files to `dist/` with route-derived filenames;
+4. add structured command flags (e.g. `--config`, `--output`);
+5. evolve WikiLinker from no-op to Obsidian-compatible `[[filename]]` resolution.
