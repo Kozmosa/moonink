@@ -1,9 +1,0 @@
-[site]
-name = "Broken Fixture"
-
-[content]
-docs = "docs"
-articles = "articles"
-
-[build]
-output = "site"
