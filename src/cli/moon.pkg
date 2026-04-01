@@ -1,5 +1,4 @@
 import {
   "username/moonink/core" @core,
-  "username/moonink/docflow" @docflow,
   "username/moonink/runtime" @runtime,
 }

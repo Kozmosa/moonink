@@ -10,23 +10,6 @@ fn expected_format_for_adapter(adapter : ParserAdapter) -> @core.SourceFormat? {
 }
 
 ///|
-fn typst_stub_diagnostics() -> DocumentDiagnostics {
-  {
-    entries: [
-      {
-        severity: DiagnosticSeverity::Warn,
-        line: Some(1),
-        message: "Typst parsing is not implemented yet.",
-        hint: Some(
-          "Use the stub diagnostic until the real Typst backend lands.",
-        ),
-        backend_name: "unsupported-typst-parser",
-      },
-    ],
-  }
-}
-
-///|
 fn parse_document_with_adapter_result(
   adapter : ParserAdapter,
   input : SourceDocumentInput,
