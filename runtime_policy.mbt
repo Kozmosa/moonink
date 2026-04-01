@@ -25,7 +25,6 @@ pub fn default_runtime_task_policy() -> RuntimeTaskPolicy {
   {
     conflict_policy: RuntimeConflictPolicy::AbortOnConflict,
     cancellation_policy: RuntimeCancellationPolicy::CancelBeforeSideEffects,
-    scheduling_note:
-      "MoonInk currently executes tasks eagerly on the native runtime, but future schedulers should honor abort-on-conflict and cancel-before-side-effects semantics.",
+    scheduling_note: "MoonInk currently executes tasks eagerly on the native runtime, but future schedulers should honor abort-on-conflict and cancel-before-side-effects semantics.",
   }
 }

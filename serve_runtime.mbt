@@ -22,7 +22,6 @@ fn run_serve_command() -> CliOutcome {
   let session = prepare_serve_dummy()
   {
     exit_code: 0,
-    message:
-      "[serve] scaffold runtime prepared\naddress: \{session.host}:\{session.port}\nstatus: placeholder only",
+    message: "[serve] scaffold runtime prepared\naddress: \{session.host}:\{session.port}\nstatus: placeholder only",
   }
 }

@@ -16,7 +16,10 @@ pub(all) struct CliOutcome {
 } derive(Show, Eq)
 
 ///|
-fn parse_command_and_payload(command : String, payload : Array[String]) -> CliCommand {
+fn parse_command_and_payload(
+  command : String,
+  payload : Array[String],
+) -> CliCommand {
   if command == "help" {
     CliCommand::Help
   } else if command == "new" {

@@ -53,7 +53,10 @@ pub fn dirname_relative_path(path : String) -> String raise PathPolicyError {
 }
 
 ///|
-pub fn join_relative_path(base : String, child : String) -> String raise PathPolicyError {
+pub fn join_relative_path(
+  base : String,
+  child : String,
+) -> String raise PathPolicyError {
   let normalized_child = normalize_relative_path(child)
   if base == "." || base == "" {
     normalized_child

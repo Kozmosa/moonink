@@ -5,8 +5,12 @@ pub(all) suberror ProjectIOError {
 } derive(Show, Eq)
 
 ///|
-pub fn project_io_error(operation : String, path : String, detail : String) -> ProjectIOError {
-  ProjectIOError::Failure(operation=operation, path=path, detail=detail)
+pub fn project_io_error(
+  operation : String,
+  path : String,
+  detail : String,
+) -> ProjectIOError {
+  ProjectIOError::Failure(operation~, path~, detail~)
 }
 
 ///|

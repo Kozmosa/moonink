@@ -10,8 +10,7 @@ pub(all) struct NativeRuntimeAdapter {
 pub fn native_runtime_adapter() -> NativeRuntimeAdapter {
   {
     name: "native-runtime-adapter",
-    note:
-      "Native runtime wiring is now isolated behind explicit adapter helpers instead of leaking through generic task execution call sites.",
+    note: "Native runtime wiring is now isolated behind explicit adapter helpers instead of leaking through generic task execution call sites.",
     policy: runtime_task_policy(),
   }
 }

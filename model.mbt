@@ -8,7 +8,10 @@ pub(all) struct SiteModel {
 } derive(Show, Eq)
 
 ///|
-pub fn build_site_model_dummy(_config : LoadedConfig, inventory : ContentInventory) -> SiteModel {
+pub fn build_site_model_dummy(
+  _config : LoadedConfig,
+  inventory : ContentInventory,
+) -> SiteModel {
   {
     page_count: inventory.discovered_documents,
     article_count: 1,

@@ -40,7 +40,10 @@ pub fn io_create_dir(path : String) -> Unit raise ProjectIOError {
 }
 
 ///|
-pub fn io_write_string(path : String, content : String) -> Unit raise ProjectIOError {
+pub fn io_write_string(
+  path : String,
+  content : String,
+) -> Unit raise ProjectIOError {
   @fs.write_string_to_file(path, content) catch {
     err => raise project_io_error("write_file", path, err.to_string())
   }

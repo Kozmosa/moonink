@@ -189,8 +189,7 @@ pub fn plan_starter_project(project_name : String?) -> StarterTemplatePlan {
     created_files: starter_template_files(resolved_name),
     content_roots: ["docs", "articles"],
     theme_dir: "theme",
-    note:
-      "Starter template now models the Phase 1 sample MoonInk site layout and can be emitted by the runtime CLI entry with normalized relative paths and UTF-8 text files.",
+    note: "Starter template now models the Phase 1 sample MoonInk site layout and can be emitted by the runtime CLI entry with normalized relative paths and UTF-8 text files.",
   }
 }
 
@@ -203,9 +202,7 @@ fn append_unique_path(paths : Array[String], path : String) -> Unit {
 
 ///|
 fn directory_prefixes(path : String) -> Array[String] {
-  let normalized = normalize_relative_path(path) catch {
-    _ => path
-  }
+  let normalized = normalize_relative_path(path) catch { _ => path }
   let prefixes = []
   let segments = normalized.split("/")
   let mut current = ""
@@ -214,11 +211,7 @@ fn directory_prefixes(path : String) -> Array[String] {
     if segment == "" {
       continue
     }
-    current = if current == "" {
-      segment
-    } else {
-      "\{current}/\{segment}"
-    }
+    current = if current == "" { segment } else { "\{current}/\{segment}" }
     append_unique_path(prefixes, current)
   }
   prefixes
@@ -230,15 +223,21 @@ fn starter_directories(plan : StarterTemplatePlan) -> Array[String] {
   append_unique_path(directories, plan.root_dir)
   append_unique_path(
     directories,
-    join_relative_path(plan.root_dir, "docs") catch { _ => "\{plan.root_dir}/docs" },
+    join_relative_path(plan.root_dir, "docs") catch {
+      _ => "\{plan.root_dir}/docs"
+    },
   )
   append_unique_path(
     directories,
-    join_relative_path(plan.root_dir, "articles") catch { _ => "\{plan.root_dir}/articles" },
+    join_relative_path(plan.root_dir, "articles") catch {
+      _ => "\{plan.root_dir}/articles"
+    },
   )
   append_unique_path(
     directories,
-    join_relative_path(plan.root_dir, "theme") catch { _ => "\{plan.root_dir}/theme" },
+    join_relative_path(plan.root_dir, "theme") catch {
+      _ => "\{plan.root_dir}/theme"
+    },
   )
   directories
 }
@@ -251,7 +250,9 @@ fn scoped_output_path(root_dir : String, relative_path : String) -> String {
 }
 
 ///|
-fn starter_write_targets(plan : StarterTemplatePlan) -> Array[StarterWriteTarget] {
+fn starter_write_targets(
+  plan : StarterTemplatePlan,
+) -> Array[StarterWriteTarget] {
   let targets = []
   for file in plan.created_files {
     targets.push({
@@ -282,16 +283,14 @@ fn validate_starter_write_plan(write_plan : StarterWritePlan) -> CliOutcome? {
   if io_path_exists(write_plan.root_dir) {
     return Some({
       exit_code: 1,
-      message:
-        "[new] target directory already exists\nroot: \{write_plan.root_dir}\nstatus: aborted to avoid overwriting existing files",
+      message: "[new] target directory already exists\nroot: \{write_plan.root_dir}\nstatus: aborted to avoid overwriting existing files",
     })
   }
   for file in write_plan.files {
     if io_path_exists(file.output_path) {
       return Some({
         exit_code: 1,
-        message:
-          "[new] target file already exists\nroot: \{write_plan.root_dir}\npath: \{file.output_path}\nstatus: aborted before writes to preserve existing content",
+        message: "[new] target file already exists\nroot: \{write_plan.root_dir}\npath: \{file.output_path}\nstatus: aborted before writes to preserve existing content",
       })
     }
   }
@@ -299,7 +298,9 @@ fn validate_starter_write_plan(write_plan : StarterWritePlan) -> CliOutcome? {
 }
 
 ///|
-fn apply_starter_write_plan(write_plan : StarterWritePlan) -> CliOutcome raise ProjectIOError {
+fn apply_starter_write_plan(
+  write_plan : StarterWritePlan,
+) -> CliOutcome raise ProjectIOError {
   for directory in write_plan.directories {
     io_create_dir(directory)
   }
@@ -308,8 +309,7 @@ fn apply_starter_write_plan(write_plan : StarterWritePlan) -> CliOutcome raise P
   }
   {
     exit_code: 0,
-    message:
-      "[new] starter project created\nroot: \{write_plan.root_dir}\nfiles written: \{write_plan.file_count}\nencoding: \{write_plan.encoding}\noverwrite policy: \{write_plan.overwrite_policy}\nnext: edit moonink.toml and begin writing content",
+    message: "[new] starter project created\nroot: \{write_plan.root_dir}\nfiles written: \{write_plan.file_count}\nencoding: \{write_plan.encoding}\noverwrite policy: \{write_plan.overwrite_policy}\nnext: edit moonink.toml and begin writing content",
   }
 }
 
@@ -318,15 +318,14 @@ pub fn emit_starter_project_result(plan : StarterTemplatePlan) -> CliOutcome {
   let write_plan = plan_starter_write(plan)
   match validate_starter_write_plan(write_plan) {
     Some(outcome) => outcome
-    None => {
+    None =>
       apply_starter_write_plan(write_plan) catch {
-        err => {
-          exit_code: 1,
-          message:
-            "[new] failed to create starter project\nroot: \{plan.root_dir}\nio error:\n\{format_project_io_error(err)}\nwrite safety: preflight completed before directory creation and file writes",
-        }
+        err =>
+          {
+            exit_code: 1,
+            message: "[new] failed to create starter project\nroot: \{plan.root_dir}\nio error:\n\{format_project_io_error(err)}\nwrite safety: preflight completed before directory creation and file writes",
+          }
       }
-    }
   }
 }
 
@@ -336,7 +335,6 @@ fn run_new_command(project_name : String?) -> CliOutcome {
   let write_plan = plan_starter_write(plan)
   {
     exit_code: 0,
-    message:
-      "[new] starter template planned\nproject: \{plan.project_name}\nroot: \{plan.root_dir}\nfiles: \{write_plan.file_count}\ncontent roots: docs, articles\ntheme dir: \{plan.theme_dir}\nencoding: \{write_plan.encoding}\noverwrite policy: \{write_plan.overwrite_policy}\nstatus: ready for file emission",
+    message: "[new] starter template planned\nproject: \{plan.project_name}\nroot: \{plan.root_dir}\nfiles: \{write_plan.file_count}\ncontent roots: docs, articles\ntheme dir: \{plan.theme_dir}\nencoding: \{write_plan.encoding}\noverwrite policy: \{write_plan.overwrite_policy}\nstatus: ready for file emission",
   }
 }

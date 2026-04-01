@@ -24,7 +24,9 @@ pub fn render_markdown_backend_payload(serialized_markdown : String) -> String {
 
 ///|
 /// Parse Markdown through mizchi/markdown and normalize the observable contract surface for tests.
-pub fn parse_markdown_backend_contract(source : String) -> MarkdownBackendContract {
+pub fn parse_markdown_backend_contract(
+  source : String,
+) -> MarkdownBackendContract {
   let result = @markdown.parse(source)
   {
     html_output: @markdown.render_html(result.document),

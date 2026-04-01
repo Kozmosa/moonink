@@ -9,7 +9,11 @@ pub(all) suberror AdapterRegistryError {
 /// Fatal parser failures for states where no meaningful ParsedDocument can be returned.
 pub(all) suberror FatalParseError {
   InvalidAdapterState(adapter_name~ : String, reason~ : String)
-  UnsupportedFormat(adapter_name~ : String, expected~ : SourceFormat, actual~ : SourceFormat)
+  UnsupportedFormat(
+    adapter_name~ : String,
+    expected~ : SourceFormat,
+    actual~ : SourceFormat
+  )
   BackendFailure(adapter_name~ : String, detail~ : String)
 } derive(Show, Eq)
 
@@ -202,7 +206,10 @@ pub fn markdown_parser_adapter() -> ParserAdapter {
 pub fn unsupported_typst_parser_adapter() -> ParserAdapter {
   {
     name: "unsupported-typst-parser",
-    capabilities: { supports_incremental_parsing: false, supports_html_passthrough: false },
+    capabilities: {
+      supports_incremental_parsing: false,
+      supports_html_passthrough: false,
+    },
     note: "Typst parsing is not implemented yet; this adapter returns a structured warning diagnostic.",
   }
 }
@@ -212,7 +219,10 @@ pub fn unsupported_typst_parser_adapter() -> ParserAdapter {
 pub fn html_passthrough_parser_adapter() -> ParserAdapter {
   {
     name: "html-passthrough-parser",
-    capabilities: { supports_incremental_parsing: false, supports_html_passthrough: true },
+    capabilities: {
+      supports_incremental_parsing: false,
+      supports_html_passthrough: true,
+    },
     note: "HTML page input bypasses markup parsing while staying inside the parser adapter boundary.",
   }
 }
@@ -223,11 +233,7 @@ pub fn broken_parser_adapter(
   name? : String = "broken-parser-adapter",
   note? : String = "Intentional broken parser adapter for fatal-boundary tests.",
 ) -> ParserAdapter {
-  {
-    name,
-    capabilities: default_parser_capabilities(),
-    note,
-  }
+  { name, capabilities: default_parser_capabilities(), note }
 }
 
 ///|
@@ -265,7 +271,9 @@ fn typst_stub_diagnostics() -> DocumentDiagnostics {
         severity: DiagnosticSeverity::Warn,
         line: Some(1),
         message: "Typst parsing is not implemented yet.",
-        hint: Some("Use the stub diagnostic until the real Typst backend lands."),
+        hint: Some(
+          "Use the stub diagnostic until the real Typst backend lands.",
+        ),
         backend_name: "unsupported-typst-parser",
       },
     ],
@@ -291,21 +299,30 @@ fn parse_document_with_adapter_result(
   input : SourceDocumentInput,
 ) -> Result[ParsedDocument, FatalParseError] {
   if adapter.name == "" {
-    return Err(FatalParseError::InvalidAdapterState(adapter_name="", reason="adapter name must not be empty"))
+    return Err(
+      FatalParseError::InvalidAdapterState(
+        adapter_name="",
+        reason="adapter name must not be empty",
+      ),
+    )
   }
   if adapter.name == "broken-parser-adapter" {
-    return Err(FatalParseError::BackendFailure(adapter_name=adapter.name, detail="intentional fatal parse failure"))
+    return Err(
+      FatalParseError::BackendFailure(
+        adapter_name=adapter.name,
+        detail="intentional fatal parse failure",
+      ),
+    )
   }
   match expected_format_for_adapter(adapter) {
-    Some(expected) if expected != input.format => {
+    Some(expected) if expected != input.format =>
       return Err(
         FatalParseError::UnsupportedFormat(
           adapter_name=adapter.name,
-          expected=expected,
+          expected~,
           actual=input.format,
         ),
       )
-    }
     _ => ()
   }
   if adapter.name == "markdown-parser-adapter" {
@@ -359,7 +376,10 @@ pub fn parse_with_adapter_result(
 
 ///|
 /// Run a parser adapter so tests can freeze the adapter boundary before real backends land.
-pub fn parse_with_adapter(adapter : ParserAdapter, input : SourceDocumentInput) -> ParsedDocument {
+pub fn parse_with_adapter(
+  adapter : ParserAdapter,
+  input : SourceDocumentInput,
+) -> ParsedDocument {
   match parse_with_adapter_result(adapter, input) {
     Ok(parsed) => parsed
     Err(_) => panic()
@@ -368,7 +388,10 @@ pub fn parse_with_adapter(adapter : ParserAdapter, input : SourceDocumentInput) 
 
 ///|
 /// Apply the semantic linker boundary. The default stage is an explicit no-op.
-pub fn apply_wikilinker(linker : WikiLinker, parsed : ParsedDocument) -> ParsedDocument {
+pub fn apply_wikilinker(
+  linker : WikiLinker,
+  parsed : ParsedDocument,
+) -> ParsedDocument {
   ignore(linker)
   parsed
 }
@@ -386,8 +409,7 @@ pub fn apply_dummy_template(rendered : RenderedDocument) -> TemplatedPage {
     route: route_from_source_path(rendered.source_path),
     source_path: rendered.source_path,
     source_uuid: rendered.source_uuid,
-    html:
-      "<!doctype html>\n<html><body><main data-source=\"\{rendered.source_path}\">\{rendered.html}</main></body></html>",
+    html: "<!doctype html>\n<html><body><main data-source=\"\{rendered.source_path}\">\{rendered.html}</main></body></html>",
     note: "dummy templater keeps rendered content inside a simple site shell",
   }
 }
@@ -486,8 +508,12 @@ pub fn run_article_pipeline(
 
 ///|
 /// Run a render adapter so tests can freeze the HTML render contract before real backends land.
-pub fn render_with_adapter(adapter : RenderAdapter, parsed : ParsedDocument) -> RenderedDocument {
-  let html_body = if adapter.name == "markdown-render-adapter" && parsed.source_format == SourceFormat::Markdown {
+pub fn render_with_adapter(
+  adapter : RenderAdapter,
+  parsed : ParsedDocument,
+) -> RenderedDocument {
+  let html_body = if adapter.name == "markdown-render-adapter" &&
+    parsed.source_format == SourceFormat::Markdown {
     let markdown_payload = match parsed.backend_payload {
       Some(payload) => payload
       None => ""

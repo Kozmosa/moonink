@@ -4,7 +4,11 @@ package "username/moonink"
 // Values
 pub const TEXT_ENCODING_NAME : String = "utf-8"
 
+pub fn apply_dummy_template(RenderedDocument) -> TemplatedPage
+
 pub fn apply_wikilinker(WikiLinker, ParsedDocument) -> ParsedDocument
+
+pub fn article_site_entry(TemplatedPage) -> SiteEntry
 
 pub fn broken_parser_adapter(name? : String, note? : String) -> ParserAdapter
 
@@ -15,6 +19,8 @@ pub fn cli_exec(Array[String]) -> CliOutcome
 pub fn cli_help_text() -> String
 
 pub fn cli_run(Array[String]) -> CliOutcome
+
+pub fn construct_site(Array[SiteEntry]) -> SiteAssembly
 
 pub fn default_parser_capabilities() -> ParserCapabilities
 
@@ -74,6 +80,12 @@ pub fn lookup_parser_adapter(ParserRegistry, SourceFormat) -> Result[ParserAdapt
 
 pub fn lookup_render_adapter(RenderRegistry, SourceFormat) -> Result[RenderAdapter, AdapterRegistryError]
 
+pub fn markdown_backend_capabilities() -> ParserCapabilities
+
+pub fn markdown_parser_adapter() -> ParserAdapter
+
+pub fn markdown_render_adapter() -> RenderAdapter
+
 pub fn native_runtime_adapter() -> NativeRuntimeAdapter
 
 pub fn noop_wikilinker(name? : String, note? : String) -> WikiLinker
@@ -82,9 +94,13 @@ pub fn normalize_config_path_or_error(String) -> String raise ConfigError
 
 pub fn normalize_relative_path(String) -> String raise PathPolicyError
 
+pub fn page_site_entry(TemplatedPage) -> SiteEntry
+
 pub fn parse_cli_command(Array[String]) -> CliCommand
 
 pub fn parse_loaded_config(String, String) -> LoadedConfig raise ConfigError
+
+pub fn parse_markdown_backend_contract(String) -> MarkdownBackendContract
 
 pub fn parse_with_adapter(ParserAdapter, SourceDocumentInput) -> ParsedDocument
 
@@ -110,11 +126,19 @@ pub fn register_parser_adapter(ParserRegistry, SourceFormat, ParserAdapter) -> P
 
 pub fn register_render_adapter(RenderRegistry, SourceFormat, RenderAdapter) -> RenderRegistry
 
+pub fn render_markdown_backend_payload(String) -> String
+
 pub fn render_site_dummy(LoadedConfig, SiteModel) -> RenderPlan
 
 pub fn render_with_adapter(RenderAdapter, ParsedDocument) -> RenderedDocument
 
+pub fn route_from_source_path(String) -> String
+
+pub fn run_article_pipeline(ParserAdapter, WikiLinker, RenderAdapter, SourceDocumentInput) -> Result[ArticlePipelineResult, FatalParseError]
+
 pub fn run_build_command_runtime() -> CliOutcome
+
+pub fn run_docflow_build_pipeline(Array[String], ParserAdapter, WikiLinker, RenderAdapter) -> SiteAssembly
 
 pub fn run_native_build_command() -> CliOutcome
 
@@ -172,6 +196,13 @@ pub(all) suberror ProjectIOError {
 } derive(Eq, Show)
 
 // Types and methods
+pub(all) struct ArticlePipelineResult {
+  parsed : ParsedDocument
+  linked : ParsedDocument
+  rendered : RenderedDocument
+  pipeline_note : String
+} derive(Eq, Show)
+
 pub enum CliCommand {
   Help
   New(String?)
@@ -232,6 +263,15 @@ pub(all) struct LoadedConfig {
   output_dir : String
   theme_name : String
   text_encoding : String
+} derive(Eq, Show)
+
+pub(all) struct MarkdownBackendContract {
+  html_output : String
+  serialized_markdown : String
+  block_count : Int
+  definition_count : Int
+  diagnostics : DocumentDiagnostics
+  capabilities : ParserCapabilities
 } derive(Eq, Show)
 
 pub(all) struct NativeRuntimeAdapter {
@@ -321,6 +361,19 @@ pub(all) struct ServeSession {
   note : String
 } derive(Eq, Show)
 
+pub(all) struct SiteAssembly {
+  entries : Array[SiteEntry]
+  note : String
+} derive(Eq, Show)
+
+pub(all) struct SiteEntry {
+  kind : String
+  route : String
+  source_path : String
+  source_uuid : String
+  html : String
+} derive(Eq, Show)
+
 pub(all) struct SiteModel {
   page_count : Int
   article_count : Int
@@ -370,6 +423,14 @@ pub(all) struct StarterWriteTarget {
   output_path : String
   summary : String
   content : String
+} derive(Eq, Show)
+
+pub(all) struct TemplatedPage {
+  route : String
+  source_path : String
+  source_uuid : String
+  html : String
+  note : String
 } derive(Eq, Show)
 
 pub(all) struct WikiLinker {

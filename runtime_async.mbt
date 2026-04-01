@@ -25,7 +25,7 @@ pub fn runtime_task_policy() -> RuntimeTaskPolicy {
 pub fn read_config_source_task(
   config_path : String,
 ) -> RuntimeIOTask[Result[(String, String), ConfigError]] {
-  let normalized_path = try normalize_config_path_or_error(config_path) catch {
+  let normalized_path = normalize_config_path_or_error(config_path) catch {
     err => return Ready(Err(err))
   }
   let source = io_read_file_to_string(normalized_path) catch {
@@ -35,7 +35,9 @@ pub fn read_config_source_task(
 }
 
 ///|
-pub fn load_config_task(config_path : String) -> RuntimeIOTask[Result[LoadedConfig, ConfigError]] {
+pub fn load_config_task(
+  config_path : String,
+) -> RuntimeIOTask[Result[LoadedConfig, ConfigError]] {
   Ready(load_config_result(config_path))
 }
 
@@ -52,11 +54,12 @@ pub fn discover_content_task(
 ) -> RuntimeIOTask[Result[ContentInventory, ContentDiscoveryError]] {
   let plan_result = run_runtime_io_task(plan_content_discovery_task(config))
   let inventory = match plan_result {
-    Ok(plan) => try discover_planned_content(plan) catch {
-      err => Err(err)
-    } noraise {
-      value => Ok(value)
-    }
+    Ok(plan) =>
+      try discover_planned_content(plan) catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
     Err(err) => Err(err)
   }
   Ready(inventory)

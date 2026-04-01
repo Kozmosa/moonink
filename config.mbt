@@ -25,12 +25,17 @@ pub(all) struct LoadedConfig {
 } derive(Show, Eq)
 
 ///|
-fn config_path_policy_error(path : String, err : PathPolicyError) -> ConfigError {
-  ConfigError::InvalidPath(path=path, reason=err.to_string())
+fn config_path_policy_error(
+  path : String,
+  err : PathPolicyError,
+) -> ConfigError {
+  ConfigError::InvalidPath(path~, reason=err.to_string())
 }
 
 ///|
-pub fn normalize_config_path_or_error(value : String) -> String raise ConfigError {
+pub fn normalize_config_path_or_error(
+  value : String,
+) -> String raise ConfigError {
   normalize_relative_path(value) catch {
     err => raise config_path_policy_error(value, err)
   }
@@ -59,7 +64,10 @@ pub fn parse_loaded_config(
 }
 
 ///|
-fn parse_string_value(line_number : Int, raw_value : String) -> String raise ConfigError {
+fn parse_string_value(
+  line_number : Int,
+  raw_value : String,
+) -> String raise ConfigError {
   let value = raw_value.trim().to_string()
   if value.length() < 2 || !value.has_prefix("\"") || !value.has_suffix("\"") {
     raise ConfigError::InvalidLine(line=line_number, content=raw_value)
@@ -68,7 +76,10 @@ fn parse_string_value(line_number : Int, raw_value : String) -> String raise Con
 }
 
 ///|
-fn parse_section_name(line_number : Int, line : String) -> String raise ConfigError {
+fn parse_section_name(
+  line_number : Int,
+  line : String,
+) -> String raise ConfigError {
   if line.length() < 3 || !line.has_prefix("[") || !line.has_suffix("]") {
     raise ConfigError::InvalidSection(line=line_number, section=line)
   }
@@ -80,7 +91,9 @@ fn parse_section_name(line_number : Int, line : String) -> String raise ConfigEr
 }
 
 ///|
-fn parse_toml_sections(source : String) -> Map[String, Map[String, String]] raise ConfigError {
+fn parse_toml_sections(
+  source : String,
+) -> Map[String, Map[String, String]] raise ConfigError {
   let sections : Map[String, Map[String, String]] = {}
   let lines = source.split("\n").map(StringView::to_string).collect()
   let mut current_section : String? = None
@@ -115,7 +128,7 @@ fn parse_toml_sections(source : String) -> Map[String, Map[String, String]] rais
           }
         }
         if fields.contains(key) {
-          raise ConfigError::DuplicateField(section=section_name, key=key)
+          raise ConfigError::DuplicateField(section=section_name, key~)
         }
         fields[key] = value
       }
@@ -145,7 +158,7 @@ fn require_field(
   let fields = require_section(sections, section)
   match fields.get(key) {
     Some(value) => value
-    None => raise ConfigError::MissingField(section=section, key=key)
+    None => raise ConfigError::MissingField(section~, key~)
   }
 }
 
@@ -174,8 +187,10 @@ fn normalized_content_path(
 }
 
 ///|
-pub fn load_config_result(config_path : String) -> Result[LoadedConfig, ConfigError] {
-  let config_path = try normalize_config_path_or_error(config_path) catch {
+pub fn load_config_result(
+  config_path : String,
+) -> Result[LoadedConfig, ConfigError] {
+  let config_path = normalize_config_path_or_error(config_path) catch {
     err => return Err(err)
   }
   let source = io_read_file_to_string(config_path) catch {

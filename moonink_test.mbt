@@ -5,7 +5,10 @@ test "parse cli command supports raw command tokens" {
   inspect(@moonink.parse_cli_command(["build"]), content="Build")
   inspect(@moonink.parse_cli_command(["serve"]), content="Serve")
   inspect(@moonink.parse_cli_command(["new"]), content="New(None)")
-  inspect(@moonink.parse_cli_command(["new", "demo"]), content="New(Some(\"demo\"))")
+  inspect(
+    @moonink.parse_cli_command(["new", "demo"]),
+    content="New(Some(\"demo\"))",
+  )
 }
 
 ///|
@@ -25,7 +28,8 @@ test "parse cli command supports full argv forms" {
 
 ///|
 test "load_config reads the minimal build phase 1a fixture" {
-  let config = match @moonink.load_config_result("fixtures/build_phase1a/minimal/moonink.toml") {
+  let config = match
+    @moonink.load_config_result("fixtures/build_phase1a/minimal/moonink.toml") {
     Ok(config) => config
     Err(_) => panic()
   }
@@ -41,11 +45,17 @@ test "load_config reads the minimal build phase 1a fixture" {
 
 ///|
 test "load_config normalizes relative config paths" {
-  let config = match @moonink.load_config_result("fixtures//build_phase1a/./minimal/moonink.toml") {
+  let config = match
+    @moonink.load_config_result(
+      "fixtures//build_phase1a/./minimal/moonink.toml",
+    ) {
     Ok(config) => config
     Err(_) => panic()
   }
-  inspect(config.config_path, content="fixtures/build_phase1a/minimal/moonink.toml")
+  inspect(
+    config.config_path,
+    content="fixtures/build_phase1a/minimal/moonink.toml",
+  )
   inspect(config.project_root, content="fixtures/build_phase1a/minimal")
 }
 
@@ -62,7 +72,9 @@ test "load_config rejects parent traversal paths" {
 ///|
 test "load_config reports missing required fields" {
   inspect(
-    @moonink.load_config_result("fixtures/build_phase1a/missing_site_name/moonink.toml"),
+    @moonink.load_config_result(
+      "fixtures/build_phase1a/missing_site_name/moonink.toml",
+    ),
     content="Err(MissingField(section=\"site\", key=\"name\"))",
   )
 }
@@ -80,7 +92,9 @@ test "load_config reports normalized io errors" {
 ///|
 test "read config source task moves file reads to runtime boundary" {
   let outcome = @moonink.run_runtime_io_task(
-    @moonink.read_config_source_task("fixtures/build_phase1a/minimal/moonink.toml"),
+    @moonink.read_config_source_task(
+      "fixtures/build_phase1a/minimal/moonink.toml",
+    ),
   )
   inspect(outcome is Ok(_), content="true")
 }
@@ -89,7 +103,9 @@ test "read config source task moves file reads to runtime boundary" {
 test "read config source task reports missing file contract" {
   inspect(
     @moonink.run_runtime_io_task(
-      @moonink.read_config_source_task("fixtures/build_phase1a/minimal/missing.toml"),
+      @moonink.read_config_source_task(
+        "fixtures/build_phase1a/minimal/missing.toml",
+      ),
     ),
     content=(
       #|Err(IOError(Failure(operation="read_file", path="fixtures/build_phase1a/minimal/missing.toml", detail="IOError(\"Failed to read file fixtures/build_phase1a/minimal/missing.toml: No such file or directory (os error 2)\")")))
@@ -109,7 +125,9 @@ test "load_config task wraps config loading in runtime io task" {
 test "load_config task propagates parse contract errors" {
   inspect(
     @moonink.run_runtime_io_task(
-      @moonink.load_config_task("fixtures/build_phase1a/missing_site_name/moonink.toml"),
+      @moonink.load_config_task(
+        "fixtures/build_phase1a/missing_site_name/moonink.toml",
+      ),
     ),
     content="Err(MissingField(section=\"site\", key=\"name\"))",
   )
@@ -119,34 +137,55 @@ test "load_config task propagates parse contract errors" {
 test "emit starter project task preserves overwrite contract" {
   ignore(
     @moonink.run_runtime_io_task(
-      @moonink.emit_starter_project_task(@moonink.plan_starter_project(Some("demo"))),
+      @moonink.emit_starter_project_task(
+        @moonink.plan_starter_project(Some("demo")),
+      ),
     ),
   )
   let outcome = @moonink.run_runtime_io_task(
-    @moonink.emit_starter_project_task(@moonink.plan_starter_project(Some("demo"))),
+    @moonink.emit_starter_project_task(
+      @moonink.plan_starter_project(Some("demo")),
+    ),
   )
   inspect(outcome.exit_code, content="1")
-  inspect(outcome.message.contains("target directory already exists"), content="true")
+  inspect(
+    outcome.message.contains("target directory already exists"),
+    content="true",
+  )
 }
 
 ///|
 test "discover_content uses normalized relative content roots" {
-  let config = match @moonink.load_config_result("fixtures/build_phase1a/minimal/moonink.toml") {
+  let config = match
+    @moonink.load_config_result("fixtures/build_phase1a/minimal/moonink.toml") {
     Ok(config) => config
     Err(_) => panic()
   }
-  let normalized_config = { ..config, docs_dir: "./docs//guides", articles_dir: "articles/." }
+  let normalized_config = {
+    ..config,
+    docs_dir: "./docs//guides",
+    articles_dir: "articles/.",
+  }
   let inventory = match @moonink.discover_content_result(normalized_config) {
     Ok(inventory) => inventory
     Err(_) => panic()
   }
-  inspect(inventory.docs_root, content="fixtures/build_phase1a/minimal/docs/guides")
-  inspect(inventory.articles_root, content="fixtures/build_phase1a/minimal/articles")
+  inspect(
+    inventory.docs_root,
+    content="fixtures/build_phase1a/minimal/docs/guides",
+  )
+  inspect(
+    inventory.articles_root,
+    content="fixtures/build_phase1a/minimal/articles",
+  )
 }
 
 ///|
 test "discover_content reports missing content roots clearly" {
-  let config = match @moonink.load_config_result("fixtures/build_phase1a/missing_articles_dir/moonink.toml") {
+  let config = match
+    @moonink.load_config_result(
+      "fixtures/build_phase1a/missing_articles_dir/moonink.toml",
+    ) {
     Ok(config) => config
     Err(_) => panic()
   }
@@ -159,7 +198,9 @@ test "discover_content reports missing content roots clearly" {
 ///|
 test "native runtime adapter executes runtime io tasks" {
   let write_plan = @moonink.run_native_runtime_io_task(
-    @moonink.plan_starter_write_task(@moonink.plan_starter_project(Some("demo"))),
+    @moonink.plan_starter_write_task(
+      @moonink.plan_starter_project(Some("demo")),
+    ),
   )
   inspect(write_plan.overwrite_policy, content="abort_if_target_exists")
 }
@@ -187,7 +228,9 @@ test "cli run remains a pure planning entry for new" {
 ///|
 test "starter write plan exposes overwrite protection" {
   let write_plan = @moonink.run_runtime_io_task(
-    @moonink.plan_starter_write_task(@moonink.plan_starter_project(Some("demo"))),
+    @moonink.plan_starter_write_task(
+      @moonink.plan_starter_project(Some("demo")),
+    ),
   )
   inspect(write_plan.file_count, content="7")
   inspect(write_plan.overwrite_policy, content="abort_if_target_exists")
@@ -196,7 +239,9 @@ test "starter write plan exposes overwrite protection" {
 ///|
 test "emit starter project task keeps runtime interface shape" {
   let outcome = @moonink.run_runtime_io_task(
-    @moonink.emit_starter_project_task(@moonink.plan_starter_project(Some("demo"))),
+    @moonink.emit_starter_project_task(
+      @moonink.plan_starter_project(Some("demo")),
+    ),
   )
   inspect(outcome.message.contains("[new]"), content="true")
 }
@@ -213,7 +258,9 @@ test "native runtime adapter exposes explicit runtime identity" {
 test "native runtime adapter preserves config read contract" {
   inspect(
     @moonink.run_native_runtime_io_task(
-      @moonink.read_config_source_task("fixtures/build_phase1a/minimal/missing.toml"),
+      @moonink.read_config_source_task(
+        "fixtures/build_phase1a/minimal/missing.toml",
+      ),
     ),
     content=(
       #|Err(IOError(Failure(operation="read_file", path="fixtures/build_phase1a/minimal/missing.toml", detail="IOError(\"Failed to read file fixtures/build_phase1a/minimal/missing.toml: No such file or directory (os error 2)\")")))
@@ -224,7 +271,9 @@ test "native runtime adapter preserves config read contract" {
 ///|
 test "native runtime adapter policy hook preserves task result" {
   let write_plan = @moonink.run_native_runtime_io_task_with_policy(
-    @moonink.plan_starter_write_task(@moonink.plan_starter_project(Some("demo"))),
+    @moonink.plan_starter_write_task(
+      @moonink.plan_starter_project(Some("demo")),
+    ),
     @moonink.default_runtime_task_policy(),
   )
   inspect(write_plan.overwrite_policy, content="abort_if_target_exists")
@@ -232,7 +281,10 @@ test "native runtime adapter policy hook preserves task result" {
 
 ///|
 test "native runtime adapter preserves discovery contract" {
-  let config = match @moonink.load_config_result("fixtures/build_phase1a/missing_articles_dir/moonink.toml") {
+  let config = match
+    @moonink.load_config_result(
+      "fixtures/build_phase1a/missing_articles_dir/moonink.toml",
+    ) {
     Ok(config) => config
     Err(_) => panic()
   }
@@ -257,12 +309,14 @@ test "cli run keeps build behind runtime boundary" {
 test "runtime cli build formats normalized io errors" {
   let outcome = @moonink.cli_exec(["moonink", "build"])
   inspect(outcome.exit_code, content="1")
-  inspect(outcome.message.contains("[build] failed during config loading"), content="true")
+  inspect(
+    outcome.message.contains("[build] failed during config loading"),
+    content="true",
+  )
   inspect(outcome.message.contains("io error:"), content="true")
   inspect(outcome.message.contains("operation: read_file"), content="true")
   inspect(outcome.message.contains("path: moonink.toml"), content="true")
 }
-
 
 ///|
 test "docflow parser domain types support construction" {
@@ -333,7 +387,10 @@ test "docflow diagnostic formatting handles missing location and capability defa
     entries: [info_diagnostic, error_diagnostic],
   }
   let default_capabilities = @moonink.default_parser_capabilities()
-  inspect(@moonink.format_document_diagnostic(info_diagnostic), content="(INFO) HTML passthrough engaged.")
+  inspect(
+    @moonink.format_document_diagnostic(info_diagnostic),
+    content="(INFO) HTML passthrough engaged.",
+  )
   inspect(
     @moonink.format_document_diagnostics(diagnostics),
     content=(
@@ -344,11 +401,34 @@ test "docflow diagnostic formatting handles missing location and capability defa
   inspect(default_capabilities.supports_incremental_parsing, content="false")
   inspect(default_capabilities.supports_html_passthrough, content="false")
   inspect(@moonink.empty_document_diagnostics().entries.length(), content="0")
-  inspect(@moonink.SourceDocumentInput::{ path: "page.html", format: @moonink.SourceFormat::Html, content: "<p>x</p>", uuid: "page-001" }.format, content="Html")
-  inspect(@moonink.SourceDocumentInput::{ path: "draft.typ", format: @moonink.SourceFormat::Typst, content: "= Hello", uuid: "typ-001" }.format, content="Typst")
-  inspect(@moonink.SourceDocumentInput::{ path: "misc.bin", format: @moonink.SourceFormat::Unknown, content: "", uuid: "unknown-001" }.format, content="Unknown")
+  inspect(
+    @moonink.SourceDocumentInput::{
+      path: "page.html",
+      format: @moonink.SourceFormat::Html,
+      content: "<p>x</p>",
+      uuid: "page-001",
+    }.format,
+    content="Html",
+  )
+  inspect(
+    @moonink.SourceDocumentInput::{
+      path: "draft.typ",
+      format: @moonink.SourceFormat::Typst,
+      content: "= Hello",
+      uuid: "typ-001",
+    }.format,
+    content="Typst",
+  )
+  inspect(
+    @moonink.SourceDocumentInput::{
+      path: "misc.bin",
+      format: @moonink.SourceFormat::Unknown,
+      content: "",
+      uuid: "unknown-001",
+    }.format,
+    content="Unknown",
+  )
 }
-
 
 ///|
 test "docflow parser adapter contract preserves identity and source metadata" {
@@ -358,7 +438,7 @@ test "docflow parser adapter contract preserves identity and source metadata" {
   }
   let adapter = @moonink.fake_parser_adapter(
     "fake-markdown-parser",
-    capabilities=capabilities,
+    capabilities~,
     note="Fake parser adapter for contract coverage.",
   )
   let input : @moonink.SourceDocumentInput = {
@@ -375,7 +455,10 @@ test "docflow parser adapter contract preserves identity and source metadata" {
   inspect(parsed.source_path, content="articles/hello.md")
   inspect(parsed.source_uuid, content="article-001")
   inspect(parsed.diagnostics.entries.length(), content="0")
-  inspect(parsed.backend_payload, content="Some(\"fake-parse:articles/hello.md\")")
+  inspect(
+    parsed.backend_payload,
+    content="Some(\"fake-parse:articles/hello.md\")",
+  )
 }
 
 ///|
@@ -394,7 +477,10 @@ test "docflow wikilinker contract remains explicit no-op" {
   )
   let linked = @moonink.apply_wikilinker(linker, parsed)
   inspect(linker.name, content="semantic-noop")
-  inspect(linked, content="{backend_name: \"fake-markdown-parser\", source_format: Markdown, source_path: \"articles/hello.md\", source_uuid: \"article-001\", diagnostics: {entries: []}, backend_payload: Some(\"fake-parse:articles/hello.md\")}")
+  inspect(
+    linked,
+    content="{backend_name: \"fake-markdown-parser\", source_format: Markdown, source_path: \"articles/hello.md\", source_uuid: \"article-001\", diagnostics: {entries: []}, backend_payload: Some(\"fake-parse:articles/hello.md\")}",
+  )
 }
 
 ///|
@@ -423,13 +509,12 @@ test "docflow render adapter contract produces html from parsed document" {
   inspect(rendered.note, content="Fake render adapter for contract coverage.")
 }
 
-
 ///|
 test "docflow parser registry resolves adapters by source format" {
-  let parser = @moonink.fake_parser_adapter(
-    "fake-markdown-parser",
-    capabilities={ supports_incremental_parsing: true, supports_html_passthrough: false },
-  )
+  let parser = @moonink.fake_parser_adapter("fake-markdown-parser", capabilities={
+    supports_incremental_parsing: true,
+    supports_html_passthrough: false,
+  })
   let registry = @moonink.register_parser_adapter(
     @moonink.empty_parser_registry(),
     @moonink.SourceFormat::Markdown,
@@ -461,15 +546,20 @@ test "docflow render registry resolves adapters by source format" {
 ///|
 test "docflow registry reports missing parser and render registrations" {
   inspect(
-    @moonink.lookup_parser_adapter(@moonink.empty_parser_registry(), @moonink.SourceFormat::Typst),
+    @moonink.lookup_parser_adapter(
+      @moonink.empty_parser_registry(),
+      @moonink.SourceFormat::Typst,
+    ),
     content="Err(MissingParserAdapter(Typst))",
   )
   inspect(
-    @moonink.lookup_render_adapter(@moonink.empty_render_registry(), @moonink.SourceFormat::Html),
+    @moonink.lookup_render_adapter(
+      @moonink.empty_render_registry(),
+      @moonink.SourceFormat::Html,
+    ),
     content="Err(MissingRenderAdapter(Html))",
   )
 }
-
 
 ///|
 test "docflow typst stub adapter returns warning diagnostics" {
@@ -504,7 +594,10 @@ test "docflow html passthrough adapter preserves html input" {
   inspect(adapter.name, content="html-passthrough-parser")
   inspect(adapter.capabilities.supports_html_passthrough, content="true")
   inspect(parsed.diagnostics.entries.length(), content="0")
-  inspect(parsed.backend_payload, content="Some(\"<main><h1>Home</h1></main>\")")
+  inspect(
+    parsed.backend_payload,
+    content="Some(\"<main><h1>Home</h1></main>\")",
+  )
 }
 
 ///|
@@ -529,7 +622,6 @@ test "docflow parser registry supports typst stub and html passthrough paths" {
     content="Ok({name: \"html-passthrough-parser\", capabilities: {supports_incremental_parsing: false, supports_html_passthrough: true}, note: \"HTML page input bypasses markup parsing while staying inside the parser adapter boundary.\"})",
   )
 }
-
 
 ///|
 test "docflow fatal boundary preserves recoverable typst diagnostics" {
@@ -583,7 +675,10 @@ test "docflow fatal boundary reports format mismatch for html passthrough adapte
 
 ///|
 test "docflow fatal boundary reports invalid adapter state when name is empty" {
-  let adapter = @moonink.fake_parser_adapter("", note="Invalid parser adapter for fatal-boundary coverage.")
+  let adapter = @moonink.fake_parser_adapter(
+    "",
+    note="Invalid parser adapter for fatal-boundary coverage.",
+  )
   let input : @moonink.SourceDocumentInput = {
     path: "articles/hello.md",
     format: @moonink.SourceFormat::Markdown,
@@ -595,7 +690,6 @@ test "docflow fatal boundary reports invalid adapter state when name is empty" {
     content="Err(InvalidAdapterState(adapter_name=\"\", reason=\"adapter name must not be empty\"))",
   )
 }
-
 
 ///|
 test "docflow markdown parser adapter parses empty input" {
@@ -628,11 +722,14 @@ test "docflow markdown parser adapter parses paragraph and heading" {
     content: "# Hello MoonInk",
     uuid: "markdown-002",
   }
-  let heading = match @moonink.parse_with_adapter_result(adapter, heading_input) {
+  let heading = match
+    @moonink.parse_with_adapter_result(adapter, heading_input) {
     Ok(parsed) => parsed
     Err(_) => panic()
   }
-  let heading_contract = @moonink.parse_markdown_backend_contract("# Hello MoonInk")
+  let heading_contract = @moonink.parse_markdown_backend_contract(
+    "# Hello MoonInk",
+  )
   inspect(heading.backend_payload, content="Some(\"# Hello MoonInk\\n\")")
   inspect(heading_contract.block_count, content="1")
   inspect(heading_contract.html_output, content="<h1>Hello MoonInk</h1>\n")
@@ -642,11 +739,14 @@ test "docflow markdown parser adapter parses paragraph and heading" {
     content: "Hello paragraph",
     uuid: "markdown-003",
   }
-  let paragraph = match @moonink.parse_with_adapter_result(adapter, paragraph_input) {
+  let paragraph = match
+    @moonink.parse_with_adapter_result(adapter, paragraph_input) {
     Ok(parsed) => parsed
     Err(_) => panic()
   }
-  let paragraph_contract = @moonink.parse_markdown_backend_contract("Hello paragraph")
+  let paragraph_contract = @moonink.parse_markdown_backend_contract(
+    "Hello paragraph",
+  )
   inspect(paragraph.backend_payload, content="Some(\"Hello paragraph\\n\")")
   inspect(paragraph_contract.block_count, content="1")
   inspect(paragraph_contract.html_output, content="<p>Hello paragraph</p>\n")
@@ -661,7 +761,8 @@ test "docflow markdown parser adapter parses list and link" {
     content: "- one\n- two",
     uuid: "markdown-004",
   }
-  let list_parsed = match @moonink.parse_with_adapter_result(adapter, list_input) {
+  let list_parsed = match
+    @moonink.parse_with_adapter_result(adapter, list_input) {
     Ok(parsed) => parsed
     Err(_) => panic()
   }
@@ -684,14 +785,23 @@ test "docflow markdown parser adapter parses list and link" {
     content: "[MoonBit](https://www.moonbitlang.com)",
     uuid: "markdown-005",
   }
-  let link_parsed = match @moonink.parse_with_adapter_result(adapter, link_input) {
+  let link_parsed = match
+    @moonink.parse_with_adapter_result(adapter, link_input) {
     Ok(parsed) => parsed
     Err(_) => panic()
   }
-  let link_contract = @moonink.parse_markdown_backend_contract("[MoonBit](https://www.moonbitlang.com)")
-  inspect(link_parsed.backend_payload, content="Some(\"[MoonBit](https://www.moonbitlang.com)\\n\")")
+  let link_contract = @moonink.parse_markdown_backend_contract(
+    "[MoonBit](https://www.moonbitlang.com)",
+  )
+  inspect(
+    link_parsed.backend_payload,
+    content="Some(\"[MoonBit](https://www.moonbitlang.com)\\n\")",
+  )
   inspect(link_contract.block_count, content="1")
-  inspect(link_contract.html_output, content="<p><a href=\"https://www.moonbitlang.com\">MoonBit</a></p>\n")
+  inspect(
+    link_contract.html_output,
+    content="<p><a href=\"https://www.moonbitlang.com\">MoonBit</a></p>\n",
+  )
 }
 
 ///|
@@ -707,18 +817,22 @@ test "docflow markdown parser adapter parses inline html and reports capabilitie
     Ok(parsed) => parsed
     Err(_) => panic()
   }
-  let contract = @moonink.parse_markdown_backend_contract("Hello <span>inline</span> html")
+  let contract = @moonink.parse_markdown_backend_contract(
+    "Hello <span>inline</span> html",
+  )
   inspect(adapter.capabilities.supports_incremental_parsing, content="true")
   inspect(adapter.capabilities.supports_html_passthrough, content="false")
   inspect(parsed.diagnostics.entries.length(), content="0")
-  inspect(parsed.backend_payload, content="Some(\"Hello <span>inline</span> html\\n\")")
+  inspect(
+    parsed.backend_payload,
+    content="Some(\"Hello <span>inline</span> html\\n\")",
+  )
   inspect(
     contract.html_output,
     content="<p>Hello <a href=\"span\">span</a>inline<a href=\"/span\">/span</a> html</p>\n",
   )
   inspect(contract.definition_count, content="0")
 }
-
 
 ///|
 test "docflow markdown render adapter renders heading html through render boundary" {
@@ -739,7 +853,10 @@ test "docflow markdown render adapter renders heading html through render bounda
   inspect(rendered.source_path, content="articles/render-heading.md")
   inspect(rendered.source_uuid, content="render-001")
   inspect(rendered.html, content="<h1>Hello MoonInk</h1>\n")
-  inspect(rendered.note, content="Real Markdown render adapter backed by mizchi/markdown.")
+  inspect(
+    rendered.note,
+    content="Real Markdown render adapter backed by mizchi/markdown.",
+  )
 }
 
 ///|
@@ -752,7 +869,8 @@ test "docflow markdown render adapter renders list and link html through render 
     content: "- one\n- two",
     uuid: "render-002",
   }
-  let list_parsed = match @moonink.parse_with_adapter_result(parser, list_input) {
+  let list_parsed = match
+    @moonink.parse_with_adapter_result(parser, list_input) {
     Ok(parsed) => parsed
     Err(_) => panic()
   }
@@ -773,12 +891,16 @@ test "docflow markdown render adapter renders list and link html through render 
     content: "[MoonBit](https://www.moonbitlang.com)",
     uuid: "render-003",
   }
-  let link_parsed = match @moonink.parse_with_adapter_result(parser, link_input) {
+  let link_parsed = match
+    @moonink.parse_with_adapter_result(parser, link_input) {
     Ok(parsed) => parsed
     Err(_) => panic()
   }
   let link_rendered = @moonink.render_with_adapter(renderer, link_parsed)
-  inspect(link_rendered.html, content="<p><a href=\"https://www.moonbitlang.com\">MoonBit</a></p>\n")
+  inspect(
+    link_rendered.html,
+    content="<p><a href=\"https://www.moonbitlang.com\">MoonBit</a></p>\n",
+  )
 }
 
 ///|
@@ -802,7 +924,6 @@ test "docflow markdown render adapter renders inline html according to backend b
   )
 }
 
-
 ///|
 test "docflow article pipeline keeps parser wikilinker and render order explicit" {
   let parser = @moonink.markdown_parser_adapter()
@@ -817,15 +938,22 @@ test "docflow article pipeline keeps parser wikilinker and render order explicit
     content: "# Pipeline Heading",
     uuid: "pipeline-001",
   }
-  let pipeline = match @moonink.run_article_pipeline(parser, linker, renderer, input) {
+  let pipeline = match
+    @moonink.run_article_pipeline(parser, linker, renderer, input) {
     Ok(result) => result
     Err(_) => panic()
   }
   inspect(pipeline.parsed.backend_name, content="markdown-parser-adapter")
   inspect(pipeline.linked.backend_name, content="markdown-parser-adapter")
   inspect(pipeline.rendered.backend_name, content="markdown-render-adapter")
-  inspect(pipeline.parsed.backend_payload, content="Some(\"# Pipeline Heading\\n\")")
-  inspect(pipeline.linked.backend_payload, content="Some(\"# Pipeline Heading\\n\")")
+  inspect(
+    pipeline.parsed.backend_payload,
+    content="Some(\"# Pipeline Heading\\n\")",
+  )
+  inspect(
+    pipeline.linked.backend_payload,
+    content="Some(\"# Pipeline Heading\\n\")",
+  )
   inspect(pipeline.rendered.html, content="<h1>Pipeline Heading</h1>\n")
   inspect(
     pipeline.pipeline_note,
@@ -844,7 +972,8 @@ test "docflow article pipeline keeps noop wikilinker transform explicit for list
     content: "- one\n- two",
     uuid: "pipeline-002",
   }
-  let pipeline = match @moonink.run_article_pipeline(parser, linker, renderer, input) {
+  let pipeline = match
+    @moonink.run_article_pipeline(parser, linker, renderer, input) {
     Ok(result) => result
     Err(_) => panic()
   }
@@ -862,7 +991,6 @@ test "docflow article pipeline keeps noop wikilinker transform explicit for list
   )
 }
 
-
 ///|
 test "docflow downstream assembly accepts article output after templating" {
   let parser = @moonink.markdown_parser_adapter()
@@ -874,17 +1002,23 @@ test "docflow downstream assembly accepts article output after templating" {
     content: "# Downstream Article",
     uuid: "downstream-001",
   }
-  let pipeline = match @moonink.run_article_pipeline(parser, linker, renderer, input) {
+  let pipeline = match
+    @moonink.run_article_pipeline(parser, linker, renderer, input) {
     Ok(result) => result
     Err(_) => panic()
   }
   let templated = @moonink.apply_dummy_template(pipeline.rendered)
-  let assembly = @moonink.construct_site([@moonink.article_site_entry(templated)])
+  let assembly = @moonink.construct_site([
+    @moonink.article_site_entry(templated),
+  ])
   inspect(templated.route, content="/articles/downstream-article.md")
   inspect(assembly.entries.length(), content="1")
   inspect(assembly.entries[0].kind, content="article")
   inspect(assembly.entries[0].route, content="/articles/downstream-article.md")
-  inspect(assembly.entries[0].html.contains("<h1>Downstream Article</h1>"), content="true")
+  inspect(
+    assembly.entries[0].html.contains("<h1>Downstream Article</h1>"),
+    content="true",
+  )
 }
 
 ///|
@@ -945,7 +1079,8 @@ test "docflow build pipeline processes discovered article files into site assemb
 
 ///|
 test "docflow build pipeline closure integrates with content discovery result" {
-  let config = match @moonink.load_config_result("fixtures/build_phase1a/minimal/moonink.toml") {
+  let config = match
+    @moonink.load_config_result("fixtures/build_phase1a/minimal/moonink.toml") {
     Ok(config) => config
     Err(_) => panic()
   }
@@ -957,7 +1092,12 @@ test "docflow build pipeline closure integrates with content discovery result" {
   let linker = @moonink.noop_wikilinker()
   let renderer = @moonink.markdown_render_adapter()
   let combined_files = inventory.docs_files + inventory.article_files
-  let assembly = @moonink.run_docflow_build_pipeline(combined_files, parser, linker, renderer)
-  inspect(combined_files.length(), content="\{inventory.discovered_docs + inventory.discovered_articles}")
+  let assembly = @moonink.run_docflow_build_pipeline(
+    combined_files, parser, linker, renderer,
+  )
+  inspect(
+    combined_files.length(),
+    content="\{inventory.discovered_docs + inventory.discovered_articles}",
+  )
   inspect(assembly.entries.length(), content="\{combined_files.length()}")
 }
