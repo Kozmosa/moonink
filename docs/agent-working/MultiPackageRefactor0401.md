@@ -60,25 +60,25 @@ Initial discovery defaults all `.md` to Article (no file reads). A planned secon
 
 ## Current Limitations / Placeholders
 
-- frontmatter-based Page reclassification is not wired into the build command yet;
+- build now performs frontmatter-aware source loading, dummy-template rendering, and full HTML emission to `dist/`, but still uses direct-style output paths for this first end-to-end iteration;
 - WikiLinker is a no-op stub;
-- `build` command still uses dummy render/emit stages after config and discovery;
+- build still uses the dummy template rather than a real theme/template engine;
 - `onboard` command is scaffolded but file-injection logic may need testing with real vaults;
 - `serve` is entirely placeholder.
 
 ## Test Coverage
 
-47 tests across all 4 packages. All passing. Zero compiler warnings after cleanup.
+50 tests across all 4 packages. All passing. Zero compiler warnings after cleanup.
 
-- `src/core/core_test.mbt` — 21 tests: path policy, JSON config, frontmatter, classification, route generation
+- `src/core/core_test.mbt` — 21 tests: path policy, JSON config, frontmatter, classification, route generation, output-path mapping
 - `src/docflow/docflow_test.mbt` — 14 tests: adapters, registry, markdown backend, pipeline, assembly
-- `src/runtime/runtime_test.mbt` — 7 tests: config loading, content discovery, native adapter
-- `src/cli/cli_test.mbt` — 6 tests: command parsing, dispatch
+- `src/runtime/runtime_test.mbt` — 8 tests: config loading, content discovery, source-backed build inputs, native adapter
+- `src/cli/cli_test.mbt` — 7 tests: command parsing, dispatch, real build emission
 
 ## Next Implementation Steps
 
-1. wire frontmatter read into content discovery to enable `type: page` reclassification;
-2. replace dummy render/emit in `cmd_build.mbt` with real DocFlow pipeline execution;
-3. emit actual HTML files to `dist/` with route-derived filenames;
-4. implement Obsidian-compatible WikiLink resolution in `docflow/wikilinker.mbt`;
-5. add structured command flags (`--config`, `--output`, `--dry-run`).
+1. restore configurable pretty-route output layout instead of the temporary direct-style emitter mapping;
+2. implement Obsidian-compatible WikiLink resolution in `docflow/wikilinker.mbt`;
+3. replace the dummy template with a real theme/template system;
+4. add structured command flags (`--config`, `--output`, `--dry-run`);
+5. decide whether discovery-stage provisional counts should be narrowed now that source-backed build inputs exist.

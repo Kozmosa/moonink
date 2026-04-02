@@ -72,8 +72,10 @@ Current real behavior:
 
 1. Reads `moonink.json` via `runtime/config_loader.mbt` → `parse_config_json`.
 2. Discovers content via `runtime/content_discovery.mbt` → recursive scan with exclude patterns.
-3. Reports phase-1a summary (config + discovery ready).
-4. Rendering/emit stages remain scaffold placeholders.
+3. Loads real source files and parses Markdown frontmatter to classify article vs page.
+4. Runs DocFlow parser → WikiLinker → render using real source content.
+5. Applies the dummy template and emits HTML files to `dist/` using direct-style `.html` output paths.
+6. Fully clears `output_dir` before each rebuild.
 
 Pipeline target (explicit stages):
 
