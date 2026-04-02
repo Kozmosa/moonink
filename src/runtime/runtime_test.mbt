@@ -57,6 +57,31 @@ test "discover_content finds markdown and html files" {
 }
 
 ///|
+test "discover_content_build inputs read frontmatter-aware metadata" {
+  let config = match
+    @runtime.load_config_result("fixtures/v2/minimal/moonink.json") {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let inventory = match @runtime.discover_content_result(config) {
+    Ok(inventory) => inventory
+    Err(_) => panic()
+  }
+  let inputs = match @runtime.load_build_inputs_result(config, inventory) {
+    Ok(inputs) => inputs
+    Err(_) => panic()
+  }
+  inspect(inputs.length(), content="3")
+  let by_path : Map[String, @runtime.BuildInput] = {}
+  for input in inputs {
+    by_path[input.meta.source_path] = input
+  }
+  inspect(by_path.get("about.html").unwrap().meta.content_kind, content="Page")
+  inspect(by_path.get("hello.md").unwrap().meta.content_kind, content="Article")
+  inspect(by_path.get("index.md").unwrap().meta.content_kind, content="Page")
+}
+
+///|
 test "native runtime adapter exposes explicit runtime identity" {
   let adapter = @runtime.native_runtime_adapter()
   inspect(adapter.name, content="native-runtime-adapter")

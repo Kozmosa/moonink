@@ -195,6 +195,16 @@ test "generate_route direct style" {
 }
 
 ///|
+test "generate_output_html_path maps source paths to direct html outputs" {
+  inspect(
+    @core.output_html_path("guides/intro.md"),
+    content="guides/intro.html",
+  )
+  inspect(@core.output_html_path("index.md"), content="index.html")
+  inspect(@core.output_html_path("about.html"), content="about.html")
+}
+
+///|
 test "should_exclude matches patterns and hidden dirs" {
   inspect(@core.should_exclude(".git", []), content="true")
   inspect(@core.should_exclude(".obsidian", []), content="true")

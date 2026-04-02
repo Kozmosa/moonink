@@ -3,6 +3,7 @@ package "username/moonink/cli"
 
 import {
   "username/moonink/core",
+  "username/moonink/docflow",
 }
 
 // Values
@@ -16,15 +17,29 @@ pub fn parse_cli_command(Array[String]) -> CliCommand
 
 pub fn prepare_serve_dummy() -> ServeSession
 
-pub fn render_site_dummy(@core.MooninkConfig, @core.SiteModel) -> RenderPlan
-
 pub fn run_build_command_runtime() -> CliOutcome
+
+pub fn run_build_command_runtime_from_config(String) -> CliOutcome
 
 pub fn run_runtime_cli_command(CliCommand) -> CliOutcome
 
 // Errors
+pub(all) suberror BuildCommandError {
+  ContentDiscovery(@core.ContentDiscoveryError)
+  AdapterRegistry(@docflow.AdapterRegistryError)
+  FatalParse(@docflow.FatalParseError)
+  ProjectIO(@core.ProjectIOError)
+} derive(Eq, Show)
 
 // Types and methods
+pub(all) struct BuildSummary {
+  output_dir : String
+  processed_sources : Int
+  emitted_html_files : Int
+  article_count : Int
+  page_count : Int
+} derive(Eq, Show)
+
 pub enum CliCommand {
   Help
   Onboard
@@ -36,13 +51,6 @@ pub enum CliCommand {
 pub(all) struct CliOutcome {
   exit_code : Int
   message : String
-} derive(Eq, Show)
-
-pub(all) struct RenderPlan {
-  output_dir : String
-  emitted_html_files : Int
-  emitted_assets : Int
-  note : String
 } derive(Eq, Show)
 
 pub(all) struct ServeSession {

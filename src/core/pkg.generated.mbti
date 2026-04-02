@@ -28,6 +28,8 @@ pub fn normalize_config_path_or_error(String) -> String raise ConfigError
 
 pub fn normalize_relative_path(String) -> String raise PathPolicyError
 
+pub fn output_html_path(String) -> String
+
 pub fn parse_config_json(String, String) -> MooninkConfig raise ConfigError
 
 pub fn parse_frontmatter(String) -> Frontmatter

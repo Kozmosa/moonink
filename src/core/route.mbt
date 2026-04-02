@@ -21,6 +21,12 @@ pub fn generate_route(source_path : String, style : RouteStyle) -> String {
 }
 
 ///|
+/// Map a relative source path to the emitted direct-style HTML file path.
+pub fn output_html_path(source_path : String) -> String {
+  "\{strip_extension(source_path)}.html"
+}
+
+///|
 fn strip_extension(path : String) -> String {
   if path.has_suffix(".md") {
     path[:path.length() - 3].to_string()

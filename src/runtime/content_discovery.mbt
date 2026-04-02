@@ -7,6 +7,15 @@ fn content_path_policy_error(
 }
 
 ///|
+pub(all) struct BuildInput {
+  absolute_source_path : String
+  relative_source_path : String
+  source_content : String
+  docflow_content : String
+  meta : @core.PageMeta
+} derive(Show, Eq)
+
+///|
 fn join_content_path(
   base : String,
   child : String,
@@ -21,6 +30,80 @@ fn io_discovery_error(
   err : @core.ProjectIOError,
 ) -> @core.ContentDiscoveryError {
   @core.ContentDiscoveryError::IOError(err)
+}
+
+///|
+fn relative_source_path(
+  content_root : String,
+  absolute_path : String,
+) -> String raise @core.ContentDiscoveryError {
+  if content_root == "." {
+    @core.normalize_relative_path(absolute_path) catch {
+      err => raise content_path_policy_error(absolute_path, err)
+    }
+  } else if absolute_path == content_root {
+    "."
+  } else {
+    let prefix = content_root + "/"
+    if absolute_path.has_prefix(prefix) {
+      @core.normalize_relative_path(absolute_path[prefix.length():].to_string()) catch {
+        err => raise content_path_policy_error(absolute_path, err)
+      }
+    } else {
+      raise @core.ContentDiscoveryError::InvalidPath(
+        path=absolute_path,
+        reason="path is outside configured content root",
+      )
+    }
+  }
+}
+
+///|
+pub fn load_build_inputs_result(
+  config : @core.MooninkConfig,
+  inventory : @core.ContentInventory,
+) -> Result[Array[BuildInput], @core.ContentDiscoveryError] {
+  let inputs : Array[BuildInput] = []
+  for file in inventory.files {
+    let source = io_read_file_to_string(file.path) catch {
+      err => return Err(io_discovery_error(err))
+    }
+    let relative_path = relative_source_path(inventory.root, file.path) catch {
+      err => return Err(err)
+    }
+    let (frontmatter, body) = match file.format {
+      @core.SourceFormat::Markdown =>
+        @core.parse_frontmatter_from_source(source)
+      _ => (@core.Frontmatter::default(), source)
+    }
+    let content_kind = @core.classify_content_kind(
+      file.format,
+      frontmatter.content_type,
+    )
+    let meta = @core.PageMeta::new(
+      relative_path,
+      content_kind,
+      file.format,
+      frontmatter,
+      config.route_style,
+    )
+    inputs.push({
+      absolute_source_path: file.path,
+      relative_source_path: relative_path,
+      source_content: source,
+      docflow_content: body,
+      meta,
+    })
+  }
+  Ok(inputs)
+}
+
+///|
+pub fn load_build_inputs_task(
+  config : @core.MooninkConfig,
+  inventory : @core.ContentInventory,
+) -> RuntimeIOTask[Result[Array[BuildInput], @core.ContentDiscoveryError]] {
+  Ready(load_build_inputs_result(config, inventory))
 }
 
 ///|

@@ -41,6 +41,51 @@ test "cli run returns error for unknown command" {
 }
 
 ///|
+test "runtime cli build writes minimal fixture html files" {
+  let fixture_root = "fixtures/v2/minimal"
+  let stale_path = fixture_root + "/dist/stale.txt"
+  let _ = try? @runtime.io_create_dir(fixture_root + "/dist")
+  @runtime.io_write_string(stale_path, "stale") catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/hello.html"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/about.html"),
+    content="true",
+  )
+  inspect(@runtime.io_path_exists(stale_path), content="false")
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let hello_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/hello.html",
+  ) catch {
+    _ => panic()
+  }
+  let about_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/about.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(index_html.contains("Home"), content="true")
+  inspect(hello_html.contains("Hello World"), content="true")
+  inspect(about_html.contains("This is a static HTML page."), content="true")
+}
+
+///|
 test "runtime cli build formats io errors when no config exists" {
   let outcome = @cli.cli_exec(["moonink", "build"])
   inspect(outcome.exit_code, content="1")

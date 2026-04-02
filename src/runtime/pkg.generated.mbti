@@ -14,6 +14,8 @@ pub fn discover_content_task(@core.MooninkConfig) -> RuntimeIOTask[Result[@core.
 
 pub fn io_create_dir(String) -> Unit raise @core.ProjectIOError
 
+pub fn io_ensure_dir(String) -> Unit raise @core.ProjectIOError
+
 pub fn io_is_dir(String) -> Bool raise @core.ProjectIOError
 
 pub fn io_is_file(String) -> Bool raise @core.ProjectIOError
@@ -24,7 +26,17 @@ pub fn io_read_dir(String) -> Array[String] raise @core.ProjectIOError
 
 pub fn io_read_file_to_string(String) -> String raise @core.ProjectIOError
 
+pub fn io_remove_dir(String) -> Unit raise @core.ProjectIOError
+
+pub fn io_remove_dir_all(String) -> Unit raise @core.ProjectIOError
+
+pub fn io_remove_file(String) -> Unit raise @core.ProjectIOError
+
 pub fn io_write_string(String, String) -> Unit raise @core.ProjectIOError
+
+pub fn load_build_inputs_result(@core.MooninkConfig, @core.ContentInventory) -> Result[Array[BuildInput], @core.ContentDiscoveryError]
+
+pub fn load_build_inputs_task(@core.MooninkConfig, @core.ContentInventory) -> RuntimeIOTask[Result[Array[BuildInput], @core.ContentDiscoveryError]]
 
 pub fn load_config_result(String) -> Result[@core.MooninkConfig, @core.ConfigError]
 
@@ -45,6 +57,14 @@ pub fn runtime_task_policy() -> RuntimeTaskPolicy
 // Errors
 
 // Types and methods
+pub(all) struct BuildInput {
+  absolute_source_path : String
+  relative_source_path : String
+  source_content : String
+  docflow_content : String
+  meta : @core.PageMeta
+} derive(Eq, Show)
+
 pub(all) struct NativeRuntimeAdapter {
   name : String
   note : String
