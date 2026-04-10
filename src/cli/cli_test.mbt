@@ -94,3 +94,42 @@ test "runtime cli build formats io errors when no config exists" {
     content="true",
   )
 }
+
+///|
+test "runtime cli build respects direct route layout" {
+  let fixture_root = "fixtures/v2/direct_route"
+  let stale_path = fixture_root + "/dist/stale.txt"
+  let _ = try? @runtime.io_create_dir(fixture_root + "/dist")
+  @runtime.io_write_string(stale_path, "stale") catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/hello.html"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/about.html"),
+    content="true",
+  )
+  inspect(@runtime.io_path_exists(stale_path), content="false")
+  let hello_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/hello.html",
+  ) catch {
+    _ => panic()
+  }
+  let about_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/about.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(hello_html.contains("Hello World"), content="true")
+  inspect(about_html.contains("This is a static HTML page."), content="true")
+}
