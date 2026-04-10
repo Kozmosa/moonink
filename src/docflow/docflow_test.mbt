@@ -195,6 +195,72 @@ test "docflow native template renderer interpolates built-in variables" {
 }
 
 ///|
+test "docflow native template renderer keeps unmatched opening braces literal" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "articles/hello.md",
+    source_uuid: "article-001",
+    html: "<h1>Hello</h1>",
+    note: "rendered html for unmatched brace test",
+  }
+  let context = @docflow.default_template_context(rendered)
+  inspect(
+    @docflow.render_template_string("prefix {{ page_title", context),
+    content="prefix {{ page_title",
+  )
+}
+
+///|
+test "docflow native template renderer renders empty variable as empty string" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "articles/hello.md",
+    source_uuid: "article-001",
+    html: "<h1>Hello</h1>",
+    note: "rendered html for empty variable test",
+  }
+  let context = @docflow.default_template_context(rendered)
+  inspect(
+    @docflow.render_template_string("before {{   }} after", context),
+    content="before  after",
+  )
+}
+
+///|
+test "docflow native template renderer supports adjacent variables" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "articles/hello.md",
+    source_uuid: "article-001",
+    html: "<h1>Hello</h1>",
+    note: "rendered html for adjacent variable test",
+  }
+  let context = @docflow.default_template_context(rendered)
+  inspect(
+    @docflow.render_template_string(
+      "{{ site_name }}{{ page_title }}{{ body_html }}", context,
+    ),
+    content="MoonInkarticles/hello.md<h1>Hello</h1>",
+  )
+}
+
+///|
+test "docflow native template renderer leaves plain text unchanged" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "articles/hello.md",
+    source_uuid: "article-001",
+    html: "<h1>Hello</h1>",
+    note: "rendered html for plain text test",
+  }
+  let context = @docflow.default_template_context(rendered)
+  inspect(
+    @docflow.render_template_string("plain text only", context),
+    content="plain text only",
+  )
+}
+
+///|
 test "docflow apply_template uses provided page metadata context" {
   let rendered : @docflow.RenderedDocument = {
     backend_name: "fake-html-renderer",
@@ -223,6 +289,8 @@ test "docflow apply_template uses provided page metadata context" {
     content="<article data-title=\"Welcome\"><p>Welcome</p></article>",
   )
 }
+
+///|
 
 ///|
 test "docflow apply_built_in_template uses provided page metadata context" {
