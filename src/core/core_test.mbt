@@ -56,7 +56,28 @@ test "parse_config_json uses defaults for optional fields" {
   inspect(config.content_dir, content=".")
   inspect(config.output_dir, content="dist")
   inspect(config.route_style, content="Pretty")
+  inspect(config.template_file, content="None")
   inspect(config.exclude.length() > 0, content="true")
+}
+
+///|
+test "parse_config_json parses optional template_file" {
+  let json =
+    #|{"site_name": "Templated", "template_file": "templates/site.html"}
+  let config = @core.parse_config_json("moonink.json", json) catch {
+    _ => panic()
+  }
+  inspect(config.template_file, content="Some(\"templates/site.html\")")
+}
+
+///|
+test "parse_config_json rejects parent traversal template_file" {
+  let json =
+    #|{"site_name": "Templated", "template_file": "../site.html"}
+  inspect(
+    try? @core.parse_config_json("moonink.json", json),
+    content="Err(InvalidPath(path=\"../site.html\", reason=\"parent traversal is not allowed: ../site.html\"))",
+  )
 }
 
 ///|

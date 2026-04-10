@@ -59,6 +59,7 @@ pub(all) struct MooninkConfig {
   site_url : String?
   content_dir : String
   output_dir : String
+  template_file : String?
   exclude : Array[String]
   route_style : RouteStyle
   text_encoding : String
@@ -149,6 +150,11 @@ pub fn parse_config_json(
     Some(dir) => dir
     None => "dist"
   }
+  let template_file = match extract_json_string(obj, "template_file") {
+    Some(path) =>
+      Some(normalize_config_path_or_error(path) catch { err => raise err })
+    None => None
+  }
   let exclude_raw = extract_json_string_array(obj, "exclude")
   let exclude = if exclude_raw.is_empty() {
     default_exclude()
@@ -166,6 +172,7 @@ pub fn parse_config_json(
     site_url,
     content_dir,
     output_dir,
+    template_file,
     exclude,
     route_style,
     text_encoding: TEXT_ENCODING_NAME,
