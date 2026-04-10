@@ -82,6 +82,8 @@ pub impl Show for ParserAdapter with output(self, logger) {
 pub(all) struct WikiLinker {
   name : String
   note : String
+  exact_targets : Map[String, String]
+  ambiguous_targets : Map[String, Array[String]]
 } derive(Debug, Eq)
 
 ///|
@@ -282,5 +284,15 @@ pub fn noop_wikilinker(
   name? : String = "noop-wikilinker",
   note? : String = "No-op semantic stage for early document-flow testing.",
 ) -> WikiLinker {
-  { name, note }
+  { name, note, exact_targets: {}, ambiguous_targets: {} }
+}
+
+///|
+pub fn indexed_wikilinker(
+  exact_targets : Map[String, String],
+  ambiguous_targets : Map[String, Array[String]],
+  name? : String = "indexed-wikilinker",
+  note? : String = "Semantic post-parse stage with precomputed route-aware wikilink targets.",
+) -> WikiLinker {
+  { name, note, exact_targets, ambiguous_targets }
 }

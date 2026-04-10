@@ -64,11 +64,28 @@ test "docflow wikilinker contract remains explicit no-op" {
     name="semantic-noop",
     note="No-op semantic stage for contract coverage.",
   )
+  inspect(linker.exact_targets.is_empty(), content="true")
+  inspect(linker.ambiguous_targets.is_empty(), content="true")
   let linked = @docflow.apply_wikilinker(linker, parsed)
   inspect(linked.source_path, content="articles/hello.md")
   inspect(
     linked.backend_payload,
     content="Some(\"fake-parse:articles/hello.md\")",
+  )
+}
+
+///|
+test "docflow indexed wikilinker stores exact and ambiguous targets" {
+  let linker = @docflow.indexed_wikilinker(
+    { "hello": "/hello/" },
+    { "intro": ["/guides/intro/", "/reference/intro/"] },
+    name="test-indexed-linker",
+  )
+  inspect(linker.name, content="test-indexed-linker")
+  inspect(linker.exact_targets.get("hello"), content="Some(\"/hello/\")")
+  inspect(
+    linker.ambiguous_targets.get("intro"),
+    content="Some([\"/guides/intro/\", \"/reference/intro/\"])",
   )
 }
 
