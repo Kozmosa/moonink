@@ -519,8 +519,27 @@ pub fn build_site_pages(
 }
 
 ///|
+pub fn build_site_assembly_model(
+  _config : @core.MooninkConfig,
+  inputs : Array[@runtime.BuildInput],
+  inventory : @core.ContentInventory,
+) -> @core.SiteAssemblyModel {
+  let pages = build_site_pages(inputs)
+  let navigation = build_navigation_model(pages)
+  {
+    pages,
+    navigation,
+    page_count: inventory.total_pages,
+    article_count: inventory.total_articles,
+    navigation_items: navigation.total_items,
+    note: "Site assembly combines page metadata and navigation before templating.",
+  }
+}
+
+///|
 fn build_template_context(
   config : @core.MooninkConfig,
+  assembly : @core.SiteAssemblyModel,
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
 ) -> @docflow.TemplateContext {
@@ -535,7 +554,10 @@ fn build_template_context(
     url_path: input.meta.url_path,
     source_path: input.meta.source_path,
     content_kind: template_content_kind(input.meta.content_kind),
-    navigation_html: "",
+    navigation_html: render_navigation_html(
+      assembly.navigation,
+      input.meta.url_path,
+    ),
     body_html: rendered.html,
   }
 }
@@ -543,11 +565,12 @@ fn build_template_context(
 ///|
 fn apply_build_template(
   config : @core.MooninkConfig,
+  assembly : @core.SiteAssemblyModel,
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
   template_source : String?,
 ) -> @docflow.TemplatedPage {
-  let context = build_template_context(config, input, rendered)
+  let context = build_template_context(config, assembly, input, rendered)
   match template_source {
     Some(template_source) =>
       @docflow.apply_template(rendered, context, template_source)
@@ -568,6 +591,7 @@ fn build_site_result(
     err => return Err(err)
   }
   let wikilinker = build_wikilinker(inputs)
+  let assembly = build_site_assembly_model(config, inputs, inventory)
   let template_source = match @runtime.load_template_source_result(config) {
     Ok(template_source) => template_source
     Err(err) =>
@@ -610,7 +634,7 @@ fn build_site_result(
     let linked = @docflow.apply_wikilinker(wikilinker, parsed)
     let rendered = @docflow.render_with_adapter(renderer, linked)
     let templated = apply_build_template(
-      config, input, rendered, template_source,
+      config, assembly, input, rendered, template_source,
     )
     let output_path = @core.output_html_path(
       input.meta.source_path,

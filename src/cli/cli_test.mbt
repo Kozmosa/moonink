@@ -1,4 +1,81 @@
 ///|
+test "build site assembly model combines pages and navigation" {
+  let config : @core.MooninkConfig = {
+    config_path: "moonink.json",
+    project_root: ".",
+    site_name: "Fixture Site",
+    site_url: Some("https://example.com/docs"),
+    content_dir: ".",
+    output_dir: "dist",
+    template_file: None,
+    exclude: ["dist"],
+    route_style: @core.RouteStyle::Pretty,
+    text_encoding: "utf-8",
+  }
+  let inventory : @core.ContentInventory = {
+    root: "fixtures/v2/minimal",
+    files: [],
+    total_articles: 1,
+    total_pages: 2,
+    note: "inventory for assembly test",
+  }
+  let inputs : Array[@runtime.BuildInput] = [
+    {
+      absolute_source_path: "fixtures/v2/minimal/index.md",
+      relative_source_path: "index.md",
+      source_content: "# Home",
+      docflow_content: "# Home",
+      meta: {
+        source_path: "index.md",
+        url_path: "/",
+        content_kind: @core.ContentKind::Page,
+        format: @core.SourceFormat::Markdown,
+        frontmatter: {
+          ..@core.Frontmatter::default(),
+          title: Some("Home"),
+          content_type: Some("page"),
+        },
+        sort_key: "index.md",
+      },
+    },
+    {
+      absolute_source_path: "fixtures/v2/minimal/about.html",
+      relative_source_path: "about.html",
+      source_content: "<h1>About</h1>",
+      docflow_content: "<h1>About</h1>",
+      meta: {
+        source_path: "about.html",
+        url_path: "/about/",
+        content_kind: @core.ContentKind::Page,
+        format: @core.SourceFormat::Html,
+        frontmatter: @core.Frontmatter::default(),
+        sort_key: "about.html",
+      },
+    },
+    {
+      absolute_source_path: "fixtures/v2/minimal/hello.md",
+      relative_source_path: "hello.md",
+      source_content: "# Hello",
+      docflow_content: "# Hello",
+      meta: {
+        source_path: "hello.md",
+        url_path: "/hello/",
+        content_kind: @core.ContentKind::Article,
+        format: @core.SourceFormat::Markdown,
+        frontmatter: @core.Frontmatter::default(),
+        sort_key: "hello.md",
+      },
+    },
+  ]
+  let assembly = @cli.build_site_assembly_model(config, inputs, inventory)
+  inspect(assembly.page_count, content="2")
+  inspect(assembly.article_count, content="1")
+  inspect(assembly.navigation_items, content="2")
+  inspect(assembly.pages.length(), content="3")
+  inspect(assembly.navigation.items.length(), content="2")
+}
+
+///|
 test "render navigation html marks active and ancestor items" {
   let navigation : @core.NavigationModel = {
     items: [
