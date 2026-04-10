@@ -188,6 +188,10 @@ test "runtime cli build applies configured template file" {
     hello_html.contains("data-site=\"https://example.com/template\""),
     content="true",
   )
+  inspect(hello_html.contains("href=\"/about/\""), content="true")
+  inspect(hello_html.contains(">about<"), content="true")
+  inspect(hello_html.contains("href=\"/\""), content="true")
+  inspect(hello_html.contains(">Home<"), content="true")
   inspect(about_html.contains("About Template"), content="true")
   inspect(about_html.contains("<aside></aside>"), content="true")
   inspect(about_html.contains("data-kind=\"page\""), content="true")
