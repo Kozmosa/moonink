@@ -227,8 +227,8 @@ pub fn apply_template(
 }
 
 ///|
-/// Dummy templater that wraps rendered HTML in a simple site shell.
-pub fn apply_dummy_template(rendered : RenderedDocument) -> TemplatedPage {
+/// Native templater that derives a default context from the rendered document.
+pub fn apply_default_template(rendered : RenderedDocument) -> TemplatedPage {
   let context = default_template_context(rendered)
   apply_template(rendered, context)
 }
@@ -303,7 +303,7 @@ pub fn run_docflow_build_pipeline(
     }
     match run_article_pipeline(parser, linker, renderer, input) {
       Ok(result) => {
-        let templated = apply_dummy_template(result.rendered)
+        let templated = apply_default_template(result.rendered)
         entries.push(article_site_entry(templated))
       }
       Err(_) => {
@@ -314,7 +314,7 @@ pub fn run_docflow_build_pipeline(
           html: "<!-- docflow build failed for \{file} -->",
           note: "docflow build placeholder for failed article pipeline",
         }
-        let templated = apply_dummy_template(failed_rendered)
+        let templated = apply_default_template(failed_rendered)
         entries.push(article_site_entry(templated))
       }
     }

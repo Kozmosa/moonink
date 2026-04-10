@@ -356,7 +356,7 @@ test "docflow downstream assembly accepts article output after templating" {
     Ok(result) => result
     Err(_) => panic()
   }
-  let templated = @docflow.apply_dummy_template(pipeline.rendered)
+  let templated = @docflow.apply_default_template(pipeline.rendered)
   let assembly = @docflow.construct_site([
     @docflow.article_site_entry(templated),
   ])
