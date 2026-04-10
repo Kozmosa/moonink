@@ -141,10 +141,9 @@ test "docflow indexed wikilinker leaves ambiguous wikilinks and warns" {
     diagnostics: @docflow.empty_document_diagnostics(),
     backend_payload: Some("Visit [[intro]]."),
   }
-  let linker = @docflow.indexed_wikilinker(
-    {},
-    { "intro": ["/guides/intro/", "/reference/intro/"] },
-  )
+  let linker = @docflow.indexed_wikilinker({}, {
+    "intro": ["/guides/intro/", "/reference/intro/"],
+  })
   let linked = @docflow.apply_wikilinker(linker, parsed)
   inspect(linked.backend_payload, content="Some(\"Visit [[intro]].\")")
   inspect(linked.diagnostics.entries.length(), content="1")
@@ -173,6 +172,25 @@ test "docflow render adapter contract produces html from parsed document" {
   inspect(
     rendered.html,
     content="<article data-renderer=\"fake-html-renderer\" data-source-format=\"Markdown\"><h1>Hello</h1></article>",
+  )
+}
+
+///|
+test "docflow native template renderer interpolates built-in variables" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "articles/hello.md",
+    source_uuid: "article-001",
+    html: "<h1>Hello</h1>",
+    note: "rendered html for template test",
+  }
+  let context = @docflow.default_template_context(rendered)
+  inspect(
+    @docflow.render_template_string(
+      "<title>{{ page_title }}</title><section>{{ body_html }}</section><footer>{{ unknown }}</footer>",
+      context,
+    ),
+    content="<title>articles/hello.md</title><section><h1>Hello</h1></section><footer></footer>",
   )
 }
 

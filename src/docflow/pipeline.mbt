@@ -129,14 +129,99 @@ pub fn route_from_source_path(source_path : String) -> String {
 }
 
 ///|
+fn lookup_template_variable(context : TemplateContext, name : String) -> String {
+  match name {
+    "site_name" => context.site_name
+    "site_url" => context.site_url
+    "page_title" => context.page_title
+    "page_description" => context.page_description
+    "url_path" => context.url_path
+    "source_path" => context.source_path
+    "content_kind" => context.content_kind
+    "body_html" => context.body_html
+    _ => ""
+  }
+}
+
+///|
+fn trim_template_variable_name(name : String) -> String {
+  name.trim().to_string()
+}
+
+///|
+fn find_template_close(template : String, start : Int) -> Int? {
+  if start < 0 || start + 1 >= template.length() {
+    return None
+  }
+  for i in start..<(template.length() - 1) {
+    let pair = template[i:i + 2].to_string()
+    if pair == "}}" {
+      return Some(i)
+    }
+  }
+  None
+}
+
+///|
+pub fn render_template_string(
+  template : String,
+  context : TemplateContext,
+) -> String {
+  let mut cursor = 0
+  let mut output = ""
+  while cursor < template.length() {
+    if cursor + 1 < template.length() &&
+      template[cursor:cursor + 2].to_string() == "{{" {
+      match find_template_close(template, cursor + 2) {
+        Some(close) => {
+          let variable = trim_template_variable_name(
+            template[cursor + 2:close].to_string(),
+          )
+          output = output + lookup_template_variable(context, variable)
+          cursor = close + 2
+        }
+        None => {
+          output = output + template[cursor:].to_string()
+          cursor = template.length()
+        }
+      }
+    } else {
+      output = output + template[cursor:cursor + 1].to_string()
+      cursor = cursor + 1
+    }
+  }
+  output
+}
+
+///|
+pub fn default_template_context(rendered : RenderedDocument) -> TemplateContext {
+  {
+    site_name: "MoonInk",
+    site_url: "",
+    page_title: rendered.source_path,
+    page_description: "",
+    url_path: route_from_source_path(rendered.source_path),
+    source_path: rendered.source_path,
+    content_kind: "article",
+    body_html: rendered.html,
+  }
+}
+
+///|
+pub fn default_page_template() -> String {
+  "<!doctype html>\n<html><body><main data-source=\"{{ source_path }}\">{{ body_html }}</main></body></html>"
+}
+
+///|
 /// Dummy templater that wraps rendered HTML in a simple site shell.
 pub fn apply_dummy_template(rendered : RenderedDocument) -> TemplatedPage {
+  let context = default_template_context(rendered)
   {
-    route: route_from_source_path(rendered.source_path),
+    route: context.url_path,
     source_path: rendered.source_path,
     source_uuid: rendered.source_uuid,
-    html: "<!doctype html>\n<html><body><main data-source=\"\{rendered.source_path}\">\{rendered.html}</main></body></html>",
-    note: "dummy templater keeps rendered content inside a simple site shell",
+    html: render_template_string(default_page_template(), context),
+    note: "native templater renders the built-in page template with a minimal context",
   }
 }
 

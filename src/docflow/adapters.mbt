@@ -104,6 +104,19 @@ pub(all) struct RenderedDocument {
 } derive(Debug, Eq)
 
 ///|
+/// Minimal native template context used by the built-in templater.
+pub(all) struct TemplateContext {
+  site_name : String
+  site_url : String
+  page_title : String
+  page_description : String
+  url_path : String
+  source_path : String
+  content_kind : String
+  body_html : String
+} derive(Debug, Eq)
+
+///|
 /// Explicit article-flow summary that keeps parser, WikiLinker, and render stages visible.
 pub(all) struct ArticlePipelineResult {
   parsed : ParsedDocument
