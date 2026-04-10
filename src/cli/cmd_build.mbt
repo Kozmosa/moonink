@@ -171,7 +171,10 @@ fn build_site_result(
     let linked = @docflow.apply_wikilinker(@docflow.noop_wikilinker(), parsed)
     let rendered = @docflow.render_with_adapter(renderer, linked)
     let templated = @docflow.apply_dummy_template(rendered)
-    let output_path = @core.output_html_path(input.meta.source_path)
+    let output_path = @core.output_html_path(
+      input.meta.source_path,
+      config.route_style,
+    )
     write_build_output(config, output_path, templated.html) catch {
       err => return Err(err)
     }
