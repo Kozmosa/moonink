@@ -57,11 +57,11 @@ test "runtime cli build writes minimal fixture html files" {
     content="true",
   )
   inspect(
-    @runtime.io_path_exists(fixture_root + "/dist/hello.html"),
+    @runtime.io_path_exists(fixture_root + "/dist/hello/index.html"),
     content="true",
   )
   inspect(
-    @runtime.io_path_exists(fixture_root + "/dist/about.html"),
+    @runtime.io_path_exists(fixture_root + "/dist/about/index.html"),
     content="true",
   )
   inspect(@runtime.io_path_exists(stale_path), content="false")
@@ -71,12 +71,12 @@ test "runtime cli build writes minimal fixture html files" {
     _ => panic()
   }
   let hello_html = @runtime.io_read_file_to_string(
-    fixture_root + "/dist/hello.html",
+    fixture_root + "/dist/hello/index.html",
   ) catch {
     _ => panic()
   }
   let about_html = @runtime.io_read_file_to_string(
-    fixture_root + "/dist/about.html",
+    fixture_root + "/dist/about/index.html",
   ) catch {
     _ => panic()
   }
