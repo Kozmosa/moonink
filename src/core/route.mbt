@@ -21,9 +21,18 @@ pub fn generate_route(source_path : String, style : RouteStyle) -> String {
 }
 
 ///|
-/// Map a relative source path to the emitted direct-style HTML file path.
-pub fn output_html_path(source_path : String) -> String {
-  "\{strip_extension(source_path)}.html"
+/// Map a relative source path to the emitted HTML file path for the configured route style.
+pub fn output_html_path(source_path : String, style : RouteStyle) -> String {
+  let stripped = strip_extension(source_path)
+  match style {
+    RouteStyle::Pretty =>
+      if stripped == "index" || stripped.has_suffix("/index") {
+        "\{stripped}.html"
+      } else {
+        "\{stripped}/index.html"
+      }
+    RouteStyle::Direct => "\{stripped}.html"
+  }
 }
 
 ///|

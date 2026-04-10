@@ -195,13 +195,43 @@ test "generate_route direct style" {
 }
 
 ///|
+test "generate_output_html_path maps source paths to pretty html outputs" {
+  inspect(
+    @core.output_html_path("guides/intro.md", @core.RouteStyle::Pretty),
+    content="guides/intro/index.html",
+  )
+  inspect(
+    @core.output_html_path("index.md", @core.RouteStyle::Pretty),
+    content="index.html",
+  )
+  inspect(
+    @core.output_html_path("docs/index.md", @core.RouteStyle::Pretty),
+    content="docs/index.html",
+  )
+  inspect(
+    @core.output_html_path("about.html", @core.RouteStyle::Pretty),
+    content="about/index.html",
+  )
+}
+
+///|
 test "generate_output_html_path maps source paths to direct html outputs" {
   inspect(
-    @core.output_html_path("guides/intro.md"),
+    @core.output_html_path("guides/intro.md", @core.RouteStyle::Direct),
     content="guides/intro.html",
   )
-  inspect(@core.output_html_path("index.md"), content="index.html")
-  inspect(@core.output_html_path("about.html"), content="about.html")
+  inspect(
+    @core.output_html_path("index.md", @core.RouteStyle::Direct),
+    content="index.html",
+  )
+  inspect(
+    @core.output_html_path("docs/index.md", @core.RouteStyle::Direct),
+    content="docs/index.html",
+  )
+  inspect(
+    @core.output_html_path("about.html", @core.RouteStyle::Direct),
+    content="about.html",
+  )
 }
 
 ///|
