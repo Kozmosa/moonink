@@ -384,6 +384,97 @@ pub fn build_navigation_model(
 }
 
 ///|
+fn escape_html_text(value : String) -> String {
+  let mut cursor = 0
+  let mut output = ""
+  while cursor < value.length() {
+    let char = value[cursor:cursor + 1].to_string()
+    if char == "&" {
+      output = output + "&amp;"
+    } else if char == "<" {
+      output = output + "&lt;"
+    } else if char == ">" {
+      output = output + "&gt;"
+    } else if char == "\"" {
+      output = output + "&quot;"
+    } else if char == "'" {
+      output = output + "&#39;"
+    } else {
+      output = output + char
+    }
+    cursor = cursor + 1
+  }
+  output
+}
+
+///|
+fn navigation_bool_attr(value : Bool) -> String {
+  if value {
+    "true"
+  } else {
+    "false"
+  }
+}
+
+///|
+fn navigation_contains_url(
+  item : @core.NavigationItem,
+  current_url : String,
+) -> Bool {
+  if item.url_path == current_url {
+    return true
+  }
+  for child in item.children {
+    if navigation_contains_url(child, current_url) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn render_navigation_items(
+  items : Array[@core.NavigationItem],
+  current_url : String,
+) -> String {
+  let mut html = "<ul>"
+  for item in items {
+    let is_active = item.url_path == current_url
+    let is_ancestor = !is_active && navigation_contains_url(item, current_url)
+    let active_attr = navigation_bool_attr(is_active)
+    let ancestor_attr = navigation_bool_attr(is_ancestor)
+    let index_attr = navigation_bool_attr(item.is_index)
+    html = html +
+      "<li data-active=\"" +
+      active_attr +
+      "\" data-ancestor=\"" +
+      ancestor_attr +
+      "\" data-index=\"" +
+      index_attr +
+      "\"><a href=\"" +
+      escape_html_text(item.url_path) +
+      "\">" +
+      escape_html_text(item.title) +
+      "</a>"
+    if !item.children.is_empty() {
+      html = html + render_navigation_items(item.children, current_url)
+    }
+    html = html + "</li>"
+  }
+  html + "</ul>"
+}
+
+///|
+pub fn render_navigation_html(
+  navigation : @core.NavigationModel,
+  current_url : String,
+) -> String {
+  "<nav data-moonink-nav=\"auto\">" +
+  render_navigation_items(navigation.items, current_url) +
+  "</nav>"
+}
+
+///|
 pub fn site_page_title(meta : @core.PageMeta) -> String {
   match meta.frontmatter.title {
     Some(title) => title

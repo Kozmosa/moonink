@@ -1,4 +1,75 @@
 ///|
+test "render navigation html marks active and ancestor items" {
+  let navigation : @core.NavigationModel = {
+    items: [
+      {
+        title: "Home",
+        url_path: "/",
+        source_path: "index.md",
+        content_kind: @core.ContentKind::Page,
+        children: [],
+        is_index: true,
+      },
+      {
+        title: "Guide",
+        url_path: "/guide/",
+        source_path: "guide/index.md",
+        content_kind: @core.ContentKind::Page,
+        children: [
+          {
+            title: "Install",
+            url_path: "/guide/install/",
+            source_path: "guide/install.md",
+            content_kind: @core.ContentKind::Page,
+            children: [],
+            is_index: false,
+          },
+        ],
+        is_index: true,
+      },
+    ],
+    total_items: 3,
+    note: "navigation for render test",
+  }
+  let html = @cli.render_navigation_html(navigation, "/guide/install/")
+  inspect(html.contains("<nav data-moonink-nav=\"auto\">"), content="true")
+  inspect(html.contains("href=\"/guide/install/\">Install</a>"), content="true")
+  inspect(
+    html.contains(
+      "<li data-active=\"false\" data-ancestor=\"true\" data-index=\"true\"><a href=\"/guide/\">Guide</a>",
+    ),
+    content="true",
+  )
+  inspect(
+    html.contains(
+      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"false\"><a href=\"/guide/install/\">Install</a>",
+    ),
+    content="true",
+  )
+}
+
+///|
+test "render navigation html escapes titles and urls" {
+  let navigation : @core.NavigationModel = {
+    items: [
+      {
+        title: "A < B",
+        url_path: "/guide/?q=1&x=2",
+        source_path: "guide/index.md",
+        content_kind: @core.ContentKind::Page,
+        children: [],
+        is_index: true,
+      },
+    ],
+    total_items: 1,
+    note: "navigation escaping test",
+  }
+  let html = @cli.render_navigation_html(navigation, "/")
+  inspect(html.contains("A &lt; B"), content="true")
+  inspect(html.contains("/guide/?q=1&amp;x=2"), content="true")
+}
+
+///|
 test "build navigation model keeps only pages and nests section children" {
   let pages : Array[@core.SitePage] = [
     {

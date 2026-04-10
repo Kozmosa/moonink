@@ -23,6 +23,8 @@ pub fn parse_cli_command(Array[String]) -> CliCommand
 
 pub fn prepare_serve_dummy() -> ServeSession
 
+pub fn render_navigation_html(@core.NavigationModel, String) -> String
+
 pub fn run_build_command_runtime() -> CliOutcome
 
 pub fn run_build_command_runtime_from_config(String) -> CliOutcome
