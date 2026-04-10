@@ -1,0 +1,6 @@
+[submodule "ref-repos/mkdocs"]
+	path = ref-repos/mkdocs
+	url = https://github.com/mkdocs/mkdocs.git
+[submodule "ref-repos/quartz"]
+	path = ref-repos/quartz
+	url = https://github.com/jackyzha0/quartz.git
