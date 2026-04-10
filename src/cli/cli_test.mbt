@@ -1,4 +1,82 @@
 ///|
+test "site page title derives from frontmatter basename and root index" {
+  let titled_meta : @core.PageMeta = {
+    source_path: "guide/install.md",
+    url_path: "/guide/install/",
+    content_kind: @core.ContentKind::Page,
+    format: @core.SourceFormat::Markdown,
+    frontmatter: {
+      ..@core.Frontmatter::default(),
+      title: Some("Install Guide"),
+    },
+    sort_key: "guide/install.md",
+  }
+  let untitled_meta : @core.PageMeta = {
+    source_path: "guide/config.md",
+    url_path: "/guide/config/",
+    content_kind: @core.ContentKind::Page,
+    format: @core.SourceFormat::Markdown,
+    frontmatter: @core.Frontmatter::default(),
+    sort_key: "guide/config.md",
+  }
+  let index_meta : @core.PageMeta = {
+    source_path: "index.md",
+    url_path: "/",
+    content_kind: @core.ContentKind::Page,
+    format: @core.SourceFormat::Markdown,
+    frontmatter: @core.Frontmatter::default(),
+    sort_key: "index.md",
+  }
+  inspect(@cli.site_page_title(titled_meta), content="Install Guide")
+  inspect(@cli.site_page_title(untitled_meta), content="config")
+  inspect(@cli.site_page_title(index_meta), content="Home")
+}
+
+///|
+test "build site pages derives description and index flag" {
+  let page_input : @runtime.BuildInput = {
+    absolute_source_path: "fixtures/v2/minimal/index.md",
+    relative_source_path: "index.md",
+    source_content: "---\ntitle: Home\ndescription: Landing page\ntype: page\n---\n",
+    docflow_content: "# Home",
+    meta: {
+      source_path: "index.md",
+      url_path: "/",
+      content_kind: @core.ContentKind::Page,
+      format: @core.SourceFormat::Markdown,
+      frontmatter: {
+        ..@core.Frontmatter::default(),
+        title: Some("Home"),
+        description: Some("Landing page"),
+        content_type: Some("page"),
+      },
+      sort_key: "index.md",
+    },
+  }
+  let article_input : @runtime.BuildInput = {
+    absolute_source_path: "fixtures/v2/minimal/hello.md",
+    relative_source_path: "hello.md",
+    source_content: "# Hello",
+    docflow_content: "# Hello",
+    meta: {
+      source_path: "hello.md",
+      url_path: "/hello/",
+      content_kind: @core.ContentKind::Article,
+      format: @core.SourceFormat::Markdown,
+      frontmatter: @core.Frontmatter::default(),
+      sort_key: "hello.md",
+    },
+  }
+  let pages = @cli.build_site_pages([page_input, article_input])
+  inspect(pages.length(), content="2")
+  inspect(pages[0].description, content="Landing page")
+  inspect(pages[0].is_index, content="true")
+  inspect(pages[1].title, content="hello")
+  inspect(pages[1].description, content="")
+  inspect(pages[1].is_index, content="false")
+}
+
+///|
 test "parse cli command supports raw command tokens" {
   inspect(@cli.parse_cli_command([]), content="Help")
   inspect(@cli.parse_cli_command(["help"]), content="Help")

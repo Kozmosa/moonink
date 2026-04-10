@@ -5,9 +5,12 @@ import {
   "moonbitlang/core/debug",
   "username/moonink/core",
   "username/moonink/docflow",
+  "username/moonink/runtime",
 }
 
 // Values
+pub fn build_site_pages(Array[@runtime.BuildInput]) -> Array[@core.SitePage]
+
 pub fn cli_exec(Array[String]) -> CliOutcome
 
 pub fn cli_help_text() -> String
@@ -23,6 +26,10 @@ pub fn run_build_command_runtime() -> CliOutcome
 pub fn run_build_command_runtime_from_config(String) -> CliOutcome
 
 pub fn run_runtime_cli_command(CliCommand) -> CliOutcome
+
+pub fn site_page_description(@core.PageMeta) -> String
+
+pub fn site_page_title(@core.PageMeta) -> String
 
 // Errors
 pub(all) suberror BuildCommandError {

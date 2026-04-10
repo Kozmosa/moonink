@@ -265,19 +265,57 @@ fn template_content_kind(kind : @core.ContentKind) -> String {
 }
 
 ///|
-fn template_page_title(meta : @core.PageMeta) -> String {
+fn is_index_source_path(path : String) -> Bool {
+  path == "index.md" ||
+  path == "index.html" ||
+  path == "index.htm" ||
+  path.has_suffix("/index.md") ||
+  path.has_suffix("/index.html") ||
+  path.has_suffix("/index.htm")
+}
+
+///|
+pub fn site_page_title(meta : @core.PageMeta) -> String {
   match meta.frontmatter.title {
     Some(title) => title
-    None => meta.source_path
+    None =>
+      if is_index_source_path(meta.source_path) {
+        "Home"
+      } else {
+        basename_without_extension(meta.source_path)
+      }
   }
 }
 
 ///|
-fn template_page_description(meta : @core.PageMeta) -> String {
+pub fn site_page_description(meta : @core.PageMeta) -> String {
   match meta.frontmatter.description {
     Some(description) => description
     None => ""
   }
+}
+
+///|
+fn build_site_page(input : @runtime.BuildInput) -> @core.SitePage {
+  {
+    title: site_page_title(input.meta),
+    description: site_page_description(input.meta),
+    source_path: input.meta.source_path,
+    url_path: input.meta.url_path,
+    content_kind: input.meta.content_kind,
+    is_index: is_index_source_path(input.meta.source_path),
+  }
+}
+
+///|
+pub fn build_site_pages(
+  inputs : Array[@runtime.BuildInput],
+) -> Array[@core.SitePage] {
+  let pages : Array[@core.SitePage] = []
+  for input in inputs {
+    pages.push(build_site_page(input))
+  }
+  pages
 }
 
 ///|
@@ -292,8 +330,8 @@ fn build_template_context(
       Some(site_url) => site_url
       None => ""
     },
-    page_title: template_page_title(input.meta),
-    page_description: template_page_description(input.meta),
+    page_title: site_page_title(input.meta),
+    page_description: site_page_description(input.meta),
     url_path: input.meta.url_path,
     source_path: input.meta.source_path,
     content_kind: template_content_kind(input.meta.content_kind),
