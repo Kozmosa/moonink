@@ -79,6 +79,9 @@ test "discover_content_build inputs read frontmatter-aware metadata" {
   inspect(by_path.get("about.html").unwrap().meta.content_kind, content="Page")
   inspect(by_path.get("hello.md").unwrap().meta.content_kind, content="Article")
   inspect(by_path.get("index.md").unwrap().meta.content_kind, content="Page")
+  inspect(by_path.get("about.html").unwrap().meta.url_path, content="/about/")
+  inspect(by_path.get("hello.md").unwrap().meta.url_path, content="/hello/")
+  inspect(by_path.get("index.md").unwrap().meta.url_path, content="/")
 }
 
 ///|

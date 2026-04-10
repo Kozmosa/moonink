@@ -134,6 +134,121 @@ fn write_build_output(
 }
 
 ///|
+fn strip_link_target_extension(path : String) -> String {
+  if path.has_suffix(".md") {
+    path[:path.length() - 3].to_string()
+  } else if path.has_suffix(".html") {
+    path[:path.length() - 5].to_string()
+  } else if path.has_suffix(".htm") {
+    path[:path.length() - 4].to_string()
+  } else {
+    path
+  }
+}
+
+///|
+fn basename_without_extension(path : String) -> String {
+  let stripped = strip_link_target_extension(path)
+  let mut result = stripped
+  for part_view in stripped.split("/") {
+    result = part_view.to_string()
+  }
+  result
+}
+
+///|
+fn index_alias_without_extension(path : String) -> String? {
+  let stripped = strip_link_target_extension(path)
+  if stripped == "index" {
+    None
+  } else if stripped.has_suffix("/index") {
+    Some(stripped[:stripped.length() - 6].to_string())
+  } else {
+    None
+  }
+}
+
+///|
+fn collect_duplicate_keys(keys : Array[String]) -> Map[String, Bool] {
+  let counts : Map[String, Int] = {}
+  for key in keys {
+    if key == "" {
+      continue
+    }
+    match counts.get(key) {
+      Some(count) => counts[key] = count + 1
+      None => counts[key] = 1
+    }
+  }
+  let duplicates : Map[String, Bool] = {}
+  for entry in counts {
+    let (key, count) = entry
+    if count > 1 {
+      duplicates[key] = true
+    }
+  }
+  duplicates
+}
+
+///|
+fn register_exact_target(targets : Map[String, String], key : String, url : String) -> Unit {
+  if key == "" {
+    return
+  }
+  targets[key] = url
+}
+
+///|
+fn build_wikilinker(inputs : Array[@runtime.BuildInput]) -> @docflow.WikiLinker {
+  let basename_keys : Array[String] = []
+  let index_alias_keys : Array[String] = []
+  for input in inputs {
+    basename_keys.push(basename_without_extension(input.meta.source_path))
+    match index_alias_without_extension(input.meta.source_path) {
+      Some(index_key) => index_alias_keys.push(index_key)
+      None => ()
+    }
+  }
+  let duplicate_basenames = collect_duplicate_keys(basename_keys)
+  let duplicate_index_aliases = collect_duplicate_keys(index_alias_keys)
+
+  let exact_targets : Map[String, String] = {}
+  let ambiguous_targets : Map[String, Array[String]] = {}
+  for input in inputs {
+    let source_path = input.meta.source_path
+    let url = input.meta.url_path
+    register_exact_target(exact_targets, source_path, url)
+    register_exact_target(exact_targets, strip_link_target_extension(source_path), url)
+
+    let basename = basename_without_extension(source_path)
+    if duplicate_basenames.get(basename) is Some(_) {
+      let urls = match ambiguous_targets.get(basename) {
+        Some(urls) => urls
+        None => []
+      }
+      ambiguous_targets[basename] = urls + [url]
+    } else {
+      register_exact_target(exact_targets, basename, url)
+    }
+
+    match index_alias_without_extension(source_path) {
+      Some(index_key) =>
+        if duplicate_index_aliases.get(index_key) is Some(_) {
+          let urls = match ambiguous_targets.get(index_key) {
+            Some(urls) => urls
+            None => []
+          }
+          ambiguous_targets[index_key] = urls + [url]
+        } else {
+          register_exact_target(exact_targets, index_key, url)
+        }
+      None => ()
+    }
+  }
+  @docflow.indexed_wikilinker(exact_targets, ambiguous_targets)
+}
+
+///|
 fn build_site_result(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
@@ -145,6 +260,7 @@ fn build_site_result(
   prepare_output_dir(config) catch {
     err => return Err(err)
   }
+  let wikilinker = build_wikilinker(inputs)
   let mut emitted_html_files = 0
   let mut article_count = 0
   let mut page_count = 0
@@ -168,7 +284,7 @@ fn build_site_result(
       Ok(parsed) => parsed
       Err(err) => return Err(BuildCommandError::FatalParse(err))
     }
-    let linked = @docflow.apply_wikilinker(@docflow.noop_wikilinker(), parsed)
+    let linked = @docflow.apply_wikilinker(wikilinker, parsed)
     let rendered = @docflow.render_with_adapter(renderer, linked)
     let templated = @docflow.apply_dummy_template(rendered)
     let output_path = @core.output_html_path(
