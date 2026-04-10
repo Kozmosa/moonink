@@ -152,6 +152,47 @@ test "runtime cli build respects direct route layout" {
 }
 
 ///|
+test "runtime cli build applies configured template file" {
+  let fixture_root = "fixtures/v2/with_template_file"
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let hello_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/hello/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let about_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/about/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(index_html.contains("data-template=\"custom\""), content="true")
+  inspect(
+    index_html.contains("<title>Home :: Template Fixture</title>"),
+    content="true",
+  )
+  inspect(index_html.contains("<aside>Landing page</aside>"), content="true")
+  inspect(hello_html.contains("Hello Template"), content="true")
+  inspect(
+    hello_html.contains("<title>Hello :: Template Fixture</title>"),
+    content="true",
+  )
+  inspect(
+    hello_html.contains("data-site=\"https://example.com/template\""),
+    content="true",
+  )
+  inspect(about_html.contains("About Template"), content="true")
+  inspect(about_html.contains("<aside></aside>"), content="true")
+}
+
+///|
 test "runtime cli build resolves wikilinks for pretty routes" {
   let fixture_root = "fixtures/v2/wikilinks_pretty"
   let outcome = @cli.run_build_command_runtime_from_config(
