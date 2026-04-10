@@ -360,6 +360,59 @@ test "cli run returns error for unknown command" {
 }
 
 ///|
+test "runtime cli build renders automatic navigation for pretty routes" {
+  let fixture_root = "fixtures/v2/nav_pretty_basic"
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let guide_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/guide/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let install_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/guide/install/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(index_html.contains("data-template=\"nav-pretty\""), content="true")
+  inspect(
+    index_html.contains("<nav data-moonink-nav=\"auto\">"),
+    content="true",
+  )
+  inspect(index_html.contains("href=\"/guide/\">Guide</a>"), content="true")
+  inspect(
+    index_html.contains("href=\"/guide/install/\">Install</a>"),
+    content="true",
+  )
+  inspect(index_html.contains("Hello Article"), content="false")
+  inspect(
+    guide_html.contains(
+      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"true\"><a href=\"/guide/\">Guide</a>",
+    ),
+    content="true",
+  )
+  inspect(
+    install_html.contains(
+      "<li data-active=\"false\" data-ancestor=\"true\" data-index=\"true\"><a href=\"/guide/\">Guide</a>",
+    ),
+    content="true",
+  )
+  inspect(
+    install_html.contains(
+      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"false\"><a href=\"/guide/install/\">Install</a>",
+    ),
+    content="true",
+  )
+}
+
+///|
 test "runtime cli build writes minimal fixture html files" {
   let fixture_root = "fixtures/v2/minimal"
   let stale_path = fixture_root + "/dist/stale.txt"

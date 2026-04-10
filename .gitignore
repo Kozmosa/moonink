@@ -11,3 +11,4 @@ fixtures/v2/wikilinks_pretty/dist/
 fixtures/v2/with_template_file/dist/
 fixtures/v2/missing_template_file/dist/
 fixtures/v2/template_direct_route/dist/
+fixtures/v2/nav_pretty_basic/dist/
