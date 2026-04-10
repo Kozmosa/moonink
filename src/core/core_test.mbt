@@ -1,4 +1,77 @@
 ///|
+test "site assembly model supports construction" {
+  let page : @core.SitePage = {
+    title: "Home",
+    description: "Landing page",
+    source_path: "index.md",
+    url_path: "/",
+    content_kind: @core.ContentKind::Page,
+    is_index: true,
+  }
+  let child : @core.NavigationItem = {
+    title: "Install",
+    url_path: "/guide/install/",
+    source_path: "guide/install.md",
+    content_kind: @core.ContentKind::Page,
+    children: [],
+    is_index: false,
+  }
+  let item : @core.NavigationItem = {
+    title: "Guide",
+    url_path: "/guide/",
+    source_path: "guide/index.md",
+    content_kind: @core.ContentKind::Page,
+    children: [child],
+    is_index: true,
+  }
+  let navigation : @core.NavigationModel = {
+    items: [item],
+    total_items: 2,
+    note: "auto navigation placeholder",
+  }
+  let site : @core.SiteAssemblyModel = {
+    pages: [page],
+    navigation,
+    page_count: 1,
+    article_count: 0,
+    navigation_items: 2,
+    note: "site assembly placeholder",
+  }
+  inspect(site.pages[0].title, content="Home")
+  inspect(site.navigation.items[0].children.length(), content="1")
+  inspect(site.navigation.total_items, content="2")
+  inspect(site.navigation_items, content="2")
+}
+
+///|
+test "build_site_model_dummy preserves inventory counts" {
+  let inventory : @core.ContentInventory = {
+    root: "fixtures/v2/minimal",
+    files: [],
+    total_articles: 2,
+    total_pages: 3,
+    note: "inventory for site model dummy test",
+  }
+  let config : @core.MooninkConfig = {
+    config_path: "moonink.json",
+    project_root: ".",
+    site_name: "Fixture Site",
+    site_url: Some("https://example.com"),
+    content_dir: ".",
+    output_dir: "dist",
+    template_file: None,
+    exclude: ["dist"],
+    route_style: @core.RouteStyle::Pretty,
+    text_encoding: "utf-8",
+  }
+  let model = @core.build_site_model_dummy(config, inventory)
+  inspect(model.page_count, content="3")
+  inspect(model.article_count, content="2")
+  inspect(model.navigation.total_items, content="0")
+  inspect(model.pages.length(), content="0")
+}
+
+///|
 test "normalize_relative_path normalizes redundant segments" {
   inspect(
     @core.normalize_relative_path("./docs//guides"),

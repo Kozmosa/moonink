@@ -8,7 +8,7 @@ import {
 // Values
 pub const TEXT_ENCODING_NAME : String = "utf-8"
 
-pub fn build_site_model_dummy(MooninkConfig, ContentInventory) -> SiteModel
+pub fn build_site_model_dummy(MooninkConfig, ContentInventory) -> SiteAssemblyModel
 
 pub fn classify_content_kind(SourceFormat, String?) -> ContentKind
 
@@ -125,6 +125,21 @@ pub(all) struct MooninkConfig {
 } derive(Eq, @debug.Debug)
 pub impl Show for MooninkConfig
 
+pub(all) struct NavigationItem {
+  title : String
+  url_path : String
+  source_path : String
+  content_kind : ContentKind
+  children : Array[NavigationItem]
+  is_index : Bool
+} derive(Eq, @debug.Debug)
+
+pub(all) struct NavigationModel {
+  items : Array[NavigationItem]
+  total_items : Int
+  note : String
+} derive(Eq, @debug.Debug)
+
 pub(all) struct PageMeta {
   source_path : String
   url_path : String
@@ -141,11 +156,22 @@ pub(all) enum RouteStyle {
 } derive(Eq, @debug.Debug)
 pub impl Show for RouteStyle
 
-pub(all) struct SiteModel {
+pub(all) struct SiteAssemblyModel {
+  pages : Array[SitePage]
+  navigation : NavigationModel
   page_count : Int
   article_count : Int
   navigation_items : Int
   note : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct SitePage {
+  title : String
+  description : String
+  source_path : String
+  url_path : String
+  content_kind : ContentKind
+  is_index : Bool
 } derive(Eq, @debug.Debug)
 
 pub(all) enum SourceFormat {

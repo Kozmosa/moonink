@@ -7,8 +7,40 @@ pub(all) struct BuildContext {
 } derive(Debug, Eq)
 
 ///|
-/// Placeholder site model for the scaffold build pipeline.
-pub(all) struct SiteModel {
+/// Site-level page view derived from PageMeta for site assembly stages.
+pub(all) struct SitePage {
+  title : String
+  description : String
+  source_path : String
+  url_path : String
+  content_kind : ContentKind
+  is_index : Bool
+} derive(Debug, Eq)
+
+///|
+/// Tree node used by the auto-navigation site assembly stage.
+pub(all) struct NavigationItem {
+  title : String
+  url_path : String
+  source_path : String
+  content_kind : ContentKind
+  children : Array[NavigationItem]
+  is_index : Bool
+} derive(Debug, Eq)
+
+///|
+/// Root navigation model assembled from site pages.
+pub(all) struct NavigationModel {
+  items : Array[NavigationItem]
+  total_items : Int
+  note : String
+} derive(Debug, Eq)
+
+///|
+/// Site assembly result used by build orchestration before templating.
+pub(all) struct SiteAssemblyModel {
+  pages : Array[SitePage]
+  navigation : NavigationModel
   page_count : Int
   article_count : Int
   navigation_items : Int
@@ -19,8 +51,14 @@ pub(all) struct SiteModel {
 pub fn build_site_model_dummy(
   _config : MooninkConfig,
   inventory : ContentInventory,
-) -> SiteModel {
+) -> SiteAssemblyModel {
   {
+    pages: [],
+    navigation: {
+      items: [],
+      total_items: 0,
+      note: "Navigation assembly is a placeholder in the scaffold stage.",
+    },
     page_count: inventory.total_pages,
     article_count: inventory.total_articles,
     navigation_items: 0,
