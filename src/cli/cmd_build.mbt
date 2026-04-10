@@ -302,6 +302,21 @@ fn build_template_context(
 }
 
 ///|
+fn apply_build_template(
+  config : @core.MooninkConfig,
+  input : @runtime.BuildInput,
+  rendered : @docflow.RenderedDocument,
+  template_source : String?,
+) -> @docflow.TemplatedPage {
+  let context = build_template_context(config, input, rendered)
+  match template_source {
+    Some(template_source) =>
+      @docflow.apply_template(rendered, context, template_source)
+    None => @docflow.apply_built_in_template(rendered, context)
+  }
+}
+
+///|
 fn build_site_result(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
@@ -314,6 +329,22 @@ fn build_site_result(
     err => return Err(err)
   }
   let wikilinker = build_wikilinker(inputs)
+  let template_source = match @runtime.load_template_source_result(config) {
+    Ok(template_source) => template_source
+    Err(err) =>
+      return Err(
+        BuildCommandError::ProjectIO(
+          @core.project_io_error(
+            "load_template",
+            match config.template_file {
+              Some(path) => path
+              None => config.config_path
+            },
+            @core.format_config_error(err),
+          ),
+        ),
+      )
+  }
   let mut emitted_html_files = 0
   let mut article_count = 0
   let mut page_count = 0
@@ -339,9 +370,8 @@ fn build_site_result(
     }
     let linked = @docflow.apply_wikilinker(wikilinker, parsed)
     let rendered = @docflow.render_with_adapter(renderer, linked)
-    let templated = @docflow.apply_template(
-      rendered,
-      build_template_context(config, input, rendered),
+    let templated = apply_build_template(
+      config, input, rendered, template_source,
     )
     let output_path = @core.output_html_path(
       input.meta.source_path,

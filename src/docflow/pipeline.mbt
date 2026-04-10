@@ -216,21 +216,30 @@ pub fn default_page_template() -> String {
 pub fn apply_template(
   rendered : RenderedDocument,
   context : TemplateContext,
+  template_source : String,
 ) -> TemplatedPage {
   {
     route: context.url_path,
     source_path: rendered.source_path,
     source_uuid: rendered.source_uuid,
-    html: render_template_string(default_page_template(), context),
-    note: "native templater renders the built-in page template with a minimal context",
+    html: render_template_string(template_source, context),
+    note: "native templater renders the provided template source with a minimal context",
   }
+}
+
+///|
+pub fn apply_built_in_template(
+  rendered : RenderedDocument,
+  context : TemplateContext,
+) -> TemplatedPage {
+  apply_template(rendered, context, default_page_template())
 }
 
 ///|
 /// Native templater that derives a default context from the rendered document.
 pub fn apply_default_template(rendered : RenderedDocument) -> TemplatedPage {
   let context = default_template_context(rendered)
-  apply_template(rendered, context)
+  apply_built_in_template(rendered, context)
 }
 
 ///|

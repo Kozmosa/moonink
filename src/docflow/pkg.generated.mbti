@@ -7,9 +7,11 @@ import {
 }
 
 // Values
+pub fn apply_built_in_template(RenderedDocument, TemplateContext) -> TemplatedPage
+
 pub fn apply_default_template(RenderedDocument) -> TemplatedPage
 
-pub fn apply_template(RenderedDocument, TemplateContext) -> TemplatedPage
+pub fn apply_template(RenderedDocument, TemplateContext, String) -> TemplatedPage
 
 pub fn apply_wikilinker(WikiLinker, ParsedDocument) -> ParsedDocument
 

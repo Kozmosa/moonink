@@ -203,7 +203,37 @@ test "docflow apply_template uses provided page metadata context" {
     html: "<p>Welcome</p>",
     note: "rendered html for apply_template test",
   }
-  let templated = @docflow.apply_template(rendered, {
+  let templated = @docflow.apply_template(
+    rendered,
+    {
+      site_name: "Fixture Site",
+      site_url: "https://example.com/docs",
+      page_title: "Welcome",
+      page_description: "Landing page",
+      url_path: "/welcome/",
+      source_path: "notes/welcome.md",
+      content_kind: "page",
+      body_html: rendered.html,
+    },
+    "<article data-title=\"{{ page_title }}\">{{ body_html }}</article>",
+  )
+  inspect(templated.route, content="/welcome/")
+  inspect(
+    templated.html,
+    content="<article data-title=\"Welcome\"><p>Welcome</p></article>",
+  )
+}
+
+///|
+test "docflow apply_built_in_template uses provided page metadata context" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "notes/welcome.md",
+    source_uuid: "page-ctx-001",
+    html: "<p>Welcome</p>",
+    note: "rendered html for built-in template test",
+  }
+  let templated = @docflow.apply_built_in_template(rendered, {
     site_name: "Fixture Site",
     site_url: "https://example.com/docs",
     page_title: "Welcome",
