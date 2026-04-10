@@ -191,7 +191,11 @@ fn collect_duplicate_keys(keys : Array[String]) -> Map[String, Bool] {
 }
 
 ///|
-fn register_exact_target(targets : Map[String, String], key : String, url : String) -> Unit {
+fn register_exact_target(
+  targets : Map[String, String],
+  key : String,
+  url : String,
+) -> Unit {
   if key == "" {
     return
   }
@@ -218,7 +222,11 @@ fn build_wikilinker(inputs : Array[@runtime.BuildInput]) -> @docflow.WikiLinker 
     let source_path = input.meta.source_path
     let url = input.meta.url_path
     register_exact_target(exact_targets, source_path, url)
-    register_exact_target(exact_targets, strip_link_target_extension(source_path), url)
+    register_exact_target(
+      exact_targets,
+      strip_link_target_extension(source_path),
+      url,
+    )
 
     let basename = basename_without_extension(source_path)
     if duplicate_basenames.get(basename) is Some(_) {
@@ -246,6 +254,51 @@ fn build_wikilinker(inputs : Array[@runtime.BuildInput]) -> @docflow.WikiLinker 
     }
   }
   @docflow.indexed_wikilinker(exact_targets, ambiguous_targets)
+}
+
+///|
+fn template_content_kind(kind : @core.ContentKind) -> String {
+  match kind {
+    @core.ContentKind::Article => "article"
+    @core.ContentKind::Page => "page"
+  }
+}
+
+///|
+fn template_page_title(meta : @core.PageMeta) -> String {
+  match meta.frontmatter.title {
+    Some(title) => title
+    None => meta.source_path
+  }
+}
+
+///|
+fn template_page_description(meta : @core.PageMeta) -> String {
+  match meta.frontmatter.description {
+    Some(description) => description
+    None => ""
+  }
+}
+
+///|
+fn build_template_context(
+  config : @core.MooninkConfig,
+  input : @runtime.BuildInput,
+  rendered : @docflow.RenderedDocument,
+) -> @docflow.TemplateContext {
+  {
+    site_name: config.site_name,
+    site_url: match config.site_url {
+      Some(site_url) => site_url
+      None => ""
+    },
+    page_title: template_page_title(input.meta),
+    page_description: template_page_description(input.meta),
+    url_path: input.meta.url_path,
+    source_path: input.meta.source_path,
+    content_kind: template_content_kind(input.meta.content_kind),
+    body_html: rendered.html,
+  }
 }
 
 ///|
@@ -286,7 +339,10 @@ fn build_site_result(
     }
     let linked = @docflow.apply_wikilinker(wikilinker, parsed)
     let rendered = @docflow.render_with_adapter(renderer, linked)
-    let templated = @docflow.apply_dummy_template(rendered)
+    let templated = @docflow.apply_template(
+      rendered,
+      build_template_context(config, input, rendered),
+    )
     let output_path = @core.output_html_path(
       input.meta.source_path,
       config.route_style,

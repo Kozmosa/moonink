@@ -209,13 +209,14 @@ pub fn default_template_context(rendered : RenderedDocument) -> TemplateContext 
 
 ///|
 pub fn default_page_template() -> String {
-  "<!doctype html>\n<html><body><main data-source=\"{{ source_path }}\">{{ body_html }}</main></body></html>"
+  "<!doctype html>\n<html><head><meta charset=\"utf-8\"><title>{{ page_title }}</title></head><body data-kind=\"{{ content_kind }}\" data-url=\"{{ url_path }}\"><header><a href=\"{{ site_url }}\">{{ site_name }}</a></header><main data-source=\"{{ source_path }}\">{{ body_html }}</main></body></html>"
 }
 
 ///|
-/// Dummy templater that wraps rendered HTML in a simple site shell.
-pub fn apply_dummy_template(rendered : RenderedDocument) -> TemplatedPage {
-  let context = default_template_context(rendered)
+pub fn apply_template(
+  rendered : RenderedDocument,
+  context : TemplateContext,
+) -> TemplatedPage {
   {
     route: context.url_path,
     source_path: rendered.source_path,
@@ -223,6 +224,13 @@ pub fn apply_dummy_template(rendered : RenderedDocument) -> TemplatedPage {
     html: render_template_string(default_page_template(), context),
     note: "native templater renders the built-in page template with a minimal context",
   }
+}
+
+///|
+/// Dummy templater that wraps rendered HTML in a simple site shell.
+pub fn apply_dummy_template(rendered : RenderedDocument) -> TemplatedPage {
+  let context = default_template_context(rendered)
+  apply_template(rendered, context)
 }
 
 ///|

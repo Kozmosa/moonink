@@ -80,9 +80,16 @@ test "runtime cli build writes minimal fixture html files" {
   ) catch {
     _ => panic()
   }
-  inspect(index_html.contains("Home"), content="true")
+  inspect(index_html.contains("<!doctype html>"), content="true")
+  inspect(index_html.contains("<title>Home</title>"), content="true")
+  inspect(index_html.contains("Fixture Site"), content="true")
+  inspect(index_html.contains("data-kind=\"page\""), content="true")
+  inspect(index_html.contains("data-url=\"/\""), content="true")
   inspect(hello_html.contains("Hello World"), content="true")
+  inspect(hello_html.contains("<title>Hello</title>"), content="true")
+  inspect(hello_html.contains("data-kind=\"article\""), content="true")
   inspect(about_html.contains("This is a static HTML page."), content="true")
+  inspect(about_html.contains("<title>about.html</title>"), content="true")
 }
 
 ///|

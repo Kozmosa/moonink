@@ -9,6 +9,8 @@ import {
 // Values
 pub fn apply_dummy_template(RenderedDocument) -> TemplatedPage
 
+pub fn apply_template(RenderedDocument, TemplateContext) -> TemplatedPage
+
 pub fn apply_wikilinker(WikiLinker, ParsedDocument) -> ParsedDocument
 
 pub fn article_site_entry(TemplatedPage) -> SiteEntry

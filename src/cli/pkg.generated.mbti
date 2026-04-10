@@ -2,6 +2,7 @@
 package "username/moonink/cli"
 
 import {
+  "moonbitlang/core/debug",
   "username/moonink/core",
   "username/moonink/docflow",
 }
@@ -29,7 +30,7 @@ pub(all) suberror BuildCommandError {
   AdapterRegistry(@docflow.AdapterRegistryError)
   FatalParse(@docflow.FatalParseError)
   ProjectIO(@core.ProjectIOError)
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 // Types and methods
 pub(all) struct BuildSummary {
@@ -38,7 +39,7 @@ pub(all) struct BuildSummary {
   emitted_html_files : Int
   article_count : Int
   page_count : Int
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub enum CliCommand {
   Help
@@ -46,19 +47,20 @@ pub enum CliCommand {
   Build
   Serve
   Unknown(String)
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
+pub impl Show for CliCommand
 
 pub(all) struct CliOutcome {
   exit_code : Int
   message : String
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub(all) struct ServeSession {
   host : String
   port : Int
   mode : String
   note : String
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 
