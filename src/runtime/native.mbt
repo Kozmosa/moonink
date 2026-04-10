@@ -4,7 +4,7 @@ pub(all) struct NativeRuntimeAdapter {
   name : String
   note : String
   policy : RuntimeTaskPolicy
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 pub fn native_runtime_adapter() -> NativeRuntimeAdapter {

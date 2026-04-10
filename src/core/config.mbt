@@ -3,7 +3,15 @@
 pub(all) enum RouteStyle {
   Pretty
   Direct
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl Show for RouteStyle with output(self, logger) {
+  match self {
+    Pretty => logger.write_string("Pretty")
+    Direct => logger.write_string("Direct")
+  }
+}
 
 ///|
 /// Configuration loading failures.
@@ -12,7 +20,35 @@ pub(all) suberror ConfigError {
   InvalidPath(path~ : String, reason~ : String)
   InvalidJson(detail~ : String)
   MissingField(key~ : String)
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl Show for ConfigError with output(self, logger) {
+  match self {
+    ConfigError::IOError(err) => {
+      logger.write_string("IOError(")
+      logger.write_string(format_project_io_error(err))
+      logger.write_string(")")
+    }
+    ConfigError::InvalidPath(path~, reason~) => {
+      logger.write_string("InvalidPath(path=\"")
+      logger.write_string(path)
+      logger.write_string("\", reason=\"")
+      logger.write_string(reason)
+      logger.write_string("\")")
+    }
+    ConfigError::InvalidJson(detail~) => {
+      logger.write_string("InvalidJson(detail=\"")
+      logger.write_string(detail)
+      logger.write_string("\")")
+    }
+    ConfigError::MissingField(key~) => {
+      logger.write_string("MissingField(key=\"")
+      logger.write_string(key)
+      logger.write_string("\")")
+    }
+  }
+}
 
 ///|
 /// Loaded build configuration resolved from `moonink.json`.
@@ -26,14 +62,21 @@ pub(all) struct MooninkConfig {
   exclude : Array[String]
   route_style : RouteStyle
   text_encoding : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl Show for MooninkConfig with output(self, logger) {
+  logger.write_string("MooninkConfig(site_name=\"")
+  logger.write_string(self.site_name)
+  logger.write_string("\")")
+}
 
 ///|
 fn config_path_policy_error(
   path : String,
   err : PathPolicyError,
 ) -> ConfigError {
-  ConfigError::InvalidPath(path~, reason=err.to_string())
+  ConfigError::InvalidPath(path~, reason=format_path_policy_error(err))
 }
 
 ///|

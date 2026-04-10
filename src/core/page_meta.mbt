@@ -7,7 +7,7 @@ pub(all) struct PageMeta {
   format : SourceFormat
   frontmatter : Frontmatter
   sort_key : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 pub fn PageMeta::new(

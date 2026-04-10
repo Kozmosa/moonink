@@ -7,7 +7,7 @@ pub(all) struct MarkdownBackendContract {
   definition_count : Int
   diagnostics : DocumentDiagnostics
   capabilities : ParserCapabilities
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Capability contract expected from the first Markdown backend.

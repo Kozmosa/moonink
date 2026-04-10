@@ -3,14 +3,22 @@
 pub(all) enum RuntimeConflictPolicy {
   AbortOnConflict
   AllowRepeatableRead
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl Show for RuntimeConflictPolicy with output(self, logger) {
+  match self {
+    AbortOnConflict => logger.write_string("AbortOnConflict")
+    AllowRepeatableRead => logger.write_string("AllowRepeatableRead")
+  }
+}
 
 ///|
 /// Cancellation handling policy for runtime IO tasks introduced by IO-P13.
 pub(all) enum RuntimeCancellationPolicy {
   NonCancelable
   CancelBeforeSideEffects
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Scheduling policy for runtime IO task execution.
@@ -18,7 +26,7 @@ pub(all) struct RuntimeTaskPolicy {
   conflict_policy : RuntimeConflictPolicy
   cancellation_policy : RuntimeCancellationPolicy
   scheduling_note : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 pub fn default_runtime_task_policy() -> RuntimeTaskPolicy {

@@ -5,7 +5,7 @@ pub(all) struct SourceDocumentInput {
   format : @core.SourceFormat
   content : String
   uuid : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Structured severity levels for parser diagnostics.
@@ -13,7 +13,7 @@ pub(all) enum DiagnosticSeverity {
   Info
   Warn
   Error
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Single structured parser diagnostic entry.
@@ -23,20 +23,20 @@ pub(all) struct DocumentDiagnostic {
   message : String
   hint : String?
   backend_name : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Diagnostic collection carried by a parsed document.
 pub(all) struct DocumentDiagnostics {
   entries : Array[DocumentDiagnostic]
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Compact capability flags exposed by parser backends.
 pub(all) struct ParserCapabilities {
   supports_incremental_parsing : Bool
   supports_html_passthrough : Bool
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Thin parsed document wrapper that preserves backend identity and payload.
@@ -47,7 +47,16 @@ pub(all) struct ParsedDocument {
   source_uuid : String
   diagnostics : DocumentDiagnostics
   backend_payload : String?
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl Show for ParsedDocument with output(self, logger) {
+  logger.write_string("ParsedDocument(backend_name=\"")
+  logger.write_string(self.backend_name)
+  logger.write_string("\", source_path=\"")
+  logger.write_string(self.source_path)
+  logger.write_string("\")")
+}
 
 ///|
 /// Empty diagnostics helper for parser backends that have nothing to report.

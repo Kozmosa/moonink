@@ -2,7 +2,7 @@
 /// Shared project-owned filesystem error payload introduced by IO-P3.
 pub(all) suberror ProjectIOError {
   Failure(operation~ : String, path~ : String, detail~ : String)
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 pub fn project_io_error(

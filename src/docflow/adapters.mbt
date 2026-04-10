@@ -3,7 +3,23 @@
 pub(all) suberror AdapterRegistryError {
   MissingParserAdapter(@core.SourceFormat)
   MissingRenderAdapter(@core.SourceFormat)
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl Show for AdapterRegistryError with output(self, logger) {
+  match self {
+    AdapterRegistryError::MissingParserAdapter(format) => {
+      logger.write_string("MissingParserAdapter(")
+      logger.write_string(format.to_string())
+      logger.write_string(")")
+    }
+    AdapterRegistryError::MissingRenderAdapter(format) => {
+      logger.write_string("MissingRenderAdapter(")
+      logger.write_string(format.to_string())
+      logger.write_string(")")
+    }
+  }
+}
 
 ///|
 /// Fatal parser failures for states where no meaningful ParsedDocument can be returned.
@@ -15,7 +31,36 @@ pub(all) suberror FatalParseError {
     actual~ : @core.SourceFormat
   )
   BackendFailure(adapter_name~ : String, detail~ : String)
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl Show for FatalParseError with output(self, logger) {
+  match self {
+    FatalParseError::InvalidAdapterState(adapter_name~, reason~) => {
+      logger.write_string("InvalidAdapterState(adapter_name=\"")
+      logger.write_string(adapter_name)
+      logger.write_string("\", reason=\"")
+      logger.write_string(reason)
+      logger.write_string("\")")
+    }
+    FatalParseError::UnsupportedFormat(adapter_name~, expected~, actual~) => {
+      logger.write_string("UnsupportedFormat(adapter_name=\"")
+      logger.write_string(adapter_name)
+      logger.write_string("\", expected=")
+      logger.write_string(expected.to_string())
+      logger.write_string(", actual=")
+      logger.write_string(actual.to_string())
+      logger.write_string(")")
+    }
+    FatalParseError::BackendFailure(adapter_name~, detail~) => {
+      logger.write_string("BackendFailure(adapter_name=\"")
+      logger.write_string(adapter_name)
+      logger.write_string("\", detail=\"")
+      logger.write_string(detail)
+      logger.write_string("\")")
+    }
+  }
+}
 
 ///|
 /// Contract surface for parser backends in the document-flow pipeline.
@@ -23,21 +68,28 @@ pub(all) struct ParserAdapter {
   name : String
   capabilities : ParserCapabilities
   note : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl Show for ParserAdapter with output(self, logger) {
+  logger.write_string("ParserAdapter(name=\"")
+  logger.write_string(self.name)
+  logger.write_string("\")")
+}
 
 ///|
 /// Contract surface for semantic post-parse stages such as WikiLink processing.
 pub(all) struct WikiLinker {
   name : String
   note : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Contract surface for render backends that transform parsed documents into HTML.
 pub(all) struct RenderAdapter {
   name : String
   note : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Thin render result used to freeze the RenderAdapter contract before real backends land.
@@ -47,7 +99,7 @@ pub(all) struct RenderedDocument {
   source_uuid : String
   html : String
   note : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Explicit article-flow summary that keeps parser, WikiLinker, and render stages visible.
@@ -56,7 +108,7 @@ pub(all) struct ArticlePipelineResult {
   linked : ParsedDocument
   rendered : RenderedDocument
   pipeline_note : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Dummy templated page produced after rendering but before site construction.
@@ -66,7 +118,7 @@ pub(all) struct TemplatedPage {
   source_uuid : String
   html : String
   note : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Common downstream site entry used by the dummy site constructor.
@@ -76,14 +128,14 @@ pub(all) struct SiteEntry {
   source_path : String
   source_uuid : String
   html : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Dummy site-constructor result that holds all assembled downstream entries.
 pub(all) struct SiteAssembly {
   entries : Array[SiteEntry]
   note : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Parser backend registry keyed by source format.
@@ -92,7 +144,7 @@ pub(all) struct ParserRegistry {
   typst : ParserAdapter?
   html : ParserAdapter?
   unknown : ParserAdapter?
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Render backend registry keyed by source format.
@@ -101,7 +153,7 @@ pub(all) struct RenderRegistry {
   typst : RenderAdapter?
   html : RenderAdapter?
   unknown : RenderAdapter?
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 pub fn empty_parser_registry() -> ParserRegistry {

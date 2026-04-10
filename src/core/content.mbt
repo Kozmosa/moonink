@@ -3,7 +3,15 @@
 pub(all) enum ContentKind {
   Article
   Page
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl Show for ContentKind with output(self, logger) {
+  match self {
+    Article => logger.write_string("Article")
+    Page => logger.write_string("Page")
+  }
+}
 
 ///|
 /// Source format for parser dispatch.
@@ -11,7 +19,16 @@ pub(all) enum SourceFormat {
   Markdown
   Html
   Unknown
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl Show for SourceFormat with output(self, logger) {
+  match self {
+    Markdown => logger.write_string("Markdown")
+    Html => logger.write_string("Html")
+    Unknown => logger.write_string("Unknown")
+  }
+}
 
 ///|
 /// A discovered content file with classification metadata.
@@ -19,7 +36,7 @@ pub(all) struct ContentFile {
   path : String
   content_kind : ContentKind
   format : SourceFormat
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Content discovery failures.
@@ -28,7 +45,7 @@ pub(all) suberror ContentDiscoveryError {
   InvalidPath(path~ : String, reason~ : String)
   MissingDirectory(String)
   NotDirectory(String)
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Result of content discovery: all files classified.
@@ -38,7 +55,7 @@ pub(all) struct ContentInventory {
   total_articles : Int
   total_pages : Int
   note : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Classify a file path by extension into a SourceFormat.

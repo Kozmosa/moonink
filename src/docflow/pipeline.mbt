@@ -111,7 +111,7 @@ pub fn render_with_adapter(
       Some(payload) => payload
       None => parsed.source_path
     }
-    "<article data-renderer=\"\{adapter.name}\" data-source-format=\"\{parsed.source_format}\">\{payload}</article>"
+    "<article data-renderer=\"\{adapter.name}\" data-source-format=\"\{@debug.to_string(parsed.source_format)}\">\{payload}</article>"
   }
   {
     backend_name: adapter.name,

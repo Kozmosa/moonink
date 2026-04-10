@@ -5,7 +5,7 @@ pub(all) struct ServeSession {
   port : Int
   mode : String
   note : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 pub fn prepare_serve_dummy() -> ServeSession {

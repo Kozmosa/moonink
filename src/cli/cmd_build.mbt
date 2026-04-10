@@ -4,7 +4,7 @@ pub(all) suberror BuildCommandError {
   AdapterRegistry(@docflow.AdapterRegistryError)
   FatalParse(@docflow.FatalParseError)
   ProjectIO(@core.ProjectIOError)
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 pub(all) struct BuildSummary {
@@ -13,7 +13,7 @@ pub(all) struct BuildSummary {
   emitted_html_files : Int
   article_count : Int
   page_count : Int
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 fn format_runtime_config_error(err : @core.ConfigError) -> String {
@@ -31,9 +31,9 @@ fn format_build_command_error(err : BuildCommandError) -> String {
     BuildCommandError::ContentDiscovery(inner) =>
       "[build] failed during content preparation\n\{@core.format_content_discovery_error(inner)}"
     BuildCommandError::AdapterRegistry(inner) =>
-      "[build] failed during adapter lookup\n\{inner}"
+      "[build] failed during adapter lookup\n\{@debug.to_string(inner)}"
     BuildCommandError::FatalParse(inner) =>
-      "[build] failed during document parsing\n\{inner}"
+      "[build] failed during document parsing\n\{@debug.to_string(inner)}"
     BuildCommandError::ProjectIO(inner) =>
       "[build] failed during file emission\n\{@core.format_project_io_error(inner)}"
   }
@@ -115,7 +115,7 @@ fn write_build_output(
         @core.project_io_error(
           "write_file",
           relative_output_path,
-          err.to_string(),
+          @core.format_path_policy_error(err),
         ),
       )
   }

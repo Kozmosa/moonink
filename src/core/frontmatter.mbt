@@ -8,7 +8,7 @@ pub(all) struct Frontmatter {
   tags : Array[String]
   draft : Bool
   extra : Map[String, String]
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 pub fn Frontmatter::default() -> Frontmatter {

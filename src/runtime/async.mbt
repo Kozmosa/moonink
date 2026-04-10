@@ -2,7 +2,7 @@
 /// Async-capable operation descriptor for runtime IO work introduced by IO-P6.
 pub(all) enum RuntimeIOTask[T] {
   Ready(T)
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Execute an async-capable runtime IO task generically.

@@ -74,7 +74,11 @@ pub fn io_ensure_dir(path : String) -> Unit raise @core.ProjectIOError {
   }
   let parent = @core.dirname_relative_path(path) catch {
     err =>
-      raise @core.project_io_error("create_directory", path, err.to_string())
+      raise @core.project_io_error(
+        "create_directory",
+        path,
+        @core.format_path_policy_error(err),
+      )
   }
   io_ensure_dir(parent)
   io_create_dir(path)
@@ -94,7 +98,11 @@ pub fn io_remove_dir_all(path : String) -> Unit raise @core.ProjectIOError {
   for entry in entries {
     let child = @core.join_relative_path(path, entry) catch {
       err =>
-        raise @core.project_io_error("remove_directory", path, err.to_string())
+        raise @core.project_io_error(
+          "remove_directory",
+          path,
+          @core.format_path_policy_error(err),
+        )
     }
     if io_is_dir(child) {
       io_remove_dir_all(child)

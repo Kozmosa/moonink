@@ -3,7 +3,10 @@ fn content_path_policy_error(
   path : String,
   err : @core.PathPolicyError,
 ) -> @core.ContentDiscoveryError {
-  @core.ContentDiscoveryError::InvalidPath(path~, reason=err.to_string())
+  @core.ContentDiscoveryError::InvalidPath(
+    path~,
+    reason=@core.format_path_policy_error(err),
+  )
 }
 
 ///|
@@ -13,7 +16,7 @@ pub(all) struct BuildInput {
   source_content : String
   docflow_content : String
   meta : @core.PageMeta
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 fn join_content_path(

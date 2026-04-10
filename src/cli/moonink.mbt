@@ -6,14 +6,29 @@ pub enum CliCommand {
   Build
   Serve
   Unknown(String)
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl Show for CliCommand with output(self, logger) {
+  match self {
+    CliCommand::Help => logger.write_string("Help")
+    CliCommand::Onboard => logger.write_string("Onboard")
+    CliCommand::Build => logger.write_string("Build")
+    CliCommand::Serve => logger.write_string("Serve")
+    CliCommand::Unknown(command) => {
+      logger.write_string("Unknown(\"")
+      logger.write_string(command)
+      logger.write_string("\")")
+    }
+  }
+}
 
 ///|
 /// Pure execution result for the CLI.
 pub(all) struct CliOutcome {
   exit_code : Int
   message : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 fn parse_command_and_payload(command : String) -> CliCommand {

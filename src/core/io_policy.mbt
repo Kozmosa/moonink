@@ -4,11 +4,42 @@ pub(all) suberror PathPolicyError {
   EmptyPath(String)
   AbsolutePath(String)
   ParentTraversal(String)
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// MoonInk currently treats text files as UTF-8 at the policy layer.
 pub const TEXT_ENCODING_NAME : String = "utf-8"
+
+///|
+pub fn format_path_policy_error(err : PathPolicyError) -> String {
+  match err {
+    PathPolicyError::EmptyPath(path) => "empty relative path: \{path}"
+    PathPolicyError::AbsolutePath(path) => "absolute paths are not allowed: \{path}"
+    PathPolicyError::ParentTraversal(path) =>
+      "parent traversal is not allowed: \{path}"
+  }
+}
+
+///|
+pub impl Show for PathPolicyError with output(self, logger) {
+  match self {
+    PathPolicyError::EmptyPath(path) => {
+      logger.write_string("EmptyPath(\"")
+      logger.write_string(path)
+      logger.write_string("\")")
+    }
+    PathPolicyError::AbsolutePath(path) => {
+      logger.write_string("AbsolutePath(\"")
+      logger.write_string(path)
+      logger.write_string("\")")
+    }
+    PathPolicyError::ParentTraversal(path) => {
+      logger.write_string("ParentTraversal(\"")
+      logger.write_string(path)
+      logger.write_string("\")")
+    }
+  }
+}
 
 ///|
 pub fn normalize_relative_path(path : String) -> String raise PathPolicyError {

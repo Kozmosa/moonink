@@ -1,4 +1,5 @@
 import {
   "username/moonink/core" @core,
   "mizchi/markdown" @markdown,
+  "moonbitlang/core/debug" @debug,
 }

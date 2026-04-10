@@ -4,7 +4,7 @@ pub(all) struct BuildContext {
   config : MooninkConfig
   pages : Array[PageMeta]
   inventory : ContentInventory
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// Placeholder site model for the scaffold build pipeline.
@@ -13,7 +13,7 @@ pub(all) struct SiteModel {
   article_count : Int
   navigation_items : Int
   note : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 pub fn build_site_model_dummy(
