@@ -1,4 +1,97 @@
 ///|
+test "build navigation model keeps only pages and nests section children" {
+  let pages : Array[@core.SitePage] = [
+    {
+      title: "Home",
+      description: "",
+      source_path: "index.md",
+      url_path: "/",
+      content_kind: @core.ContentKind::Page,
+      is_index: true,
+    },
+    {
+      title: "Guide",
+      description: "",
+      source_path: "guide/index.md",
+      url_path: "/guide/",
+      content_kind: @core.ContentKind::Page,
+      is_index: true,
+    },
+    {
+      title: "Install",
+      description: "",
+      source_path: "guide/install.md",
+      url_path: "/guide/install/",
+      content_kind: @core.ContentKind::Page,
+      is_index: false,
+    },
+    {
+      title: "Config",
+      description: "",
+      source_path: "guide/config.md",
+      url_path: "/guide/config/",
+      content_kind: @core.ContentKind::Page,
+      is_index: false,
+    },
+    {
+      title: "Hello",
+      description: "",
+      source_path: "hello.md",
+      url_path: "/hello/",
+      content_kind: @core.ContentKind::Article,
+      is_index: false,
+    },
+  ]
+  let navigation = @cli.build_navigation_model(pages)
+  inspect(navigation.total_items, content="4")
+  inspect(navigation.items.length(), content="2")
+  inspect(navigation.items[0].title, content="Home")
+  inspect(navigation.items[1].title, content="Guide")
+  inspect(navigation.items[1].children.length(), content="2")
+  inspect(navigation.items[1].children[0].title, content="Config")
+  inspect(navigation.items[1].children[1].title, content="Install")
+}
+
+///|
+test "build navigation model treats section index as landing item" {
+  let pages : Array[@core.SitePage] = [
+    {
+      title: "Guide",
+      description: "",
+      source_path: "guide/index.md",
+      url_path: "/guide/",
+      content_kind: @core.ContentKind::Page,
+      is_index: true,
+    },
+    {
+      title: "Advanced",
+      description: "",
+      source_path: "guide/advanced/index.md",
+      url_path: "/guide/advanced/",
+      content_kind: @core.ContentKind::Page,
+      is_index: true,
+    },
+    {
+      title: "Reference",
+      description: "",
+      source_path: "guide/advanced/reference.md",
+      url_path: "/guide/advanced/reference/",
+      content_kind: @core.ContentKind::Page,
+      is_index: false,
+    },
+  ]
+  let navigation = @cli.build_navigation_model(pages)
+  inspect(navigation.items.length(), content="1")
+  inspect(navigation.items[0].title, content="Guide")
+  inspect(navigation.items[0].children.length(), content="1")
+  inspect(navigation.items[0].children[0].title, content="Advanced")
+  inspect(
+    navigation.items[0].children[0].children[0].title,
+    content="Reference",
+  )
+}
+
+///|
 test "site page title derives from frontmatter basename and root index" {
   let titled_meta : @core.PageMeta = {
     source_path: "guide/install.md",

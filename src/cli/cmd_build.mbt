@@ -275,6 +275,115 @@ fn is_index_source_path(path : String) -> Bool {
 }
 
 ///|
+fn parent_navigation_key(path : String) -> String? {
+  let stripped = strip_link_target_extension(path)
+  let segments = stripped.split("/").map(StringView::to_string).collect()
+  if segments.length() <= 1 {
+    None
+  } else {
+    let parents : Array[String] = []
+    let parent_count = segments.length() - 1
+    for i in 0..<parent_count {
+      parents.push(segments[i])
+    }
+    Some(parents.iter().join("/"))
+  }
+}
+
+///|
+fn navigation_node_key(page : @core.SitePage) -> String {
+  let stripped = strip_link_target_extension(page.source_path)
+  if page.is_index {
+    match parent_navigation_key(page.source_path) {
+      Some(parent) => parent
+      None => ""
+    }
+  } else {
+    stripped
+  }
+}
+
+///|
+fn navigation_parent_key(page : @core.SitePage) -> String? {
+  parent_navigation_key(navigation_node_key(page))
+}
+
+///|
+fn navigation_sort_key(page : @core.SitePage) -> String {
+  if page.is_index {
+    page.source_path
+  } else {
+    "zzz/" + page.source_path
+  }
+}
+
+///|
+fn find_navigation_children(
+  pages : Array[@core.SitePage],
+  parent_key : String,
+) -> Array[@core.NavigationItem] {
+  let children_pages : Array[@core.SitePage] = []
+  for page in pages {
+    match navigation_parent_key(page) {
+      Some(candidate_parent) if candidate_parent == parent_key =>
+        children_pages.push(page)
+      _ => ()
+    }
+  }
+  children_pages.sort_by(fn(a, b) {
+    navigation_sort_key(a).compare(navigation_sort_key(b))
+  })
+  let children : Array[@core.NavigationItem] = []
+  for page in children_pages {
+    children.push(build_navigation_item(pages, page))
+  }
+  children
+}
+
+///|
+fn build_navigation_item(
+  pages : Array[@core.SitePage],
+  page : @core.SitePage,
+) -> @core.NavigationItem {
+  {
+    title: page.title,
+    url_path: page.url_path,
+    source_path: page.source_path,
+    content_kind: page.content_kind,
+    children: find_navigation_children(pages, navigation_node_key(page)),
+    is_index: page.is_index,
+  }
+}
+
+///|
+pub fn build_navigation_model(
+  pages : Array[@core.SitePage],
+) -> @core.NavigationModel {
+  let nav_pages : Array[@core.SitePage] = []
+  for page in pages {
+    if page.content_kind == @core.ContentKind::Page {
+      nav_pages.push(page)
+    }
+  }
+  nav_pages.sort_by(fn(a, b) {
+    navigation_sort_key(a).compare(navigation_sort_key(b))
+  })
+  let items : Array[@core.NavigationItem] = []
+  for page in nav_pages {
+    match navigation_parent_key(page) {
+      None => items.push(build_navigation_item(nav_pages, page))
+      Some("") => items.push(build_navigation_item(nav_pages, page))
+      _ => ()
+    }
+  }
+  {
+    items,
+    total_items: nav_pages.length(),
+    note: "Navigation model groups page content by source path hierarchy.",
+  }
+}
+
+///|
 pub fn site_page_title(meta : @core.PageMeta) -> String {
   match meta.frontmatter.title {
     Some(title) => title

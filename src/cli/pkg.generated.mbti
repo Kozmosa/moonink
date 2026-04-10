@@ -9,6 +9,8 @@ import {
 }
 
 // Values
+pub fn build_navigation_model(Array[@core.SitePage]) -> @core.NavigationModel
+
 pub fn build_site_pages(Array[@runtime.BuildInput]) -> Array[@core.SitePage]
 
 pub fn cli_exec(Array[String]) -> CliOutcome
