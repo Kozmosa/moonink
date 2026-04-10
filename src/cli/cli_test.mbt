@@ -133,3 +133,39 @@ test "runtime cli build respects direct route layout" {
   inspect(hello_html.contains("Hello World"), content="true")
   inspect(about_html.contains("This is a static HTML page."), content="true")
 }
+
+///|
+test "runtime cli build resolves wikilinks for pretty routes" {
+  let fixture_root = "fixtures/v2/wikilinks_pretty"
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let hello_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/hello/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(hello_html.contains("href=\"/about/\""), content="true")
+  inspect(hello_html.contains(">about<"), content="true")
+  inspect(hello_html.contains("href=\"/\""), content="true")
+  inspect(hello_html.contains(">Home<"), content="true")
+}
+
+///|
+test "runtime cli build resolves wikilinks for direct routes" {
+  let fixture_root = "fixtures/v2/wikilinks_direct"
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let hello_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/hello.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(hello_html.contains("href=\"/about.html\""), content="true")
+  inspect(hello_html.contains(">about<"), content="true")
+  inspect(hello_html.contains("href=\"/index.html\""), content="true")
+  inspect(hello_html.contains(">Home<"), content="true")
+}
