@@ -195,6 +195,35 @@ test "docflow native template renderer interpolates built-in variables" {
 }
 
 ///|
+test "docflow apply_template uses provided page metadata context" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "notes/welcome.md",
+    source_uuid: "page-ctx-001",
+    html: "<p>Welcome</p>",
+    note: "rendered html for apply_template test",
+  }
+  let templated = @docflow.apply_template(rendered, {
+    site_name: "Fixture Site",
+    site_url: "https://example.com/docs",
+    page_title: "Welcome",
+    page_description: "Landing page",
+    url_path: "/welcome/",
+    source_path: "notes/welcome.md",
+    content_kind: "page",
+    body_html: rendered.html,
+  })
+  inspect(templated.route, content="/welcome/")
+  inspect(templated.html.contains("<title>Welcome</title>"), content="true")
+  inspect(
+    templated.html.contains("href=\"https://example.com/docs\""),
+    content="true",
+  )
+  inspect(templated.html.contains("data-kind=\"page\""), content="true")
+  inspect(templated.html.contains("data-url=\"/welcome/\""), content="true")
+}
+
+///|
 test "docflow parser registry resolves adapters by source format" {
   let parser = @docflow.fake_parser_adapter("fake-markdown-parser", capabilities={
     supports_incremental_parsing: true,

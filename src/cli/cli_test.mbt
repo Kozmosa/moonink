@@ -88,8 +88,18 @@ test "runtime cli build writes minimal fixture html files" {
   inspect(hello_html.contains("Hello World"), content="true")
   inspect(hello_html.contains("<title>Hello</title>"), content="true")
   inspect(hello_html.contains("data-kind=\"article\""), content="true")
-  inspect(about_html.contains("This is a static HTML page."), content="true")
-  inspect(about_html.contains("<title>about.html</title>"), content="true")
+  inspect(
+    hello_html.contains("href=\"https://example.com/docs\""),
+    content="true",
+  )
+  inspect(about_html.contains("data-kind=\"page\""), content="true")
+  inspect(about_html.contains("data-url=\"/about/\""), content="true")
+  inspect(
+    about_html.contains(
+      "<header><a href=\"https://example.com/docs\">Fixture Site</a></header>",
+    ),
+    content="true",
+  )
 }
 
 ///|
