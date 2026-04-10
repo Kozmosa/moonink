@@ -571,6 +571,62 @@ test "runtime cli build applies configured template file" {
 }
 
 ///|
+test "runtime cli build renders automatic navigation for direct routes" {
+  let fixture_root = "fixtures/v2/nav_direct_basic"
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let guide_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/guide/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let install_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/guide/install.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(index_html.contains("data-template=\"nav-direct\""), content="true")
+  inspect(
+    index_html.contains("<nav data-moonink-nav=\"auto\">"),
+    content="true",
+  )
+  inspect(
+    index_html.contains("href=\"/guide/index.html\">Guide</a>"),
+    content="true",
+  )
+  inspect(
+    index_html.contains("href=\"/guide/install.html\">Install</a>"),
+    content="true",
+  )
+  inspect(index_html.contains("Direct Hello Article"), content="false")
+  inspect(
+    guide_html.contains(
+      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"true\"><a href=\"/guide/index.html\">Guide</a>",
+    ),
+    content="true",
+  )
+  inspect(
+    install_html.contains(
+      "<li data-active=\"false\" data-ancestor=\"true\" data-index=\"true\"><a href=\"/guide/index.html\">Guide</a>",
+    ),
+    content="true",
+  )
+  inspect(
+    install_html.contains(
+      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"false\"><a href=\"/guide/install.html\">Install</a>",
+    ),
+    content="true",
+  )
+}
+
+///|
 test "runtime cli build applies configured template file with direct routes" {
   let fixture_root = "fixtures/v2/template_direct_route"
   let outcome = @cli.run_build_command_runtime_from_config(
