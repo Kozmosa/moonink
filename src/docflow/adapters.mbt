@@ -113,6 +113,7 @@ pub(all) struct TemplateContext {
   url_path : String
   source_path : String
   content_kind : String
+  navigation_html : String
   body_html : String
 } derive(Debug, Eq)
 

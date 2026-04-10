@@ -138,6 +138,7 @@ fn lookup_template_variable(context : TemplateContext, name : String) -> String 
     "url_path" => context.url_path
     "source_path" => context.source_path
     "content_kind" => context.content_kind
+    "navigation_html" => context.navigation_html
     "body_html" => context.body_html
     _ => ""
   }
@@ -203,6 +204,7 @@ pub fn default_template_context(rendered : RenderedDocument) -> TemplateContext 
     url_path: route_from_source_path(rendered.source_path),
     source_path: rendered.source_path,
     content_kind: "article",
+    navigation_html: "",
     body_html: rendered.html,
   }
 }

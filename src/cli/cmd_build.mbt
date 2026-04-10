@@ -535,6 +535,7 @@ fn build_template_context(
     url_path: input.meta.url_path,
     source_path: input.meta.source_path,
     content_kind: template_content_kind(input.meta.content_kind),
+    navigation_html: "",
     body_html: rendered.html,
   }
 }

@@ -176,6 +176,27 @@ test "docflow render adapter contract produces html from parsed document" {
 }
 
 ///|
+test "docflow native template renderer interpolates navigation html" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "articles/hello.md",
+    source_uuid: "article-001",
+    html: "<h1>Hello</h1>",
+    note: "rendered html for navigation template test",
+  }
+  let context : @docflow.TemplateContext = {
+    ..@docflow.default_template_context(rendered),
+    navigation_html: "<nav data-moonink-nav=\"auto\"></nav>",
+  }
+  inspect(
+    @docflow.render_template_string(
+      "<aside>{{ navigation_html }}</aside><main>{{ body_html }}</main>", context,
+    ),
+    content="<aside><nav data-moonink-nav=\"auto\"></nav></aside><main><h1>Hello</h1></main>",
+  )
+}
+
+///|
 test "docflow native template renderer interpolates built-in variables" {
   let rendered : @docflow.RenderedDocument = {
     backend_name: "fake-html-renderer",
@@ -279,6 +300,7 @@ test "docflow apply_template uses provided page metadata context" {
       url_path: "/welcome/",
       source_path: "notes/welcome.md",
       content_kind: "page",
+      navigation_html: "<nav></nav>",
       body_html: rendered.html,
     },
     "<article data-title=\"{{ page_title }}\">{{ body_html }}</article>",
@@ -309,6 +331,7 @@ test "docflow apply_built_in_template uses provided page metadata context" {
     url_path: "/welcome/",
     source_path: "notes/welcome.md",
     content_kind: "page",
+    navigation_html: "<nav></nav>",
     body_html: rendered.html,
   })
   inspect(templated.route, content="/welcome/")
