@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "moonbit-agent-guide@moonbit-code-plugins": true
+  }
+}
