@@ -31,9 +31,9 @@ fn format_build_command_error(err : BuildCommandError) -> String {
     BuildCommandError::ContentDiscovery(inner) =>
       "[build] failed during content preparation\n\{@core.format_content_discovery_error(inner)}"
     BuildCommandError::AdapterRegistry(inner) =>
-      "[build] failed during adapter lookup\n\{@debug.to_string(inner)}"
+      "[build] failed during adapter lookup\n\{inner.to_string()}"
     BuildCommandError::FatalParse(inner) =>
-      "[build] failed during document parsing\n\{@debug.to_string(inner)}"
+      "[build] failed during document parsing\n\{inner.to_string()}"
     BuildCommandError::ProjectIO(inner) =>
       "[build] failed during file emission\n\{@core.format_project_io_error(inner)}"
   }
