@@ -17,6 +17,33 @@ pub fn load_config_result(
 }
 
 ///|
+pub fn load_template_source_result(
+  config : @core.MooninkConfig,
+) -> Result[String?, @core.ConfigError] {
+  match config.template_file {
+    None => Ok(None)
+    Some(template_file) => {
+      let full_path = @core.join_relative_path(
+        config.project_root,
+        template_file,
+      ) catch {
+        err =>
+          return Err(
+            @core.ConfigError::InvalidPath(
+              path=template_file,
+              reason=@core.format_path_policy_error(err),
+            ),
+          )
+      }
+      let source = io_read_file_to_string(full_path) catch {
+        err => return Err(@core.ConfigError::IOError(err))
+      }
+      Ok(Some(source))
+    }
+  }
+}
+
+///|
 pub fn read_config_source_task(
   config_path : String,
 ) -> RuntimeIOTask[Result[(String, String), @core.ConfigError]] {

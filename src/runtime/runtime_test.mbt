@@ -10,7 +10,18 @@ test "load_config_result reads the minimal v2 fixture" {
   inspect(config.project_root, content="fixtures/v2/minimal")
   inspect(config.content_dir, content=".")
   inspect(config.output_dir, content="dist")
+  inspect(config.template_file, content="None")
   inspect(config.text_encoding, content="utf-8")
+}
+
+///|
+test "load_template_source_result returns none without configured template" {
+  let config = match
+    @runtime.load_config_result("fixtures/v2/minimal/moonink.json") {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  inspect(@runtime.load_template_source_result(config), content="Ok(None)")
 }
 
 ///|
@@ -35,6 +46,21 @@ test "load_config_task wraps config loading in runtime io task" {
     @runtime.load_config_task("fixtures/v2/minimal/moonink.json"),
   )
   inspect(outcome is Ok(_), content="true")
+}
+
+///|
+test "load_template_source_result reports missing configured template file" {
+  let config_json =
+    #|{"site_name": "Fixture Site", "template_file": "templates/missing.html"}
+  let config = @core.parse_config_json(
+    "fixtures/v2/minimal/moonink.json", config_json,
+  ) catch {
+    _ => panic()
+  }
+  inspect(
+    @runtime.load_template_source_result(config) is Err(_),
+    content="true",
+  )
 }
 
 ///|

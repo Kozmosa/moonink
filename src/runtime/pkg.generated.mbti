@@ -2,6 +2,7 @@
 package "username/moonink/runtime"
 
 import {
+  "moonbitlang/core/debug",
   "username/moonink/core",
 }
 
@@ -42,6 +43,8 @@ pub fn load_config_result(String) -> Result[@core.MooninkConfig, @core.ConfigErr
 
 pub fn load_config_task(String) -> RuntimeIOTask[Result[@core.MooninkConfig, @core.ConfigError]]
 
+pub fn load_template_source_result(@core.MooninkConfig) -> Result[String?, @core.ConfigError]
+
 pub fn native_runtime_adapter() -> NativeRuntimeAdapter
 
 pub fn read_config_source_task(String) -> RuntimeIOTask[Result[(String, String), @core.ConfigError]]
@@ -63,33 +66,34 @@ pub(all) struct BuildInput {
   source_content : String
   docflow_content : String
   meta : @core.PageMeta
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub(all) struct NativeRuntimeAdapter {
   name : String
   note : String
   policy : RuntimeTaskPolicy
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub(all) enum RuntimeCancellationPolicy {
   NonCancelable
   CancelBeforeSideEffects
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub(all) enum RuntimeConflictPolicy {
   AbortOnConflict
   AllowRepeatableRead
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
+pub impl Show for RuntimeConflictPolicy
 
 pub(all) enum RuntimeIOTask[T] {
   Ready(T)
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub(all) struct RuntimeTaskPolicy {
   conflict_policy : RuntimeConflictPolicy
   cancellation_policy : RuntimeCancellationPolicy
   scheduling_note : String
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 
