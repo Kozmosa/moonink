@@ -3,4 +3,7 @@ _build/
 .mooncakes/
 .moonagent/
 fixtures/v2/minimal/dist/
+fixtures/v2/direct_route/dist/
+fixtures/v2/wikilinks_direct/dist/
+fixtures/v2/wikilinks_pretty/dist/
 quartz/
