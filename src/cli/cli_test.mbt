@@ -564,6 +564,9 @@ test "runtime cli build applies configured template file" {
   inspect(hello_html.contains(">about<"), content="true")
   inspect(hello_html.contains("href=\"/\""), content="true")
   inspect(hello_html.contains(">Home<"), content="true")
+  inspect(hello_html.contains("<nav class=\"template-nav\">"), content="true")
+  inspect(hello_html.contains("href=\"/about/\">about</a>"), content="true")
+  inspect(hello_html.contains("href=\"/\">Home</a>"), content="true")
   inspect(about_html.contains("About Template"), content="true")
   inspect(about_html.contains("<aside></aside>"), content="true")
   inspect(about_html.contains("data-kind=\"page\""), content="true")
@@ -665,8 +668,11 @@ test "runtime cli build applies configured template file with direct routes" {
   )
   inspect(hello_html.contains("data-url=\"/hello.html\""), content="true")
   inspect(hello_html.contains("Hello Direct Template"), content="true")
+  inspect(hello_html.contains("<nav class=\"template-nav\">"), content="true")
+  inspect(hello_html.contains("href=\"/index.html\">Home</a>"), content="true")
   inspect(about_html.contains("About Direct Template"), content="true")
   inspect(about_html.contains("data-url=\"/about.html\""), content="true")
+  inspect(about_html.contains("href=\"/index.html\">Home</a>"), content="true")
 }
 
 ///|
