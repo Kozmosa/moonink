@@ -43,19 +43,25 @@ fn append_wikilink_diagnostic(
   hint : String?,
 ) -> ParsedDocument {
   let diagnostics = {
-    entries: parsed.diagnostics.entries + [{
-      severity: DiagnosticSeverity::Warn,
-      line: None,
-      message,
-      hint,
-      backend_name: parsed.backend_name,
-    }],
+    entries: parsed.diagnostics.entries +
+    [
+      {
+        severity: DiagnosticSeverity::Warn,
+        line: None,
+        message,
+        hint,
+        backend_name: parsed.backend_name,
+      },
+    ],
   }
-  { ..parsed, diagnostics }
+  { ..parsed, diagnostics, }
 }
 
 ///|
-fn resolve_wikilink(linker : WikiLinker, target : String) -> Result[String, String?] {
+fn resolve_wikilink(
+  linker : WikiLinker,
+  target : String,
+) -> Result[String, String?] {
   match linker.exact_targets.get(target) {
     Some(url) => Ok(url)
     None =>
@@ -79,7 +85,8 @@ fn rewrite_markdown_wikilinks(
   let mut cursor = 0
   let mut linked = parsed
   while cursor < payload.length() {
-    if cursor + 1 < payload.length() && payload[cursor:cursor + 2].to_string() == "[[" {
+    if cursor + 1 < payload.length() &&
+      payload[cursor:cursor + 2].to_string() == "[[" {
       let close = find_wikilink_close(payload, cursor + 2)
       match close {
         Some(close_cursor) => {

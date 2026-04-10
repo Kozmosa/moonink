@@ -14,7 +14,8 @@ pub const TEXT_ENCODING_NAME : String = "utf-8"
 pub fn format_path_policy_error(err : PathPolicyError) -> String {
   match err {
     PathPolicyError::EmptyPath(path) => "empty relative path: \{path}"
-    PathPolicyError::AbsolutePath(path) => "absolute paths are not allowed: \{path}"
+    PathPolicyError::AbsolutePath(path) =>
+      "absolute paths are not allowed: \{path}"
     PathPolicyError::ParentTraversal(path) =>
       "parent traversal is not allowed: \{path}"
   }
