@@ -199,6 +199,49 @@ test "runtime cli build applies configured template file" {
 }
 
 ///|
+test "runtime cli build applies configured template file with direct routes" {
+  let fixture_root = "fixtures/v2/template_direct_route"
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/hello.html"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/about.html"),
+    content="true",
+  )
+  let hello_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/hello.html",
+  ) catch {
+    _ => panic()
+  }
+  let about_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/about.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(
+    hello_html.contains("data-template=\"direct-custom\""),
+    content="true",
+  )
+  inspect(
+    hello_html.contains("<title>Hello :: Direct Template Fixture</title>"),
+    content="true",
+  )
+  inspect(hello_html.contains("data-url=\"/hello.html\""), content="true")
+  inspect(hello_html.contains("Hello Direct Template"), content="true")
+  inspect(about_html.contains("About Direct Template"), content="true")
+  inspect(about_html.contains("data-url=\"/about.html\""), content="true")
+}
+
+///|
 test "runtime cli build reports missing configured template file" {
   let config_path = "fixtures/v2/missing_template_file/moonink.json"
   let outcome = @cli.run_build_command_runtime_from_config(config_path)
