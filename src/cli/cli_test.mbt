@@ -190,6 +190,21 @@ test "runtime cli build applies configured template file" {
   )
   inspect(about_html.contains("About Template"), content="true")
   inspect(about_html.contains("<aside></aside>"), content="true")
+  inspect(about_html.contains("data-kind=\"page\""), content="true")
+  inspect(about_html.contains("data-url=\"/about/\""), content="true")
+}
+
+///|
+test "runtime cli build reports missing configured template file" {
+  let config_path = "fixtures/v2/missing_template_file/moonink.json"
+  let outcome = @cli.run_build_command_runtime_from_config(config_path)
+  inspect(outcome.exit_code, content="1")
+  inspect(
+    outcome.message.contains("[build] failed during file emission"),
+    content="true",
+  )
+  inspect(outcome.message.contains("load_template"), content="true")
+  inspect(outcome.message.contains("templates/missing.html"), content="true")
 }
 
 ///|

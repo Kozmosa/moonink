@@ -25,6 +25,21 @@ test "load_template_source_result returns none without configured template" {
 }
 
 ///|
+test "load_template_source_result reads configured template contents" {
+  let config = match
+    @runtime.load_config_result("fixtures/v2/with_template_file/moonink.json") {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let source = match @runtime.load_template_source_result(config) {
+    Ok(Some(source)) => source
+    _ => panic()
+  }
+  inspect(source.contains("data-template=\"custom\""), content="true")
+  inspect(source.contains("{{ body_html }}"), content="true")
+}
+
+///|
 test "load_config_result reports missing config file" {
   let result = @runtime.load_config_result(
     "fixtures/v2/missing_config/moonink.json",
