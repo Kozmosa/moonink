@@ -227,6 +227,16 @@ test "parse_frontmatter collects extra fields" {
 }
 
 ///|
+test "parse_frontmatter keeps navigation fields in extra" {
+  let yaml = "title: Guide\nnav_title: Documentation\nnav_hidden: true\ntype: page"
+  let fm = @core.parse_frontmatter(yaml)
+  inspect(fm.title, content="Some(\"Guide\")")
+  inspect(fm.content_type, content="Some(\"page\")")
+  inspect(fm.extra.get("nav_title"), content="Some(\"Documentation\")")
+  inspect(fm.extra.get("nav_hidden"), content="Some(\"true\")")
+}
+
+///|
 test "parse_frontmatter_from_source handles full document" {
   let source = "---\ntitle: Hello\ntype: page\n---\n\n# Body content"
   let (fm, body) = @core.parse_frontmatter_from_source(source)
