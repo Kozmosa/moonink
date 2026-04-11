@@ -317,6 +317,35 @@ test "site page navigation metadata derives from frontmatter extra" {
 }
 
 ///|
+test "site page navigation metadata falls back on empty title and strict hidden flag" {
+  let empty_title_meta : @core.PageMeta = {
+    source_path: "guide/advanced.md",
+    url_path: "/guide/advanced/",
+    content_kind: @core.ContentKind::Page,
+    format: @core.SourceFormat::Markdown,
+    frontmatter: {
+      ..@core.Frontmatter::default(),
+      title: Some("Advanced Guide"),
+      extra: { "nav_title": "" },
+    },
+    sort_key: "guide/advanced.md",
+  }
+  let loose_hidden_meta : @core.PageMeta = {
+    source_path: "guide/draft.md",
+    url_path: "/guide/draft/",
+    content_kind: @core.ContentKind::Page,
+    format: @core.SourceFormat::Markdown,
+    frontmatter: {
+      ..@core.Frontmatter::default(),
+      extra: { "nav_hidden": "TRUE" },
+    },
+    sort_key: "guide/draft.md",
+  }
+  inspect(@cli.site_page_nav_title(empty_title_meta), content="Advanced Guide")
+  inspect(@cli.site_page_nav_hidden(loose_hidden_meta), content="false")
+}
+
+///|
 test "build site pages derives description index flag and nav metadata" {
   let page_input : @runtime.BuildInput = {
     absolute_source_path: "fixtures/v2/minimal/index.md",
