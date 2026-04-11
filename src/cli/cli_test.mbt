@@ -436,29 +436,37 @@ test "runtime cli build renders automatic navigation for pretty routes" {
     index_html.contains("<nav data-moonink-nav=\"auto\">"),
     content="true",
   )
-  inspect(index_html.contains("href=\"/guide/\">Guide</a>"), content="true")
   inspect(
-    index_html.contains("href=\"/guide/install/\">Install</a>"),
+    index_html.contains("href=\"/guide/\">Documentation</a>"),
     content="true",
   )
+  inspect(
+    index_html.contains("href=\"/guide/install/\">Quick Start</a>"),
+    content="true",
+  )
+  inspect(index_html.contains("href=\"/guide/config/\">Config</a>"), content="false")
   inspect(index_html.contains("Hello Article"), content="false")
   inspect(
     guide_html.contains(
-      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"true\"><a href=\"/guide/\">Guide</a>",
+      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"true\"><a href=\"/guide/\">Documentation</a>",
     ),
     content="true",
   )
   inspect(
     install_html.contains(
-      "<li data-active=\"false\" data-ancestor=\"true\" data-index=\"true\"><a href=\"/guide/\">Guide</a>",
+      "<li data-active=\"false\" data-ancestor=\"true\" data-index=\"true\"><a href=\"/guide/\">Documentation</a>",
     ),
     content="true",
   )
   inspect(
     install_html.contains(
-      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"false\"><a href=\"/guide/install/\">Install</a>",
+      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"false\"><a href=\"/guide/install/\">Quick Start</a>",
     ),
     content="true",
+  )
+  inspect(
+    install_html.contains("href=\"/guide/config/\">Config</a>"),
+    content="false",
   )
 }
 
