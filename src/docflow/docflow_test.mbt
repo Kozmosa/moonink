@@ -337,6 +337,10 @@ test "docflow apply_built_in_template uses provided page metadata context" {
   inspect(templated.route, content="/welcome/")
   inspect(templated.html.contains("<title>Welcome</title>"), content="true")
   inspect(
+    templated.html.contains("<aside class=\"site-nav\"><nav></nav></aside>"),
+    content="true",
+  )
+  inspect(
     templated.html.contains("href=\"https://example.com/docs\""),
     content="true",
   )

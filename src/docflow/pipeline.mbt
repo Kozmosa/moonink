@@ -211,7 +211,7 @@ pub fn default_template_context(rendered : RenderedDocument) -> TemplateContext 
 
 ///|
 pub fn default_page_template() -> String {
-  "<!doctype html>\n<html><head><meta charset=\"utf-8\"><title>{{ page_title }}</title></head><body data-kind=\"{{ content_kind }}\" data-url=\"{{ url_path }}\"><header><a href=\"{{ site_url }}\">{{ site_name }}</a></header><main data-source=\"{{ source_path }}\">{{ body_html }}</main></body></html>"
+  "<!doctype html>\n<html><head><meta charset=\"utf-8\"><title>{{ page_title }}</title></head><body data-kind=\"{{ content_kind }}\" data-url=\"{{ url_path }}\"><header><a href=\"{{ site_url }}\">{{ site_name }}</a></header><aside class=\"site-nav\">{{ navigation_html }}</aside><main data-source=\"{{ source_path }}\">{{ body_html }}</main></body></html>"
 }
 
 ///|
