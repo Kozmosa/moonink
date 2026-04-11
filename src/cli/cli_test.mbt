@@ -147,10 +147,12 @@ test "render navigation html escapes titles and urls" {
 }
 
 ///|
-test "build navigation model keeps only pages and nests section children" {
+test "build navigation model uses nav_title and hides nav_hidden pages" {
   let pages : Array[@core.SitePage] = [
     {
       title: "Home",
+      nav_title: "Home",
+      nav_hidden: false,
       description: "",
       source_path: "index.md",
       url_path: "/",
@@ -159,6 +161,8 @@ test "build navigation model keeps only pages and nests section children" {
     },
     {
       title: "Guide",
+      nav_title: "Documentation",
+      nav_hidden: false,
       description: "",
       source_path: "guide/index.md",
       url_path: "/guide/",
@@ -167,6 +171,8 @@ test "build navigation model keeps only pages and nests section children" {
     },
     {
       title: "Install",
+      nav_title: "Quick Start",
+      nav_hidden: false,
       description: "",
       source_path: "guide/install.md",
       url_path: "/guide/install/",
@@ -175,6 +181,8 @@ test "build navigation model keeps only pages and nests section children" {
     },
     {
       title: "Config",
+      nav_title: "Config",
+      nav_hidden: true,
       description: "",
       source_path: "guide/config.md",
       url_path: "/guide/config/",
@@ -183,6 +191,8 @@ test "build navigation model keeps only pages and nests section children" {
     },
     {
       title: "Hello",
+      nav_title: "Hello",
+      nav_hidden: false,
       description: "",
       source_path: "hello.md",
       url_path: "/hello/",
@@ -191,13 +201,12 @@ test "build navigation model keeps only pages and nests section children" {
     },
   ]
   let navigation = @cli.build_navigation_model(pages)
-  inspect(navigation.total_items, content="4")
+  inspect(navigation.total_items, content="3")
   inspect(navigation.items.length(), content="2")
   inspect(navigation.items[0].title, content="Home")
-  inspect(navigation.items[1].title, content="Guide")
-  inspect(navigation.items[1].children.length(), content="2")
-  inspect(navigation.items[1].children[0].title, content="Config")
-  inspect(navigation.items[1].children[1].title, content="Install")
+  inspect(navigation.items[1].title, content="Documentation")
+  inspect(navigation.items[1].children.length(), content="1")
+  inspect(navigation.items[1].children[0].title, content="Quick Start")
 }
 
 ///|
@@ -205,6 +214,8 @@ test "build navigation model treats section index as landing item" {
   let pages : Array[@core.SitePage] = [
     {
       title: "Guide",
+      nav_title: "Guide",
+      nav_hidden: false,
       description: "",
       source_path: "guide/index.md",
       url_path: "/guide/",
@@ -213,6 +224,8 @@ test "build navigation model treats section index as landing item" {
     },
     {
       title: "Advanced",
+      nav_title: "Advanced",
+      nav_hidden: false,
       description: "",
       source_path: "guide/advanced/index.md",
       url_path: "/guide/advanced/",
@@ -221,6 +234,8 @@ test "build navigation model treats section index as landing item" {
     },
     {
       title: "Reference",
+      nav_title: "Reference",
+      nav_hidden: false,
       description: "",
       source_path: "guide/advanced/reference.md",
       url_path: "/guide/advanced/reference/",
@@ -274,7 +289,35 @@ test "site page title derives from frontmatter basename and root index" {
 }
 
 ///|
-test "build site pages derives description and index flag" {
+test "site page navigation metadata derives from frontmatter extra" {
+  let nav_meta : @core.PageMeta = {
+    source_path: "guide/install.md",
+    url_path: "/guide/install/",
+    content_kind: @core.ContentKind::Page,
+    format: @core.SourceFormat::Markdown,
+    frontmatter: {
+      ..@core.Frontmatter::default(),
+      title: Some("Install Guide"),
+      extra: { "nav_title": "Quick Start", "nav_hidden": "true" },
+    },
+    sort_key: "guide/install.md",
+  }
+  let default_meta : @core.PageMeta = {
+    source_path: "guide/config.md",
+    url_path: "/guide/config/",
+    content_kind: @core.ContentKind::Page,
+    format: @core.SourceFormat::Markdown,
+    frontmatter: @core.Frontmatter::default(),
+    sort_key: "guide/config.md",
+  }
+  inspect(@cli.site_page_nav_title(nav_meta), content="Quick Start")
+  inspect(@cli.site_page_nav_hidden(nav_meta), content="true")
+  inspect(@cli.site_page_nav_title(default_meta), content="config")
+  inspect(@cli.site_page_nav_hidden(default_meta), content="false")
+}
+
+///|
+test "build site pages derives description index flag and nav metadata" {
   let page_input : @runtime.BuildInput = {
     absolute_source_path: "fixtures/v2/minimal/index.md",
     relative_source_path: "index.md",
@@ -304,7 +347,10 @@ test "build site pages derives description and index flag" {
       url_path: "/hello/",
       content_kind: @core.ContentKind::Article,
       format: @core.SourceFormat::Markdown,
-      frontmatter: @core.Frontmatter::default(),
+      frontmatter: {
+        ..@core.Frontmatter::default(),
+        extra: { "nav_title": "Read Me", "nav_hidden": "true" },
+      },
       sort_key: "hello.md",
     },
   }
@@ -312,7 +358,11 @@ test "build site pages derives description and index flag" {
   inspect(pages.length(), content="2")
   inspect(pages[0].description, content="Landing page")
   inspect(pages[0].is_index, content="true")
+  inspect(pages[0].nav_title, content="Home")
+  inspect(pages[0].nav_hidden, content="false")
   inspect(pages[1].title, content="hello")
+  inspect(pages[1].nav_title, content="Read Me")
+  inspect(pages[1].nav_hidden, content="true")
   inspect(pages[1].description, content="")
   inspect(pages[1].is_index, content="false")
 }

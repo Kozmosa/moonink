@@ -2,6 +2,8 @@
 test "site assembly model supports construction" {
   let page : @core.SitePage = {
     title: "Home",
+    nav_title: "Home",
+    nav_hidden: false,
     description: "Landing page",
     source_path: "index.md",
     url_path: "/",

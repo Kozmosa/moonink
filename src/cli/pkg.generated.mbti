@@ -35,6 +35,10 @@ pub fn run_runtime_cli_command(CliCommand) -> CliOutcome
 
 pub fn site_page_description(@core.PageMeta) -> String
 
+pub fn site_page_nav_hidden(@core.PageMeta) -> Bool
+
+pub fn site_page_nav_title(@core.PageMeta) -> String
+
 pub fn site_page_title(@core.PageMeta) -> String
 
 // Errors

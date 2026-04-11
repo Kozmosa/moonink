@@ -10,6 +10,8 @@ pub(all) struct BuildContext {
 /// Site-level page view derived from PageMeta for site assembly stages.
 pub(all) struct SitePage {
   title : String
+  nav_title : String
+  nav_hidden : Bool
   description : String
   source_path : String
   url_path : String

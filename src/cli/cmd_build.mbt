@@ -346,7 +346,7 @@ fn build_navigation_item(
   page : @core.SitePage,
 ) -> @core.NavigationItem {
   {
-    title: page.title,
+    title: page.nav_title,
     url_path: page.url_path,
     source_path: page.source_path,
     content_kind: page.content_kind,
@@ -361,7 +361,7 @@ pub fn build_navigation_model(
 ) -> @core.NavigationModel {
   let nav_pages : Array[@core.SitePage] = []
   for page in pages {
-    if page.content_kind == @core.ContentKind::Page {
+    if page.content_kind == @core.ContentKind::Page && !page.nav_hidden {
       nav_pages.push(page)
     }
   }
@@ -488,6 +488,22 @@ pub fn site_page_title(meta : @core.PageMeta) -> String {
 }
 
 ///|
+pub fn site_page_nav_title(meta : @core.PageMeta) -> String {
+  match meta.frontmatter.extra.get("nav_title") {
+    Some(title) if title != "" => title
+    _ => site_page_title(meta)
+  }
+}
+
+///|
+pub fn site_page_nav_hidden(meta : @core.PageMeta) -> Bool {
+  match meta.frontmatter.extra.get("nav_hidden") {
+    Some("true") => true
+    _ => false
+  }
+}
+
+///|
 pub fn site_page_description(meta : @core.PageMeta) -> String {
   match meta.frontmatter.description {
     Some(description) => description
@@ -499,6 +515,8 @@ pub fn site_page_description(meta : @core.PageMeta) -> String {
 fn build_site_page(input : @runtime.BuildInput) -> @core.SitePage {
   {
     title: site_page_title(input.meta),
+    nav_title: site_page_nav_title(input.meta),
+    nav_hidden: site_page_nav_hidden(input.meta),
     description: site_page_description(input.meta),
     source_path: input.meta.source_path,
     url_path: input.meta.url_path,
