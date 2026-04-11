@@ -1,5 +1,6 @@
 ---
 title: Guide
+nav_title: Documentation
 type: page
 ---
 

@@ -662,31 +662,39 @@ test "runtime cli build renders automatic navigation for direct routes" {
     content="true",
   )
   inspect(
-    index_html.contains("href=\"/guide/index.html\">Guide</a>"),
+    index_html.contains("href=\"/guide/index.html\">Documentation</a>"),
     content="true",
   )
   inspect(
-    index_html.contains("href=\"/guide/install.html\">Install</a>"),
+    index_html.contains("href=\"/guide/install.html\">Quick Start</a>"),
     content="true",
+  )
+  inspect(
+    index_html.contains("href=\"/guide/config.html\">Config</a>"),
+    content="false",
   )
   inspect(index_html.contains("Direct Hello Article"), content="false")
   inspect(
     guide_html.contains(
-      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"true\"><a href=\"/guide/index.html\">Guide</a>",
+      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"true\"><a href=\"/guide/index.html\">Documentation</a>",
     ),
     content="true",
   )
   inspect(
     install_html.contains(
-      "<li data-active=\"false\" data-ancestor=\"true\" data-index=\"true\"><a href=\"/guide/index.html\">Guide</a>",
+      "<li data-active=\"false\" data-ancestor=\"true\" data-index=\"true\"><a href=\"/guide/index.html\">Documentation</a>",
     ),
     content="true",
   )
   inspect(
     install_html.contains(
-      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"false\"><a href=\"/guide/install.html\">Install</a>",
+      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"false\"><a href=\"/guide/install.html\">Quick Start</a>",
     ),
     content="true",
+  )
+  inspect(
+    install_html.contains("href=\"/guide/config.html\">Config</a>"),
+    content="false",
   )
 }
 
