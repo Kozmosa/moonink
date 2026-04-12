@@ -441,9 +441,11 @@ fn render_navigation_items(
   for item in items {
     let is_active = item.url_path == current_url
     let is_ancestor = !is_active && navigation_contains_url(item, current_url)
+    let is_expanded = is_active || is_ancestor
     let active_attr = navigation_bool_attr(is_active)
     let ancestor_attr = navigation_bool_attr(is_ancestor)
     let index_attr = navigation_bool_attr(item.is_index)
+    let expanded_attr = navigation_bool_attr(is_expanded)
     html = html +
       "<li data-active=\"" +
       active_attr +
@@ -451,6 +453,8 @@ fn render_navigation_items(
       ancestor_attr +
       "\" data-index=\"" +
       index_attr +
+      "\" data-expanded=\"" +
+      expanded_attr +
       "\"><a href=\"" +
       escape_html_text(item.url_path) +
       "\">" +
