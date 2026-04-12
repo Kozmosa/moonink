@@ -112,6 +112,43 @@ test "docflow indexed wikilinker rewrites markdown wikilinks" {
 }
 
 ///|
+test "docflow indexed wikilinker supports path and extension targets" {
+  let parsed : @docflow.ParsedDocument = {
+    backend_name: "fake-markdown-parser",
+    source_format: @core.SourceFormat::Markdown,
+    source_path: "articles/hello.md",
+    source_uuid: "article-001",
+    diagnostics: @docflow.empty_document_diagnostics(),
+    backend_payload: Some("See [[guide/install]] and [[about.html|About page]]."),
+  }
+  let linker = @docflow.indexed_wikilinker(
+    { "guide/install": "/guide/install/", "about.html": "/about/" },
+    {},
+  )
+  let linked = @docflow.apply_wikilinker(linker, parsed)
+  inspect(
+    linked.backend_payload,
+    content="Some(\"See [guide/install](/guide/install/) and [About page](/about/).\")",
+  )
+}
+
+///|
+test "docflow indexed wikilinker ignores non-markdown payloads" {
+  let parsed : @docflow.ParsedDocument = {
+    backend_name: "html-passthrough-parser",
+    source_format: @core.SourceFormat::Html,
+    source_path: "pages/about.html",
+    source_uuid: "page-001",
+    diagnostics: @docflow.empty_document_diagnostics(),
+    backend_payload: Some("<p>Visit [[hello]]</p>"),
+  }
+  let linker = @docflow.indexed_wikilinker({ "hello": "/hello/" }, {})
+  let linked = @docflow.apply_wikilinker(linker, parsed)
+  inspect(linked.backend_payload, content="Some(\"<p>Visit [[hello]]</p>\")")
+  inspect(linked.diagnostics.entries.length(), content="0")
+}
+
+///|
 test "docflow indexed wikilinker leaves unresolved wikilinks and warns" {
   let parsed : @docflow.ParsedDocument = {
     backend_name: "fake-markdown-parser",
