@@ -247,7 +247,7 @@ test "docflow native template renderer interpolates built-in variables" {
   let context = @docflow.default_template_context(rendered)
   inspect(
     @docflow.render_template_string(
-      "<title>{{ page_title }}</title><section>{{ body_html }}</section><nav>{{ current_section_title }}</nav><footer>{{ breadcrumb_html }}</footer><aside>{{ unknown }}</aside>",
+      "<title>{{ page_title }}</title><section>{{ body_html }}</section><nav>{{ current_section_title }}</nav><footer>{{ page_header_html }}</footer><aside>{{ unknown }}</aside>",
       context,
     ),
     content="<title>articles/hello.md</title><section><h1>Hello</h1></section><nav></nav><footer></footer><aside></aside>",
@@ -342,10 +342,10 @@ test "docflow apply_template uses provided page metadata context" {
       navigation_html: "<nav></nav>",
       current_section_title: "Guide",
       current_section_url: "/guide/",
-      breadcrumb_html: "<nav class=\"breadcrumb\"></nav>",
+      page_header_html: "<nav class=\"breadcrumb\"></nav>",
       body_html: rendered.html,
     },
-    "<article data-title=\"{{ page_title }}\" data-section=\"{{ current_section_title }}\" data-section-url=\"{{ current_section_url }}\">{{ breadcrumb_html }}{{ body_html }}</article>",
+    "<article data-title=\"{{ page_title }}\" data-section=\"{{ current_section_title }}\" data-section-url=\"{{ current_section_url }}\">{{ page_header_html }}{{ body_html }}</article>",
   )
   inspect(templated.route, content="/welcome/")
   inspect(
@@ -376,7 +376,7 @@ test "docflow apply_built_in_template uses provided page metadata context" {
     navigation_html: "<nav></nav>",
     current_section_title: "Guide",
     current_section_url: "/guide/",
-    breadcrumb_html: "<nav class=\"breadcrumb\"></nav>",
+    page_header_html: "<nav class=\"breadcrumb\"></nav>",
     body_html: rendered.html,
   })
   inspect(templated.route, content="/welcome/")

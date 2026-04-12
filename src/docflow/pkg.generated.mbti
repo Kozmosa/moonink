@@ -210,7 +210,7 @@ pub(all) struct TemplateContext {
   navigation_html : String
   current_section_title : String
   current_section_url : String
-  breadcrumb_html : String
+  page_header_html : String
   body_html : String
 } derive(Eq, @debug.Debug)
 
