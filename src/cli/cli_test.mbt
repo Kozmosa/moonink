@@ -543,10 +543,8 @@ test "runtime cli build renders automatic navigation for pretty routes" {
   inspect(hello_html.contains("data-section-title=\"\""), content="true")
   inspect(hello_html.contains("data-section-url=\"\""), content="true")
   inspect(
-    hello_html.contains(
-      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Hello Article</span></nav>",
-    ),
-    content="true",
+    hello_html.contains("data-moonink-breadcrumb=\"auto\""),
+    content="false",
   )
   inspect(
     guide_tips_html.contains("data-section-title=\"Documentation\""),
@@ -746,10 +744,8 @@ test "runtime cli build applies configured template file" {
   inspect(hello_html.contains("data-section-title=\"\""), content="true")
   inspect(hello_html.contains("data-section-url=\"\""), content="true")
   inspect(
-    hello_html.contains(
-      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Hello</span></nav>",
-    ),
-    content="true",
+    hello_html.contains("data-moonink-breadcrumb=\"auto\""),
+    content="false",
   )
   inspect(
     guide_tips_html.contains("data-section-title=\"Documentation\""),
@@ -887,10 +883,8 @@ test "runtime cli build renders automatic navigation for direct routes" {
   inspect(hello_html.contains("data-section-title=\"\""), content="true")
   inspect(hello_html.contains("data-section-url=\"\""), content="true")
   inspect(
-    hello_html.contains(
-      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Hello Article</span></nav>",
-    ),
-    content="true",
+    hello_html.contains("data-moonink-breadcrumb=\"auto\""),
+    content="false",
   )
   inspect(
     guide_tips_html.contains("data-section-title=\"Documentation\""),
@@ -957,10 +951,8 @@ test "runtime cli build applies configured template file with direct routes" {
   inspect(hello_html.contains("data-section-title=\"\""), content="true")
   inspect(hello_html.contains("data-section-url=\"\""), content="true")
   inspect(
-    hello_html.contains(
-      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Hello</span></nav>",
-    ),
-    content="true",
+    hello_html.contains("data-moonink-breadcrumb=\"auto\""),
+    content="false",
   )
   inspect(
     guide_tips_html.contains("data-section-title=\"Documentation\""),

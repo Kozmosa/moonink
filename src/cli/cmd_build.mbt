@@ -615,11 +615,11 @@ fn build_breadcrumb_html(
   }
   let target_url = breadcrumb_target_url(pages, input)
   if target_url == "" {
-    return render_breadcrumb_html([], current_title)
+    return ""
   }
   match find_navigation_path_in_items(navigation.items, target_url) {
     Some(path) => render_breadcrumb_html(path, current_title)
-    None => render_breadcrumb_html([], current_title)
+    None => ""
   }
 }
 
