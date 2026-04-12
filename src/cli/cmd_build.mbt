@@ -537,90 +537,22 @@ fn find_current_section_page(
 }
 
 ///|
-fn find_navigation_path_in_items(
-  items : Array[@core.NavigationItem],
-  target_url : String,
-) -> Array[@core.NavigationItem]? {
-  for item in items {
-    if item.url_path == target_url {
-      return Some([item])
-    }
-    match find_navigation_path_in_items(item.children, target_url) {
-      Some(path) => return Some([item] + path)
-      None => ()
-    }
-  }
-  None
-}
-
-///|
-fn breadcrumb_target_url(
-  pages : Array[@core.SitePage],
-  input : @runtime.BuildInput,
-) -> String {
-  match input.meta.content_kind {
-    @core.ContentKind::Page => input.meta.url_path
-    @core.ContentKind::Article =>
-      match find_current_section_page(pages, input.meta.source_path) {
-        Some(section) => section.url_path
-        None => ""
-      }
-  }
-}
-
-///|
-fn render_breadcrumb_html(
-  items : Array[@core.NavigationItem],
-  current_title : String,
-) -> String {
-  if items.is_empty() && current_title == "" {
+fn render_breadcrumb_title(title : String) -> String {
+  if title == "" {
     return ""
   }
-  let mut html = "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\">"
-  let last_index = items.length() - 1
-  for i in 0..<items.length() {
-    let item = items[i]
-    if i > 0 {
-      html = html + "<span data-separator=\"true\"> / </span>"
-    }
-    let escaped_url = escape_html_text(item.url_path)
-    let escaped_title = escape_html_text(item.title)
-    if current_title == "" && i == last_index {
-      html = html + "<span aria-current=\"page\">" + escaped_title + "</span>"
-    } else {
-      html = html + "<a href=\"" + escaped_url + "\">" + escaped_title + "</a>"
-    }
-  }
-  if current_title != "" {
-    if !items.is_empty() {
-      html = html + "<span data-separator=\"true\"> / </span>"
-    }
-    html = html +
-      "<span aria-current=\"page\">" +
-      escape_html_text(current_title) +
-      "</span>"
-  }
-  html + "</nav>"
+  "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">" +
+  escape_html_text(title) +
+  "</span></nav>"
 }
 
 ///|
 fn build_breadcrumb_html(
-  navigation : @core.NavigationModel,
-  pages : Array[@core.SitePage],
+  _navigation : @core.NavigationModel,
+  _pages : Array[@core.SitePage],
   input : @runtime.BuildInput,
 ) -> String {
-  let current_title = match input.meta.content_kind {
-    @core.ContentKind::Article => site_page_title(input.meta)
-    @core.ContentKind::Page => ""
-  }
-  let target_url = breadcrumb_target_url(pages, input)
-  if target_url == "" {
-    return ""
-  }
-  match find_navigation_path_in_items(navigation.items, target_url) {
-    Some(path) => render_breadcrumb_html(path, current_title)
-    None => ""
-  }
+  render_breadcrumb_title(site_page_title(input.meta))
 }
 
 ///|

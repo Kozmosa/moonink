@@ -509,7 +509,7 @@ test "runtime cli build renders automatic navigation for pretty routes" {
   inspect(guide_html.contains("data-section-url=\"/guide/\""), content="true")
   inspect(
     guide_html.contains(
-      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Documentation</span></nav>",
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Guide</span></nav>",
     ),
     content="true",
   )
@@ -536,15 +536,17 @@ test "runtime cli build renders automatic navigation for pretty routes" {
   inspect(install_html.contains("data-section-url=\"/guide/\""), content="true")
   inspect(
     install_html.contains(
-      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><a href=\"/guide/\">Documentation</a><span data-separator=\"true\"> / </span><span aria-current=\"page\">Quick Start</span></nav>",
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Install</span></nav>",
     ),
     content="true",
   )
   inspect(hello_html.contains("data-section-title=\"\""), content="true")
   inspect(hello_html.contains("data-section-url=\"\""), content="true")
   inspect(
-    hello_html.contains("data-moonink-breadcrumb=\"auto\""),
-    content="false",
+    hello_html.contains(
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Hello Article</span></nav>",
+    ),
+    content="true",
   )
   inspect(
     guide_tips_html.contains("data-section-title=\"Documentation\""),
@@ -556,7 +558,7 @@ test "runtime cli build renders automatic navigation for pretty routes" {
   )
   inspect(
     guide_tips_html.contains(
-      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><a href=\"/guide/\">Documentation</a><span data-separator=\"true\"> / </span><span aria-current=\"page\">Guide Tips</span></nav>",
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Guide Tips</span></nav>",
     ),
     content="true",
   )
@@ -744,8 +746,10 @@ test "runtime cli build applies configured template file" {
   inspect(hello_html.contains("data-section-title=\"\""), content="true")
   inspect(hello_html.contains("data-section-url=\"\""), content="true")
   inspect(
-    hello_html.contains("data-moonink-breadcrumb=\"auto\""),
-    content="false",
+    hello_html.contains(
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Hello</span></nav>",
+    ),
+    content="true",
   )
   inspect(
     guide_tips_html.contains("data-section-title=\"Documentation\""),
@@ -757,7 +761,7 @@ test "runtime cli build applies configured template file" {
   )
   inspect(
     guide_tips_html.contains(
-      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><a href=\"/guide/\">Documentation</a><span data-separator=\"true\"> / </span><span aria-current=\"page\">Guide Tips</span></nav>",
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Guide Tips</span></nav>",
     ),
     content="true",
   )
@@ -846,7 +850,7 @@ test "runtime cli build renders automatic navigation for direct routes" {
   )
   inspect(
     guide_html.contains(
-      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Documentation</span></nav>",
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Guide</span></nav>",
     ),
     content="true",
   )
@@ -876,15 +880,17 @@ test "runtime cli build renders automatic navigation for direct routes" {
   )
   inspect(
     install_html.contains(
-      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><a href=\"/guide/index.html\">Documentation</a><span data-separator=\"true\"> / </span><span aria-current=\"page\">Quick Start</span></nav>",
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Install</span></nav>",
     ),
     content="true",
   )
   inspect(hello_html.contains("data-section-title=\"\""), content="true")
   inspect(hello_html.contains("data-section-url=\"\""), content="true")
   inspect(
-    hello_html.contains("data-moonink-breadcrumb=\"auto\""),
-    content="false",
+    hello_html.contains(
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Hello Article</span></nav>",
+    ),
+    content="true",
   )
   inspect(
     guide_tips_html.contains("data-section-title=\"Documentation\""),
@@ -896,7 +902,7 @@ test "runtime cli build renders automatic navigation for direct routes" {
   )
   inspect(
     guide_tips_html.contains(
-      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><a href=\"/guide/index.html\">Documentation</a><span data-separator=\"true\"> / </span><span aria-current=\"page\">Guide Tips</span></nav>",
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Guide Tips</span></nav>",
     ),
     content="true",
   )
@@ -951,8 +957,10 @@ test "runtime cli build applies configured template file with direct routes" {
   inspect(hello_html.contains("data-section-title=\"\""), content="true")
   inspect(hello_html.contains("data-section-url=\"\""), content="true")
   inspect(
-    hello_html.contains("data-moonink-breadcrumb=\"auto\""),
-    content="false",
+    hello_html.contains(
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Hello</span></nav>",
+    ),
+    content="true",
   )
   inspect(
     guide_tips_html.contains("data-section-title=\"Documentation\""),
@@ -964,7 +972,7 @@ test "runtime cli build applies configured template file with direct routes" {
   )
   inspect(
     guide_tips_html.contains(
-      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><a href=\"/guide/index.html\">Documentation</a><span data-separator=\"true\"> / </span><span aria-current=\"page\">Guide Tips</span></nav>",
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Guide Tips</span></nav>",
     ),
     content="true",
   )
