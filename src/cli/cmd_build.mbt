@@ -608,7 +608,6 @@ fn build_site_result(
   prepare_output_dir(config) catch {
     err => return Err(err)
   }
-  let wikilinker = build_wikilinker(inputs)
   let assembly = build_site_assembly_model(config, inputs, inventory)
   let template_source = match @runtime.load_template_source_result(config) {
     Ok(template_source) => template_source
@@ -629,6 +628,7 @@ fn build_site_result(
   let mut emitted_html_files = 0
   let mut article_count = 0
   let mut page_count = 0
+  let wikilinker = build_wikilinker(inputs)
   for input in inputs {
     let parser = match parser_for_format(input.meta.format) {
       Ok(parser) => parser
