@@ -475,6 +475,139 @@ pub fn render_navigation_html(
 }
 
 ///|
+fn find_section_page_by_key(
+  pages : Array[@core.SitePage],
+  key : String,
+) -> @core.SitePage? {
+  for page in pages {
+    if page.content_kind == @core.ContentKind::Page &&
+      page.is_index &&
+      navigation_node_key(page) == key {
+      return Some(page)
+    }
+  }
+  None
+}
+
+///|
+fn source_directory_segments(source_path : String) -> Array[String] {
+  let stripped = strip_link_target_extension(source_path)
+  let segments = stripped.split("/").map(StringView::to_string).collect()
+  let directories : Array[String] = []
+  if segments.length() <= 1 {
+    return directories
+  }
+  for i in 0..<(segments.length() - 1) {
+    directories.push(segments[i])
+  }
+  directories
+}
+
+///|
+fn find_current_section_page(
+  pages : Array[@core.SitePage],
+  source_path : String,
+) -> @core.SitePage? {
+  let directories = source_directory_segments(source_path)
+  if is_index_source_path(source_path) {
+    let self_key = if directories.is_empty() {
+      ""
+    } else {
+      directories.iter().join("/")
+    }
+    match find_section_page_by_key(pages, self_key) {
+      Some(page) => return Some(page)
+      None => ()
+    }
+  }
+  let mut count = directories.length()
+  while count > 0 {
+    let prefix : Array[String] = []
+    for i in 0..<count {
+      prefix.push(directories[i])
+    }
+    let key = prefix.iter().join("/")
+    match find_section_page_by_key(pages, key) {
+      Some(page) => return Some(page)
+      None => ()
+    }
+    count = count - 1
+  }
+  None
+}
+
+///|
+fn find_navigation_path_in_items(
+  items : Array[@core.NavigationItem],
+  target_url : String,
+) -> Array[@core.NavigationItem]? {
+  for item in items {
+    if item.url_path == target_url {
+      return Some([item])
+    }
+    match find_navigation_path_in_items(item.children, target_url) {
+      Some(path) => return Some([item] + path)
+      None => ()
+    }
+  }
+  None
+}
+
+///|
+fn breadcrumb_target_url(
+  pages : Array[@core.SitePage],
+  input : @runtime.BuildInput,
+) -> String {
+  match input.meta.content_kind {
+    @core.ContentKind::Page => input.meta.url_path
+    @core.ContentKind::Article =>
+      match find_current_section_page(pages, input.meta.source_path) {
+        Some(section) => section.url_path
+        None => ""
+      }
+  }
+}
+
+///|
+fn render_breadcrumb_html(items : Array[@core.NavigationItem]) -> String {
+  if items.is_empty() {
+    return ""
+  }
+  let mut html = "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\">"
+  let last_index = items.length() - 1
+  for i in 0..<items.length() {
+    let item = items[i]
+    if i > 0 {
+      html = html + "<span data-separator=\"true\"> / </span>"
+    }
+    let escaped_url = escape_html_text(item.url_path)
+    let escaped_title = escape_html_text(item.title)
+    if i == last_index {
+      html = html + "<span aria-current=\"page\">" + escaped_title + "</span>"
+    } else {
+      html = html + "<a href=\"" + escaped_url + "\">" + escaped_title + "</a>"
+    }
+  }
+  html + "</nav>"
+}
+
+///|
+fn build_breadcrumb_html(
+  navigation : @core.NavigationModel,
+  pages : Array[@core.SitePage],
+  input : @runtime.BuildInput,
+) -> String {
+  let target_url = breadcrumb_target_url(pages, input)
+  if target_url == "" {
+    return ""
+  }
+  match find_navigation_path_in_items(navigation.items, target_url) {
+    Some(path) => render_breadcrumb_html(path)
+    None => ""
+  }
+}
+
+///|
 pub fn site_page_title(meta : @core.PageMeta) -> String {
   match meta.frontmatter.title {
     Some(title) => title
@@ -561,6 +694,18 @@ fn build_template_context(
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
 ) -> @docflow.TemplateContext {
+  let current_section = find_current_section_page(
+    assembly.pages,
+    input.meta.source_path,
+  )
+  let current_section_title = match current_section {
+    Some(section) => section.nav_title
+    None => ""
+  }
+  let current_section_url = match current_section {
+    Some(section) => section.url_path
+    None => ""
+  }
   {
     site_name: config.site_name,
     site_url: match config.site_url {
@@ -576,9 +721,13 @@ fn build_template_context(
       assembly.navigation,
       input.meta.url_path,
     ),
-    current_section_title: "",
-    current_section_url: "",
-    breadcrumb_html: "",
+    current_section_title,
+    current_section_url,
+    breadcrumb_html: build_breadcrumb_html(
+      assembly.navigation,
+      assembly.pages,
+      input,
+    ),
     body_html: rendered.html,
   }
 }

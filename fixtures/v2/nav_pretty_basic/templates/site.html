@@ -6,6 +6,7 @@
 </head>
 <body data-template="nav-pretty" data-kind="{{ content_kind }}" data-url="{{ url_path }}">
   <aside class="site-nav">{{ navigation_html }}</aside>
+  <div class="section-context" data-section-title="{{ current_section_title }}" data-section-url="{{ current_section_url }}">{{ breadcrumb_html }}</div>
   <main>{{ body_html }}</main>
 </body>
 </html>

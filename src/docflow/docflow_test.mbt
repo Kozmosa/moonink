@@ -119,7 +119,9 @@ test "docflow indexed wikilinker supports path and extension targets" {
     source_path: "articles/hello.md",
     source_uuid: "article-001",
     diagnostics: @docflow.empty_document_diagnostics(),
-    backend_payload: Some("See [[guide/install]] and [[about.html|About page]]."),
+    backend_payload: Some(
+      "See [[guide/install]] and [[about.html|About page]].",
+    ),
   }
   let linker = @docflow.indexed_wikilinker(
     { "guide/install": "/guide/install/", "about.html": "/about/" },
@@ -383,7 +385,10 @@ test "docflow apply_built_in_template uses provided page metadata context" {
     templated.html.contains("<aside class=\"site-nav\"><nav></nav></aside>"),
     content="true",
   )
-  inspect(templated.html.contains("href=\"https://example.com/docs\""), content="true")
+  inspect(
+    templated.html.contains("href=\"https://example.com/docs\""),
+    content="true",
+  )
   inspect(templated.html.contains("data-kind=\"page\""), content="true")
   inspect(templated.html.contains("data-url=\"/welcome/\""), content="true")
   inspect(templated.html.contains("Guide"), content="false")

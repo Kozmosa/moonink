@@ -460,6 +460,11 @@ test "runtime cli build renders automatic navigation for pretty routes" {
   ) catch {
     _ => panic()
   }
+  let hello_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/hello/index.html",
+  ) catch {
+    _ => panic()
+  }
   inspect(index_html.contains("data-template=\"nav-pretty\""), content="true")
   inspect(
     index_html.contains("<nav data-moonink-nav=\"auto\">"),
@@ -473,11 +478,33 @@ test "runtime cli build renders automatic navigation for pretty routes" {
     index_html.contains("href=\"/guide/install/\">Quick Start</a>"),
     content="true",
   )
-  inspect(index_html.contains("href=\"/guide/config/\">Config</a>"), content="false")
+  inspect(
+    index_html.contains("href=\"/guide/config/\">Config</a>"),
+    content="false",
+  )
   inspect(index_html.contains("Hello Article"), content="false")
+  inspect(index_html.contains("data-section-title=\"Home\""), content="true")
+  inspect(index_html.contains("data-section-url=\"/\""), content="true")
+  inspect(
+    index_html.contains(
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Home</span></nav>",
+    ),
+    content="true",
+  )
   inspect(
     guide_html.contains(
       "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"true\"><a href=\"/guide/\">Documentation</a>",
+    ),
+    content="true",
+  )
+  inspect(
+    guide_html.contains("data-section-title=\"Documentation\""),
+    content="true",
+  )
+  inspect(guide_html.contains("data-section-url=\"/guide/\""), content="true")
+  inspect(
+    guide_html.contains(
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Documentation</span></nav>",
     ),
     content="true",
   )
@@ -495,6 +522,23 @@ test "runtime cli build renders automatic navigation for pretty routes" {
   )
   inspect(
     install_html.contains("href=\"/guide/config/\">Config</a>"),
+    content="false",
+  )
+  inspect(
+    install_html.contains("data-section-title=\"Documentation\""),
+    content="true",
+  )
+  inspect(install_html.contains("data-section-url=\"/guide/\""), content="true")
+  inspect(
+    install_html.contains(
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><a href=\"/guide/\">Documentation</a><span data-separator=\"true\"> / </span><span aria-current=\"page\">Quick Start</span></nav>",
+    ),
+    content="true",
+  )
+  inspect(hello_html.contains("data-section-title=\"\""), content="true")
+  inspect(hello_html.contains("data-section-url=\"\""), content="true")
+  inspect(
+    hello_html.contains("data-moonink-breadcrumb=\"auto\""),
     content="false",
   )
 }
@@ -641,6 +685,14 @@ test "runtime cli build applies configured template file" {
     content="true",
   )
   inspect(index_html.contains("<aside>Landing page</aside>"), content="true")
+  inspect(index_html.contains("data-section-title=\"Home\""), content="true")
+  inspect(index_html.contains("data-section-url=\"/\""), content="true")
+  inspect(
+    index_html.contains(
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Home</span></nav>",
+    ),
+    content="true",
+  )
   inspect(hello_html.contains("Hello Template"), content="true")
   inspect(
     hello_html.contains("<title>Hello :: Template Fixture</title>"),
@@ -657,10 +709,18 @@ test "runtime cli build applies configured template file" {
   inspect(hello_html.contains("<nav class=\"template-nav\">"), content="true")
   inspect(hello_html.contains("href=\"/about/\">about</a>"), content="true")
   inspect(hello_html.contains("href=\"/\">Home</a>"), content="true")
+  inspect(hello_html.contains("data-section-title=\"\""), content="true")
+  inspect(hello_html.contains("data-section-url=\"\""), content="true")
+  inspect(
+    hello_html.contains("data-moonink-breadcrumb=\"auto\""),
+    content="false",
+  )
   inspect(about_html.contains("About Template"), content="true")
   inspect(about_html.contains("<aside></aside>"), content="true")
   inspect(about_html.contains("data-kind=\"page\""), content="true")
   inspect(about_html.contains("data-url=\"/about/\""), content="true")
+  inspect(about_html.contains("data-section-title=\"\""), content="true")
+  inspect(about_html.contains("data-section-url=\"\""), content="true")
 }
 
 ///|
@@ -685,6 +745,11 @@ test "runtime cli build renders automatic navigation for direct routes" {
   ) catch {
     _ => panic()
   }
+  let hello_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/hello.html",
+  ) catch {
+    _ => panic()
+  }
   inspect(index_html.contains("data-template=\"nav-direct\""), content="true")
   inspect(
     index_html.contains("<nav data-moonink-nav=\"auto\">"),
@@ -703,9 +768,34 @@ test "runtime cli build renders automatic navigation for direct routes" {
     content="false",
   )
   inspect(index_html.contains("Direct Hello Article"), content="false")
+  inspect(index_html.contains("data-section-title=\"Home\""), content="true")
+  inspect(
+    index_html.contains("data-section-url=\"/index.html\""),
+    content="true",
+  )
+  inspect(
+    index_html.contains(
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Home</span></nav>",
+    ),
+    content="true",
+  )
   inspect(
     guide_html.contains(
       "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"true\"><a href=\"/guide/index.html\">Documentation</a>",
+    ),
+    content="true",
+  )
+  inspect(
+    guide_html.contains("data-section-title=\"Documentation\""),
+    content="true",
+  )
+  inspect(
+    guide_html.contains("data-section-url=\"/guide/index.html\""),
+    content="true",
+  )
+  inspect(
+    guide_html.contains(
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Documentation</span></nav>",
     ),
     content="true",
   )
@@ -723,6 +813,26 @@ test "runtime cli build renders automatic navigation for direct routes" {
   )
   inspect(
     install_html.contains("href=\"/guide/config.html\">Config</a>"),
+    content="false",
+  )
+  inspect(
+    install_html.contains("data-section-title=\"Documentation\""),
+    content="true",
+  )
+  inspect(
+    install_html.contains("data-section-url=\"/guide/index.html\""),
+    content="true",
+  )
+  inspect(
+    install_html.contains(
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><a href=\"/guide/index.html\">Documentation</a><span data-separator=\"true\"> / </span><span aria-current=\"page\">Quick Start</span></nav>",
+    ),
+    content="true",
+  )
+  inspect(hello_html.contains("data-section-title=\"\""), content="true")
+  inspect(hello_html.contains("data-section-url=\"\""), content="true")
+  inspect(
+    hello_html.contains("data-moonink-breadcrumb=\"auto\""),
     content="false",
   )
 }
@@ -768,9 +878,17 @@ test "runtime cli build applies configured template file with direct routes" {
   inspect(hello_html.contains("Hello Direct Template"), content="true")
   inspect(hello_html.contains("<nav class=\"template-nav\">"), content="true")
   inspect(hello_html.contains("href=\"/index.html\">Home</a>"), content="true")
+  inspect(hello_html.contains("data-section-title=\"\""), content="true")
+  inspect(hello_html.contains("data-section-url=\"\""), content="true")
+  inspect(
+    hello_html.contains("data-moonink-breadcrumb=\"auto\""),
+    content="false",
+  )
   inspect(about_html.contains("About Direct Template"), content="true")
   inspect(about_html.contains("data-url=\"/about.html\""), content="true")
   inspect(about_html.contains("href=\"/index.html\">Home</a>"), content="true")
+  inspect(about_html.contains("data-section-title=\"\""), content="true")
+  inspect(about_html.contains("data-section-url=\"\""), content="true")
 }
 
 ///|
