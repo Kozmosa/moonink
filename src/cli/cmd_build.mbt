@@ -569,8 +569,11 @@ fn breadcrumb_target_url(
 }
 
 ///|
-fn render_breadcrumb_html(items : Array[@core.NavigationItem]) -> String {
-  if items.is_empty() {
+fn render_breadcrumb_html(
+  items : Array[@core.NavigationItem],
+  current_title : String,
+) -> String {
+  if items.is_empty() && current_title == "" {
     return ""
   }
   let mut html = "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\">"
@@ -582,11 +585,20 @@ fn render_breadcrumb_html(items : Array[@core.NavigationItem]) -> String {
     }
     let escaped_url = escape_html_text(item.url_path)
     let escaped_title = escape_html_text(item.title)
-    if i == last_index {
+    if current_title == "" && i == last_index {
       html = html + "<span aria-current=\"page\">" + escaped_title + "</span>"
     } else {
       html = html + "<a href=\"" + escaped_url + "\">" + escaped_title + "</a>"
     }
+  }
+  if current_title != "" {
+    if !items.is_empty() {
+      html = html + "<span data-separator=\"true\"> / </span>"
+    }
+    html = html +
+      "<span aria-current=\"page\">" +
+      escape_html_text(current_title) +
+      "</span>"
   }
   html + "</nav>"
 }
@@ -597,13 +609,17 @@ fn build_breadcrumb_html(
   pages : Array[@core.SitePage],
   input : @runtime.BuildInput,
 ) -> String {
+  let current_title = match input.meta.content_kind {
+    @core.ContentKind::Article => site_page_title(input.meta)
+    @core.ContentKind::Page => ""
+  }
   let target_url = breadcrumb_target_url(pages, input)
   if target_url == "" {
-    return ""
+    return render_breadcrumb_html([], current_title)
   }
   match find_navigation_path_in_items(navigation.items, target_url) {
-    Some(path) => render_breadcrumb_html(path)
-    None => ""
+    Some(path) => render_breadcrumb_html(path, current_title)
+    None => render_breadcrumb_html([], current_title)
   }
 }
 
