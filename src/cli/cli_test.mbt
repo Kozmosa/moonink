@@ -465,6 +465,11 @@ test "runtime cli build renders automatic navigation for pretty routes" {
   ) catch {
     _ => panic()
   }
+  let guide_tips_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/guide/tips/index.html",
+  ) catch {
+    _ => panic()
+  }
   inspect(index_html.contains("data-template=\"nav-pretty\""), content="true")
   inspect(
     index_html.contains("<nav data-moonink-nav=\"auto\">"),
@@ -540,6 +545,20 @@ test "runtime cli build renders automatic navigation for pretty routes" {
   inspect(
     hello_html.contains(
       "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Hello Article</span></nav>",
+    ),
+    content="true",
+  )
+  inspect(
+    guide_tips_html.contains("data-section-title=\"Documentation\""),
+    content="true",
+  )
+  inspect(
+    guide_tips_html.contains("data-section-url=\"/guide/\""),
+    content="true",
+  )
+  inspect(
+    guide_tips_html.contains(
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><a href=\"/guide/\">Documentation</a><span data-separator=\"true\"> / </span><span aria-current=\"page\">Guide Tips</span></nav>",
     ),
     content="true",
   )
@@ -689,6 +708,11 @@ test "runtime cli build applies configured template file" {
   ) catch {
     _ => panic()
   }
+  let guide_tips_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/guide/tips/index.html",
+  ) catch {
+    _ => panic()
+  }
   inspect(index_html.contains("data-template=\"custom\""), content="true")
   inspect(
     index_html.contains("<title>Home :: Template Fixture</title>"),
@@ -727,6 +751,20 @@ test "runtime cli build applies configured template file" {
     ),
     content="true",
   )
+  inspect(
+    guide_tips_html.contains("data-section-title=\"Documentation\""),
+    content="true",
+  )
+  inspect(
+    guide_tips_html.contains("data-section-url=\"/guide/\""),
+    content="true",
+  )
+  inspect(
+    guide_tips_html.contains(
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><a href=\"/guide/\">Documentation</a><span data-separator=\"true\"> / </span><span aria-current=\"page\">Guide Tips</span></nav>",
+    ),
+    content="true",
+  )
   inspect(about_html.contains("About Template"), content="true")
   inspect(about_html.contains("<aside></aside>"), content="true")
   inspect(about_html.contains("data-kind=\"page\""), content="true")
@@ -759,6 +797,11 @@ test "runtime cli build renders automatic navigation for direct routes" {
   }
   let hello_html = @runtime.io_read_file_to_string(
     fixture_root + "/dist/hello.html",
+  ) catch {
+    _ => panic()
+  }
+  let guide_tips_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/guide/tips.html",
   ) catch {
     _ => panic()
   }
@@ -849,6 +892,20 @@ test "runtime cli build renders automatic navigation for direct routes" {
     ),
     content="true",
   )
+  inspect(
+    guide_tips_html.contains("data-section-title=\"Documentation\""),
+    content="true",
+  )
+  inspect(
+    guide_tips_html.contains("data-section-url=\"/guide/index.html\""),
+    content="true",
+  )
+  inspect(
+    guide_tips_html.contains(
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><a href=\"/guide/index.html\">Documentation</a><span data-separator=\"true\"> / </span><span aria-current=\"page\">Guide Tips</span></nav>",
+    ),
+    content="true",
+  )
 }
 
 ///|
@@ -880,6 +937,11 @@ test "runtime cli build applies configured template file with direct routes" {
   ) catch {
     _ => panic()
   }
+  let guide_tips_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/guide/tips.html",
+  ) catch {
+    _ => panic()
+  }
   inspect(
     hello_html.contains("data-template=\"direct-custom\""),
     content="true",
@@ -897,6 +959,20 @@ test "runtime cli build applies configured template file with direct routes" {
   inspect(
     hello_html.contains(
       "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Hello</span></nav>",
+    ),
+    content="true",
+  )
+  inspect(
+    guide_tips_html.contains("data-section-title=\"Documentation\""),
+    content="true",
+  )
+  inspect(
+    guide_tips_html.contains("data-section-url=\"/guide/index.html\""),
+    content="true",
+  )
+  inspect(
+    guide_tips_html.contains(
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><a href=\"/guide/index.html\">Documentation</a><span data-separator=\"true\"> / </span><span aria-current=\"page\">Guide Tips</span></nav>",
     ),
     content="true",
   )
