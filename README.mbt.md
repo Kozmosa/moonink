@@ -7,7 +7,7 @@ This repository implements the MoonInk static site generator.
 Implemented pieces:
 
 - `moonink help`
-- `moonink new [project-name]`
+- `moonink onboard`
 - `moonink build`
 - `moonink serve`
 
@@ -15,14 +15,11 @@ Current status:
 
 - command parsing is wired through the root package;
 - `cmd/main` reads real runtime argv;
-- `new` creates starter projects with normalized paths and UTF-8 files;
-- `build` implements phase 1a input handling: configuration loading, content discovery, and DocFlow pipeline integration;
-- DocFlow parser adapter chain is now complete:
-  - `ParserAdapter` boundary with `mizchi/markdown` integration;
-  - `RenderAdapter` boundary with Markdown-to-HTML rendering;
-  - `WikiLinker` no-op semantic stage;
-  - downstream `Templater` and `SiteConstructor` stages;
-  - article/page branching and build pipeline closure;
-- rendering is exercised through the DocFlow test surface;
-- `serve` remains a placeholder module;
-- frontmatter parsing, routing, and search are planned for Phase 2.
+- `onboard` creates starter config in-place and injects default frontmatter into markdown files that lack it;
+- `build` loads config, discovers content, parses frontmatter, and classifies `.html` plus `type: page` markdown as pages while other markdown remains article content;
+- DocFlow build now runs an explicit parser -> WikiLinker -> render -> template pipeline with route-aware pretty/direct HTML emission;
+- WikiLinker rewrites Obsidian-style `[[target]]` and `[[target|label]]` syntax using build-time route metadata, leaving unresolved or ambiguous links in place with diagnostics;
+- site assembly now derives automatic page-only navigation, `nav_title`, and `nav_hidden` metadata for templates and default layout rendering;
+- template rendering supports either the built-in page template or a configured `template_file`, with flat string variables including `site_name`, `page_title`, `navigation_html`, `current_section_title`, `current_section_url`, and `breadcrumb_html`;
+- the built-in template now renders automatic navigation plus section/breadcrumb context for pages and section landing pages while articles stay outside the navigation tree;
+- `serve` remains a placeholder module.
