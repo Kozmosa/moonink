@@ -21,5 +21,5 @@ Current status:
 - WikiLinker rewrites Obsidian-style `[[target]]` and `[[target|label]]` syntax using build-time route metadata, leaving unresolved or ambiguous links in place with diagnostics;
 - site assembly now derives automatic page-only navigation, `nav_title`, and `nav_hidden` metadata for templates and default layout rendering;
 - template rendering supports either the built-in page template or a configured `template_file`, with flat string variables including `site_name`, `page_title`, `navigation_html`, `current_section_title`, `current_section_url`, `page_header_title`, and `page_header_html`;
-- the built-in template now renders automatic navigation plus section/breadcrumb context for pages and section landing pages while articles stay outside the navigation tree;
+- the built-in template now renders automatic navigation plus section metadata and page header context for pages and section landing pages while articles stay outside the navigation tree;
 - `serve` remains a placeholder module.

@@ -537,7 +537,7 @@ fn find_current_section_page(
 }
 
 ///|
-fn render_breadcrumb_title(title : String) -> String {
+fn render_page_header_title(title : String) -> String {
   if title == "" {
     return ""
   }
@@ -547,12 +547,12 @@ fn render_breadcrumb_title(title : String) -> String {
 }
 
 ///|
-fn build_breadcrumb_html(
+fn build_page_header_html(
   _navigation : @core.NavigationModel,
   _pages : Array[@core.SitePage],
   input : @runtime.BuildInput,
 ) -> String {
-  render_breadcrumb_title(site_page_title(input.meta))
+  render_page_header_title(site_page_title(input.meta))
 }
 
 ///|
@@ -672,7 +672,7 @@ fn build_template_context(
     current_section_title,
     current_section_url,
     page_header_title: site_page_title(input.meta),
-    page_header_html: build_breadcrumb_html(
+    page_header_html: build_page_header_html(
       assembly.navigation,
       assembly.pages,
       input,
