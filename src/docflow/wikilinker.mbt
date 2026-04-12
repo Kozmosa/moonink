@@ -132,8 +132,7 @@ fn rewrite_markdown_wikilinks(
 }
 
 ///|
-/// Apply the semantic linker boundary. The default stage is an explicit no-op.
-/// Future implementation will handle Obsidian-compatible [[wikilink]] resolution.
+/// Apply the semantic linker boundary for route-aware markdown wikilinks.
 pub fn apply_wikilinker(
   linker : WikiLinker,
   parsed : ParsedDocument,
