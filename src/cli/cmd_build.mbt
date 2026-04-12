@@ -671,6 +671,7 @@ fn build_template_context(
     ),
     current_section_title,
     current_section_url,
+    page_header_title: site_page_title(input.meta),
     page_header_html: build_breadcrumb_html(
       assembly.navigation,
       assembly.pages,

@@ -719,6 +719,10 @@ test "runtime cli build applies configured template file" {
     content="true",
   )
   inspect(index_html.contains("<aside>Landing page</aside>"), content="true")
+  inspect(
+    index_html.contains("data-page-header-title=\"Home\""),
+    content="true",
+  )
   inspect(index_html.contains("data-section-title=\"Home\""), content="true")
   inspect(index_html.contains("data-section-url=\"/\""), content="true")
   inspect(
@@ -743,12 +747,20 @@ test "runtime cli build applies configured template file" {
   inspect(hello_html.contains("<nav class=\"template-nav\">"), content="true")
   inspect(hello_html.contains("href=\"/about/\">about</a>"), content="true")
   inspect(hello_html.contains("href=\"/\">Home</a>"), content="true")
+  inspect(
+    hello_html.contains("data-page-header-title=\"Hello\""),
+    content="true",
+  )
   inspect(hello_html.contains("data-section-title=\"\""), content="true")
   inspect(hello_html.contains("data-section-url=\"\""), content="true")
   inspect(
     hello_html.contains(
       "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Hello</span></nav>",
     ),
+    content="true",
+  )
+  inspect(
+    guide_tips_html.contains("data-page-header-title=\"Guide Tips\""),
     content="true",
   )
   inspect(
@@ -954,12 +966,20 @@ test "runtime cli build applies configured template file with direct routes" {
   inspect(hello_html.contains("Hello Direct Template"), content="true")
   inspect(hello_html.contains("<nav class=\"template-nav\">"), content="true")
   inspect(hello_html.contains("href=\"/index.html\">Home</a>"), content="true")
+  inspect(
+    hello_html.contains("data-page-header-title=\"Hello\""),
+    content="true",
+  )
   inspect(hello_html.contains("data-section-title=\"\""), content="true")
   inspect(hello_html.contains("data-section-url=\"\""), content="true")
   inspect(
     hello_html.contains(
       "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Hello</span></nav>",
     ),
+    content="true",
+  )
+  inspect(
+    guide_tips_html.contains("data-page-header-title=\"Guide Tips\""),
     content="true",
   )
   inspect(

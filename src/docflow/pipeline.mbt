@@ -141,6 +141,7 @@ fn lookup_template_variable(context : TemplateContext, name : String) -> String 
     "navigation_html" => context.navigation_html
     "current_section_title" => context.current_section_title
     "current_section_url" => context.current_section_url
+    "page_header_title" => context.page_header_title
     "page_header_html" => context.page_header_html
     "body_html" => context.body_html
     _ => ""
@@ -210,6 +211,7 @@ pub fn default_template_context(rendered : RenderedDocument) -> TemplateContext 
     navigation_html: "",
     current_section_title: "",
     current_section_url: "",
+    page_header_title: "",
     page_header_html: "",
     body_html: rendered.html,
   }
