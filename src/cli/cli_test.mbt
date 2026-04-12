@@ -113,13 +113,13 @@ test "render navigation html marks active and ancestor items" {
   inspect(html.contains("href=\"/guide/install/\">Install</a>"), content="true")
   inspect(
     html.contains(
-      "<li data-active=\"false\" data-ancestor=\"true\" data-index=\"true\" data-expanded=\"true\"><a href=\"/guide/\">Guide</a>",
+      "<li data-active=\"false\" data-ancestor=\"true\" data-index=\"true\" data-expanded=\"true\" data-current=\"ancestor\"><a href=\"/guide/\">Guide</a>",
     ),
     content="true",
   )
   inspect(
     html.contains(
-      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"false\" data-expanded=\"true\"><a href=\"/guide/install/\">Install</a>",
+      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"false\" data-expanded=\"true\" data-current=\"page\"><a href=\"/guide/install/\">Install</a>",
     ),
     content="true",
   )
@@ -498,7 +498,7 @@ test "runtime cli build renders automatic navigation for pretty routes" {
   )
   inspect(
     guide_html.contains(
-      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"true\" data-expanded=\"true\"><a href=\"/guide/\">Documentation</a>",
+      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"true\" data-expanded=\"true\" data-current=\"page\"><a href=\"/guide/\">Documentation</a>",
     ),
     content="true",
   )
@@ -515,13 +515,13 @@ test "runtime cli build renders automatic navigation for pretty routes" {
   )
   inspect(
     install_html.contains(
-      "<li data-active=\"false\" data-ancestor=\"true\" data-index=\"true\" data-expanded=\"true\"><a href=\"/guide/\">Documentation</a>",
+      "<li data-active=\"false\" data-ancestor=\"true\" data-index=\"true\" data-expanded=\"true\" data-current=\"ancestor\"><a href=\"/guide/\">Documentation</a>",
     ),
     content="true",
   )
   inspect(
     install_html.contains(
-      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"false\" data-expanded=\"true\"><a href=\"/guide/install/\">Quick Start</a>",
+      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"false\" data-expanded=\"true\" data-current=\"page\"><a href=\"/guide/install/\">Quick Start</a>",
     ),
     content="true",
   )
@@ -848,7 +848,7 @@ test "runtime cli build renders automatic navigation for direct routes" {
   )
   inspect(
     guide_html.contains(
-      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"true\" data-expanded=\"true\"><a href=\"/guide/index.html\">Documentation</a>",
+      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"true\" data-expanded=\"true\" data-current=\"page\"><a href=\"/guide/index.html\">Documentation</a>",
     ),
     content="true",
   )
@@ -868,13 +868,13 @@ test "runtime cli build renders automatic navigation for direct routes" {
   )
   inspect(
     install_html.contains(
-      "<li data-active=\"false\" data-ancestor=\"true\" data-index=\"true\" data-expanded=\"true\"><a href=\"/guide/index.html\">Documentation</a>",
+      "<li data-active=\"false\" data-ancestor=\"true\" data-index=\"true\" data-expanded=\"true\" data-current=\"ancestor\"><a href=\"/guide/index.html\">Documentation</a>",
     ),
     content="true",
   )
   inspect(
     install_html.contains(
-      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"false\" data-expanded=\"true\"><a href=\"/guide/install.html\">Quick Start</a>",
+      "<li data-active=\"true\" data-ancestor=\"false\" data-index=\"false\" data-expanded=\"true\" data-current=\"page\"><a href=\"/guide/install.html\">Quick Start</a>",
     ),
     content="true",
   )
