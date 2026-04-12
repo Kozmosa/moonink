@@ -114,6 +114,9 @@ pub(all) struct TemplateContext {
   source_path : String
   content_kind : String
   navigation_html : String
+  current_section_title : String
+  current_section_url : String
+  breadcrumb_html : String
   body_html : String
 } derive(Debug, Eq)
 

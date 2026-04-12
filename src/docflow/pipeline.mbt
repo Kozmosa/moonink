@@ -139,6 +139,9 @@ fn lookup_template_variable(context : TemplateContext, name : String) -> String 
     "source_path" => context.source_path
     "content_kind" => context.content_kind
     "navigation_html" => context.navigation_html
+    "current_section_title" => context.current_section_title
+    "current_section_url" => context.current_section_url
+    "breadcrumb_html" => context.breadcrumb_html
     "body_html" => context.body_html
     _ => ""
   }
@@ -205,6 +208,9 @@ pub fn default_template_context(rendered : RenderedDocument) -> TemplateContext 
     source_path: rendered.source_path,
     content_kind: "article",
     navigation_html: "",
+    current_section_title: "",
+    current_section_url: "",
+    breadcrumb_html: "",
     body_html: rendered.html,
   }
 }

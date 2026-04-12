@@ -576,6 +576,9 @@ fn build_template_context(
       assembly.navigation,
       input.meta.url_path,
     ),
+    current_section_title: "",
+    current_section_url: "",
+    breadcrumb_html: "",
     body_html: rendered.html,
   }
 }
