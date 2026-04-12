@@ -391,11 +391,17 @@ test "docflow apply_built_in_template uses provided page metadata context" {
   )
   inspect(templated.html.contains("data-kind=\"page\""), content="true")
   inspect(templated.html.contains("data-url=\"/welcome/\""), content="true")
-  inspect(templated.html.contains("Guide"), content="false")
-  inspect(templated.html.contains("/guide/"), content="false")
+  inspect(
+    templated.html.contains("data-section-title=\"Guide\""),
+    content="true",
+  )
+  inspect(
+    templated.html.contains("data-section-url=\"/guide/\""),
+    content="true",
+  )
   inspect(
     templated.html.contains("<nav class=\"breadcrumb\"></nav>"),
-    content="false",
+    content="true",
   )
 }
 

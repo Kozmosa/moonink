@@ -588,6 +588,14 @@ test "runtime cli build writes minimal fixture html files" {
   inspect(index_html.contains("Fixture Site"), content="true")
   inspect(index_html.contains("data-kind=\"page\""), content="true")
   inspect(index_html.contains("data-url=\"/\""), content="true")
+  inspect(index_html.contains("data-section-title=\"Home\""), content="true")
+  inspect(index_html.contains("data-section-url=\"/\""), content="true")
+  inspect(
+    index_html.contains(
+      "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Home</span></nav>",
+    ),
+    content="true",
+  )
   inspect(index_html.contains("<aside class=\"site-nav\">"), content="true")
   inspect(index_html.contains("href=\"/about/\">about</a>"), content="true")
   inspect(index_html.contains("href=\"/\">Home</a>"), content="true")
