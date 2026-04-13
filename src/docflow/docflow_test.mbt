@@ -351,6 +351,7 @@ test "docflow apply_template uses provided page metadata context" {
       current_section_url: "/guide/",
       page_header_title: "Welcome",
       page_header_html: "<nav class=\"breadcrumb\"></nav>",
+      backlinks_html: "",
       body_html: rendered.html,
     },
     "<article data-title=\"{{ page_title }}\" data-section=\"{{ current_section_title }}\" data-section-url=\"{{ current_section_url }}\" data-header-title=\"{{ page_header_title }}\">{{ page_header_html }}{{ body_html }}</article>",
@@ -389,6 +390,7 @@ test "docflow apply_built_in_template uses provided page metadata context" {
     current_section_url: "/guide/",
     page_header_title: "Welcome",
     page_header_html: "<nav class=\"breadcrumb\"></nav>",
+    backlinks_html: "",
     body_html: rendered.html,
   })
   inspect(templated.route, content="/welcome/")

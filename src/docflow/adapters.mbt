@@ -121,6 +121,7 @@ pub(all) struct TemplateContext {
   current_section_url : String
   page_header_title : String
   page_header_html : String
+  backlinks_html : String
   body_html : String
 } derive(Debug, Eq)
 

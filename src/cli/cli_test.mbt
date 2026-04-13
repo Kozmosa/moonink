@@ -1257,6 +1257,23 @@ test "runtime cli build resolves wikilinks for pretty routes" {
 }
 
 ///|
+test "runtime cli build renders backlinks for pretty routes" {
+  let fixture_root = "fixtures/v2/wikilinks_pretty"
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let about_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/about/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(about_html.contains("aria-label=\"Backlinks\""), content="true")
+  inspect(about_html.contains("href=\"/hello/\""), content="true")
+  inspect(about_html.contains(">Hello<"), content="true")
+}
+
+///|
 test "runtime cli build resolves wikilinks for direct routes" {
   let fixture_root = "fixtures/v2/wikilinks_direct"
   let outcome = @cli.run_build_command_runtime_from_config(

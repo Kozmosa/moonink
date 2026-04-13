@@ -390,6 +390,125 @@ fn build_wikilinker(inputs : Array[@runtime.BuildInput]) -> @docflow.WikiLinker 
 }
 
 ///|
+fn find_wikilink_close(payload : String, start : Int) -> Int? {
+  let mut cursor = start
+  while cursor + 1 < payload.length() {
+    if payload[cursor:cursor + 2].to_string() == "]]" {
+      return Some(cursor)
+    }
+    cursor = cursor + 1
+  }
+  None
+}
+
+///|
+fn normalize_wikilink_target(target : String) -> String {
+  let trimmed = target.trim().to_string()
+  if trimmed.has_prefix("./") {
+    trimmed[2:].to_string()
+  } else {
+    trimmed
+  }
+}
+
+///|
+fn scan_markdown_wikilink_targets(payload : String) -> Array[String] {
+  let targets : Array[String] = []
+  let mut cursor = 0
+  while cursor < payload.length() {
+    if cursor + 1 < payload.length() &&
+      payload[cursor:cursor + 2].to_string() == "[[" {
+      match find_wikilink_close(payload, cursor + 2) {
+        Some(close_cursor) => {
+          let inner = payload[cursor + 2:close_cursor].to_string()
+          let target = match inner.split_once("|") {
+            Some((target_view, _)) =>
+              normalize_wikilink_target(target_view.to_string())
+            None => normalize_wikilink_target(inner)
+          }
+          if target != "" {
+            targets.push(target)
+          }
+          cursor = close_cursor + 2
+        }
+        None => cursor = payload.length()
+      }
+    } else {
+      cursor = cursor + 1
+    }
+  }
+  targets
+}
+
+///|
+fn build_backlink_index(
+  inputs : Array[@runtime.BuildInput],
+  wikilinker : @docflow.WikiLinker,
+) -> Map[String, Array[String]] {
+  let backlinks : Map[String, Array[String]] = {}
+  for input in inputs {
+    if input.meta.format != @core.SourceFormat::Markdown {
+      continue
+    }
+    let targets = scan_markdown_wikilink_targets(input.docflow_content)
+    for target in targets {
+      match wikilinker.exact_targets.get(target) {
+        Some(url) => {
+          let existing = match backlinks.get(url) {
+            Some(urls) => urls
+            None => []
+          }
+          let already_present = existing.search_by(fn(existing_url) {
+              existing_url == input.meta.url_path
+            })
+            is Some(_)
+          if !already_present {
+            backlinks[url] = existing + [input.meta.url_path]
+          }
+        }
+        None => ()
+      }
+    }
+  }
+  backlinks
+}
+
+///|
+fn render_backlinks_html(
+  current_url : String,
+  pages : Array[@core.SitePage],
+  backlinks : Map[String, Array[String]],
+) -> String {
+  let backlink_urls = match backlinks.get(current_url) {
+    Some(urls) => urls
+    None => []
+  }
+  if backlink_urls.is_empty() {
+    return ""
+  }
+  let items : Array[String] = []
+  for url in backlink_urls {
+    let mut title = url
+    for page in pages {
+      if page.url_path == url {
+        title = page.title
+        break
+      }
+    }
+    items.push(
+      "<li><a href=\"" +
+      escape_html_text(url) +
+      "\">" +
+      escape_html_text(title) +
+      "</a></li>",
+    )
+  }
+  "<aside class=\"page-backlinks\"><section class=\"backlinks\" aria-label=\"Backlinks\"><h2>Backlinks</h2><ul>" +
+  items.iter().join("") +
+  "</ul></section></aside>"
+}
+
+///|
 fn template_content_kind(kind : @core.ContentKind) -> String {
   match kind {
     @core.ContentKind::Article => "article"
@@ -807,6 +926,7 @@ fn build_template_context(
   config : @core.MooninkConfig,
   active_theme : @runtime.ActiveThemeLayout,
   assembly : @core.SiteAssemblyModel,
+  backlinks : Map[String, Array[String]],
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
 ) -> @docflow.TemplateContext {
@@ -848,6 +968,11 @@ fn build_template_context(
       assembly.pages,
       input,
     ),
+    backlinks_html: render_backlinks_html(
+      input.meta.url_path,
+      assembly.pages,
+      backlinks,
+    ),
     body_html: rendered.html,
   }
 }
@@ -857,12 +982,13 @@ fn apply_build_template(
   config : @core.MooninkConfig,
   active_theme : @runtime.ActiveThemeLayout,
   assembly : @core.SiteAssemblyModel,
+  backlinks : Map[String, Array[String]],
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
   template_source : String,
 ) -> @docflow.TemplatedPage {
   let context = build_template_context(
-    config, active_theme, assembly, input, rendered,
+    config, active_theme, assembly, backlinks, input, rendered,
   )
   @docflow.apply_template(rendered, context, template_source)
 }
@@ -917,6 +1043,7 @@ fn build_site_result(
   let mut article_count = 0
   let mut page_count = 0
   let wikilinker = build_wikilinker(inputs)
+  let backlinks = build_backlink_index(inputs, wikilinker)
   for input in inputs {
     let parser = match parser_for_format(input.meta.format) {
       Ok(parser) => parser
@@ -940,7 +1067,7 @@ fn build_site_result(
     let linked = @docflow.apply_wikilinker(wikilinker, parsed)
     let rendered = @docflow.render_with_adapter(renderer, linked)
     let templated = apply_build_template(
-      config, active_theme, assembly, input, rendered, template_source,
+      config, active_theme, assembly, backlinks, input, rendered, template_source,
     )
     let output_path = @core.output_html_path(
       input.meta.source_path,
