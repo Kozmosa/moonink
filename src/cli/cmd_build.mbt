@@ -197,28 +197,13 @@ fn copy_public_assets(
 }
 
 ///|
-fn copy_theme_assets(
+fn copy_selected_theme_assets(
   config : @core.MooninkConfig,
+  active_theme : @runtime.ActiveThemeLayout,
 ) -> Unit raise BuildCommandError {
-  let theme_root = @core.join_relative_path(config.project_root, "theme") catch {
-    err =>
-      raise BuildCommandError::ProjectIO(
-        @core.project_io_error(
-          "copy_theme_assets",
-          "theme",
-          @core.format_path_policy_error(err),
-        ),
-      )
-  }
-  let assets_root = @core.join_relative_path(theme_root, "assets") catch {
-    err =>
-      raise BuildCommandError::ProjectIO(
-        @core.project_io_error(
-          "copy_theme_assets",
-          "theme/assets",
-          @core.format_path_policy_error(err),
-        ),
-      )
+  let assets_root = match active_theme.asset_source_dir {
+    Some(path) => path
+    None => return
   }
   if !@runtime.io_path_exists(assets_root) {
     return
@@ -413,26 +398,15 @@ fn template_content_kind(kind : @core.ContentKind) -> String {
 }
 
 ///|
-fn theme_name(config : @core.MooninkConfig) -> String {
-  let theme_root = @core.join_relative_path(config.project_root, "theme") catch {
-    _ => return ""
-  }
-  let layout_path = @core.join_relative_path(theme_root, "layout.html") catch {
-    _ => return ""
-  }
-  if @runtime.io_path_exists(layout_path) {
-    "theme"
-  } else {
-    ""
-  }
+fn theme_name(active_theme : @runtime.ActiveThemeLayout) -> String {
+  active_theme.theme_name
 }
 
 ///|
-fn theme_asset_root(config : @core.MooninkConfig) -> String {
-  if theme_name(config) == "" {
-    ""
-  } else {
-    "/assets/"
+fn theme_asset_root(active_theme : @runtime.ActiveThemeLayout) -> String {
+  match active_theme.asset_source_dir {
+    Some(_) => "/assets/"
+    None => ""
   }
 }
 
@@ -831,6 +805,7 @@ pub fn build_site_assembly_model(
 ///|
 fn build_template_context(
   config : @core.MooninkConfig,
+  active_theme : @runtime.ActiveThemeLayout,
   assembly : @core.SiteAssemblyModel,
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
@@ -858,8 +833,8 @@ fn build_template_context(
     url_path: input.meta.url_path,
     source_path: input.meta.source_path,
     content_kind: template_content_kind(input.meta.content_kind),
-    theme_name: theme_name(config),
-    theme_asset_root: theme_asset_root(config),
+    theme_name: theme_name(active_theme),
+    theme_asset_root: theme_asset_root(active_theme),
     page_body_class: page_body_class(input.meta.content_kind),
     navigation_html: render_navigation_html(
       assembly.navigation,
@@ -880,66 +855,24 @@ fn build_template_context(
 ///|
 fn apply_build_template(
   config : @core.MooninkConfig,
+  active_theme : @runtime.ActiveThemeLayout,
   assembly : @core.SiteAssemblyModel,
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
-  template_source : String?,
+  template_source : String,
 ) -> @docflow.TemplatedPage {
-  let context = build_template_context(config, assembly, input, rendered)
-  match template_source {
-    Some(template_source) =>
-      @docflow.apply_template(rendered, context, template_source)
-    None => @docflow.apply_built_in_template(rendered, context)
-  }
+  let context = build_template_context(
+    config, active_theme, assembly, input, rendered,
+  )
+  @docflow.apply_template(rendered, context, template_source)
 }
 
 ///|
-fn resolve_build_template_source(
+fn resolve_active_theme_layout(
   config : @core.MooninkConfig,
-) -> Result[String?, BuildCommandError] {
-  let theme_root = @core.join_relative_path(config.project_root, "theme") catch {
-    err =>
-      return Err(
-        BuildCommandError::ProjectIO(
-          @core.project_io_error(
-            "load_template",
-            "theme",
-            @core.format_path_policy_error(err),
-          ),
-        ),
-      )
-  }
-  let theme_layout_path = @core.join_relative_path(theme_root, "layout.html") catch {
-    err =>
-      return Err(
-        BuildCommandError::ProjectIO(
-          @core.project_io_error(
-            "load_template",
-            "theme/layout.html",
-            @core.format_path_policy_error(err),
-          ),
-        ),
-      )
-  }
-  if @runtime.io_path_exists(theme_layout_path) {
-    if !(@runtime.io_is_file(theme_layout_path) catch {
-        err => return Err(BuildCommandError::ProjectIO(err))
-      }) {
-      return Err(
-        BuildCommandError::ProjectIO(
-          @core.project_io_error(
-            "load_template", theme_layout_path, "theme layout exists and is not a file",
-          ),
-        ),
-      )
-    }
-    let source = @runtime.io_read_file_to_string(theme_layout_path) catch {
-      err => return Err(BuildCommandError::ProjectIO(err))
-    }
-    return Ok(Some(source))
-  }
-  match @runtime.load_template_source_result(config) {
-    Ok(template_source) => Ok(template_source)
+) -> Result[@runtime.ActiveThemeLayout, BuildCommandError] {
+  match @runtime.load_active_theme_layout_result(config) {
+    Ok(layout) => Ok(layout)
     Err(err) =>
       Err(
         BuildCommandError::ProjectIO(
@@ -971,14 +904,15 @@ fn build_site_result(
   copy_public_assets(config) catch {
     err => return Err(err)
   }
-  copy_theme_assets(config) catch {
+  let active_theme = match resolve_active_theme_layout(config) {
+    Ok(active_theme) => active_theme
+    Err(err) => return Err(err)
+  }
+  copy_selected_theme_assets(config, active_theme) catch {
     err => return Err(err)
   }
   let assembly = build_site_assembly_model(config, inputs, inventory)
-  let template_source = match resolve_build_template_source(config) {
-    Ok(template_source) => template_source
-    Err(err) => return Err(err)
-  }
+  let template_source = active_theme.source
   let mut emitted_html_files = 0
   let mut article_count = 0
   let mut page_count = 0
@@ -1006,7 +940,7 @@ fn build_site_result(
     let linked = @docflow.apply_wikilinker(wikilinker, parsed)
     let rendered = @docflow.render_with_adapter(renderer, linked)
     let templated = apply_build_template(
-      config, assembly, input, rendered, template_source,
+      config, active_theme, assembly, input, rendered, template_source,
     )
     let output_path = @core.output_html_path(
       input.meta.source_path,

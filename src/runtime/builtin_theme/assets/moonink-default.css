@@ -1,0 +1,20 @@
+body {
+  margin: 0;
+  font-family: serif;
+  background: #f8f5ef;
+  color: #2d241d;
+}
+
+.site-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #d9d0c4;
+}
+
+.site-nav {
+  padding: 1rem 2rem;
+}
+
+main {
+  padding: 2rem;
+  max-width: 48rem;
+}

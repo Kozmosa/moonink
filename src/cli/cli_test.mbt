@@ -731,8 +731,16 @@ test "runtime cli build writes minimal fixture html files" {
   ) catch {
     _ => panic()
   }
-  inspect(index_html.contains("<!doctype html>"), content="true")
-  inspect(index_html.contains("<title>Home</title>"), content="true")
+  inspect(index_html.contains("data-theme=\"default\""), content="true")
+  inspect(
+    index_html.contains("href=\"/assets/moonink-default.css\""),
+    content="true",
+  )
+  inspect(index_html.contains("class=\"moonink-page\""), content="true")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/assets/moonink-default.css"),
+    content="true",
+  )
   inspect(index_html.contains("Fixture Site"), content="true")
   inspect(index_html.contains("data-kind=\"page\""), content="true")
   inspect(index_html.contains("data-url=\"/\""), content="true")
@@ -757,9 +765,8 @@ test "runtime cli build writes minimal fixture html files" {
   inspect(about_html.contains("data-kind=\"page\""), content="true")
   inspect(about_html.contains("data-url=\"/about/\""), content="true")
   inspect(
-    about_html.contains(
-      "<header><a href=\"https://example.com/docs\">Fixture Site</a></header>",
-    ),
+    about_html.contains("<header class=\"site-header\">") &&
+    about_html.contains("href=\"https://example.com/docs\">Fixture Site</a>"),
     content="true",
   )
 }
@@ -974,6 +981,10 @@ test "runtime cli build prefers theme layout over template file" {
   inspect(
     @runtime.io_path_exists(fixture_root + "/dist/assets/style.css"),
     content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/assets/moonink-default.css"),
+    content="false",
   )
   let theme_css = @runtime.io_read_file_to_string(
     fixture_root + "/dist/assets/style.css",

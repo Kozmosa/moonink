@@ -15,6 +15,50 @@ test "load_config_result reads the minimal v2 fixture" {
 }
 
 ///|
+test "load_active_theme_layout_result falls back to built-in default theme" {
+  let config = match
+    @runtime.load_config_result("fixtures/v2/minimal/moonink.json") {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let layout = match @runtime.load_active_theme_layout_result(config) {
+    Ok(layout) => layout
+    Err(_) => panic()
+  }
+  inspect(
+    layout.source_kind is @runtime.ActiveThemeSource::BuiltInDefault,
+    content="true",
+  )
+  inspect(layout.theme_name, content="default")
+  inspect(
+    layout.asset_source_dir,
+    content="Some(\"src/runtime/builtin_theme/assets\")",
+  )
+  inspect(layout.source.contains("data-theme=\"default\""), content="true")
+}
+
+///|
+test "load_active_theme_layout_result reads configured template contents" {
+  let config = match
+    @runtime.load_config_result("fixtures/v2/with_template_file/moonink.json") {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let layout = match @runtime.load_active_theme_layout_result(config) {
+    Ok(layout) => layout
+    Err(_) => panic()
+  }
+  inspect(
+    layout.source_kind is @runtime.ActiveThemeSource::TemplateFile,
+    content="true",
+  )
+  inspect(layout.theme_name, content="")
+  inspect(layout.asset_source_dir, content="None")
+  inspect(layout.source.contains("data-template=\"custom\""), content="true")
+  inspect(layout.source.contains("{{ body_html }}"), content="true")
+}
+
+///|
 test "load_template_source_result returns none without configured template" {
   let config = match
     @runtime.load_config_result("fixtures/v2/minimal/moonink.json") {

@@ -43,6 +43,8 @@ pub fn io_write_string(String, String) -> Unit raise @core.ProjectIOError
 
 pub fn launch_preview_result(PreviewRunner, PreviewLaunch) -> Result[PreviewLaunch, @core.ProjectIOError]
 
+pub fn load_active_theme_layout_result(@core.MooninkConfig) -> Result[ActiveThemeLayout, @core.ConfigError]
+
 pub fn load_build_inputs_result(@core.MooninkConfig, @core.ContentInventory) -> Result[Array[BuildInput], @core.ContentDiscoveryError]
 
 pub fn load_build_inputs_task(@core.MooninkConfig, @core.ContentInventory) -> RuntimeIOTask[Result[Array[BuildInput], @core.ContentDiscoveryError]]
@@ -72,6 +74,19 @@ pub fn runtime_task_policy() -> RuntimeTaskPolicy
 // Errors
 
 // Types and methods
+pub(all) struct ActiveThemeLayout {
+  source : String
+  source_kind : ActiveThemeSource
+  theme_name : String
+  asset_source_dir : String?
+} derive(Eq, @debug.Debug)
+
+pub(all) enum ActiveThemeSource {
+  ProjectTheme
+  TemplateFile
+  BuiltInDefault
+} derive(Eq, @debug.Debug)
+
 pub(all) struct BuildInput {
   absolute_source_path : String
   relative_source_path : String

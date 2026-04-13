@@ -31,7 +31,7 @@ Runs the static generation pipeline:
 5. Apply templater and site constructor.
 6. Emit HTML to `output_dir` (default `dist/`).
 
-Current implementation includes the real parser/render/template/site-assembly flow, route-aware pretty/direct output layout, build-time wikilink rewriting based on discovered page routes, project-root `public/` asset copying, and a Theme MVP that prefers `theme/layout.html` plus `theme/assets/**` over the older single-file template path.
+Current implementation includes the real parser/render/template/site-assembly flow, route-aware pretty/direct output layout, build-time wikilink rewriting based on discovered page routes, project-root `public/` asset copying, and a Theme MVP that resolves layouts in this order: `theme/layout.html`, then `template_file`, then the built-in default theme; selected theme assets are copied into `dist/assets/` when present.
 
 ### `serve`
 

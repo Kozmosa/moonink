@@ -1,0 +1,16 @@
+<!doctype html>
+<html data-theme="default">
+  <head>
+    <meta charset="utf-8">
+    <title>{{ page_title }}</title>
+    <link rel="stylesheet" href="{{ theme_asset_root }}moonink-default.css">
+  </head>
+  <body class="{{ page_body_class }}" data-kind="{{ content_kind }}" data-url="{{ url_path }}" data-theme="{{ theme_name }}">
+    <header class="site-header">
+      <a href="{{ site_url }}">{{ site_name }}</a>
+    </header>
+    <aside class="site-nav">{{ navigation_html }}</aside>
+    <div class="section-context" data-section-title="{{ current_section_title }}" data-section-url="{{ current_section_url }}">{{ page_header_html }}</div>
+    <main data-source="{{ source_path }}">{{ body_html }}</main>
+  </body>
+</html>

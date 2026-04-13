@@ -18,7 +18,7 @@ Current status:
 - `onboard` creates starter config in-place and injects default frontmatter into markdown files that lack it;
 - `build` loads config, discovers content, parses frontmatter, classifies `.html` plus `type: page` markdown as pages, rewrites wikilinks, renders through templates, and emits pretty/direct route-aware HTML output;
 - site assembly now derives automatic page-only navigation, `nav_title`, and `nav_hidden` metadata for templates and default layout rendering;
-- template rendering supports either the built-in page template or a configured `template_file`, with flat string variables including `site_name`, `page_title`, `navigation_html`, `current_section_title`, `current_section_url`, `page_header_title`, and `page_header_html`;
+- template rendering now resolves layouts in this order: project `theme/layout.html`, then configured `template_file`, then the repository-owned built-in default theme; theme builds also copy the selected theme assets into `dist/assets/` when available;
 - `serve` in the main workspace now reuses the runtime build pipeline, validates the generated preview root, and reports the local preview address plus output directory through a dry-run preview boundary;
 - real native preview serving now lives in the standalone `native-serve/` subproject, which depends on `oboard/mocket` without polluting the main workspace wasm-gc test/build graph;
 - Theme MVP now prefers `theme/layout.html` over `template_file`, copies `theme/assets/` into `dist/assets/`, and exposes `theme_name`, `theme_asset_root`, and `page_body_class` to theme templates.
