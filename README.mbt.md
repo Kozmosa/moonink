@@ -55,3 +55,5 @@ Theme templates can use these additional variables:
 - `{{ theme_name }}`
 - `{{ theme_asset_root }}`
 - `{{ page_body_class }}`
+
+The repository-owned built-in default theme now renders page/article-aware content shells and keeps using the existing automatic navigation and breadcrumb context.

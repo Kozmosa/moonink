@@ -41,6 +41,7 @@ The currently shipped built-in theme slice covers:
 
 - one shared built-in layout;
 - basic typography and asset styles;
+- page/article-aware content shells in the repository-owned default theme;
 - reuse of existing `navigation_html`, `current_section_*`, and `page_header_html` template context fields.
 
 It does **not** yet provide a stable manifest format, partial/include system, multi-theme support, or a public theme plugin API.
