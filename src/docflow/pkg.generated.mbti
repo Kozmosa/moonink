@@ -19,6 +19,8 @@ pub fn article_site_entry(TemplatedPage) -> SiteEntry
 
 pub fn broken_parser_adapter(name? : String, note? : String) -> ParserAdapter
 
+pub fn collect_resolved_wikilink_targets(WikiLinker, ParsedDocument) -> Array[String]
+
 pub fn construct_site(Array[SiteEntry]) -> SiteAssembly
 
 pub fn default_page_template() -> String

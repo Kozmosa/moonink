@@ -1,28 +1,5 @@
 ///|
-pub(all) struct WikiLinkScanEntry {
-  raw : String
-  target : String
-  label : String
-} derive(Debug, Eq)
-
-///|
 fn find_wikilink_close(payload : String, start : Int) -> Int? {
-  let mut cursor = start
-  while cursor + 1 < payload.length() {
-    let segment = payload[cursor:cursor + 2].to_string()
-    if segment == "[[" {
-      return None
-    }
-    if segment == "]]" {
-      return Some(cursor)
-    }
-    cursor = cursor + 1
-  }
-  None
-}
-
-///|
-fn find_wikilink_rewrite_close(payload : String, start : Int) -> Int? {
   let mut cursor = start
   while cursor + 1 < payload.length() {
     if payload[cursor:cursor + 2].to_string() == "]]" {
@@ -60,41 +37,6 @@ fn parse_wikilink_inner(inner : String) -> (String, String) {
 }
 
 ///|
-fn scan_wikilink_entry(payload : String, start : Int) -> WikiLinkScanEntry? {
-  let close = find_wikilink_close(payload, start + 2)
-  match close {
-    Some(close_cursor) => {
-      let inner = payload[start + 2:close_cursor].to_string()
-      let raw = payload[start:close_cursor + 2].to_string()
-      let (target, label) = parse_wikilink_inner(inner)
-      Some({ raw, target, label })
-    }
-    None => None
-  }
-}
-
-///|
-pub fn scan_markdown_wikilinks(payload : String) -> Array[WikiLinkScanEntry] {
-  let entries = []
-  let mut cursor = 0
-  while cursor < payload.length() {
-    if cursor + 1 < payload.length() &&
-      payload[cursor:cursor + 2].to_string() == "[[" {
-      match scan_wikilink_entry(payload, cursor) {
-        Some(entry) => {
-          entries.push(entry)
-          cursor = cursor + entry.raw.length()
-        }
-        None => cursor = cursor + 2
-      }
-    } else {
-      cursor = cursor + 1
-    }
-  }
-  entries
-}
-
-///|
 fn append_wikilink_diagnostic(
   parsed : ParsedDocument,
   message : String,
@@ -116,33 +58,7 @@ fn append_wikilink_diagnostic(
 }
 
 ///|
-pub fn parse_wikilink_targets(payload : String) -> Array[String] {
-  let targets : Array[String] = []
-  let mut cursor = 0
-  while cursor < payload.length() {
-    if cursor + 1 < payload.length() &&
-      payload[cursor:cursor + 2].to_string() == "[[" {
-      let close = find_wikilink_close(payload, cursor + 2)
-      match close {
-        Some(close_cursor) => {
-          let inner = payload[cursor + 2:close_cursor].to_string()
-          let (target, _) = parse_wikilink_inner(inner)
-          if target != "" {
-            targets.push(target)
-          }
-          cursor = close_cursor + 2
-        }
-        None => cursor = payload.length()
-      }
-    } else {
-      cursor = cursor + 1
-    }
-  }
-  targets
-}
-
-///|
-pub fn resolve_wikilink(
+fn resolve_wikilink(
   linker : WikiLinker,
   target : String,
 ) -> Result[String, String?] {
@@ -171,10 +87,11 @@ fn rewrite_markdown_wikilinks(
   while cursor < payload.length() {
     if cursor + 1 < payload.length() &&
       payload[cursor:cursor + 2].to_string() == "[[" {
-      match find_wikilink_rewrite_close(payload, cursor + 2) {
+      let close = find_wikilink_close(payload, cursor + 2)
+      match close {
         Some(close_cursor) => {
           let inner = payload[cursor + 2:close_cursor].to_string()
-          let raw = payload[cursor:close_cursor + 2].to_string()
+          let raw = "[[\{inner}]]"
           let (target, label) = parse_wikilink_inner(inner)
           if target == "" {
             result.write_string(raw)
@@ -215,19 +132,11 @@ fn rewrite_markdown_wikilinks(
 }
 
 ///|
-/// Collect resolved markdown wikilink targets using the same parser and resolver semantics as apply_wikilinker.
-pub fn collect_resolved_wikilink_urls(
+fn collect_resolved_wikilink_targets_from_payload(
   linker : WikiLinker,
-  parsed : ParsedDocument,
+  payload : String,
 ) -> Array[String] {
-  if parsed.source_format != @core.SourceFormat::Markdown {
-    return []
-  }
-  let payload = match parsed.backend_payload {
-    Some(payload) => payload
-    None => return []
-  }
-  let urls : Array[String] = []
+  let targets : Array[String] = []
   let mut cursor = 0
   while cursor < payload.length() {
     if cursor + 1 < payload.length() &&
@@ -239,7 +148,7 @@ pub fn collect_resolved_wikilink_urls(
           let (target, _) = parse_wikilink_inner(inner)
           if target != "" {
             match resolve_wikilink(linker, target) {
-              Ok(url) => urls.push(url)
+              Ok(url) => targets.push(url)
               Err(_) => ()
             }
           }
@@ -251,7 +160,26 @@ pub fn collect_resolved_wikilink_urls(
       cursor = cursor + 1
     }
   }
-  urls
+  targets
+}
+
+///|
+/// Collect resolved WikiLink destinations without inspecting rendered markdown links.
+pub fn collect_resolved_wikilink_targets(
+  linker : WikiLinker,
+  parsed : ParsedDocument,
+) -> Array[String] {
+  match parsed.source_format {
+    @core.SourceFormat::Markdown =>
+      match parsed.backend_payload {
+        Some(payload) => collect_resolved_wikilink_targets_from_payload(
+          linker,
+          payload,
+        )
+        None => []
+      }
+    _ => []
+  }
 }
 
 ///|

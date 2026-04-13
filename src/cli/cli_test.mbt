@@ -812,6 +812,21 @@ test "runtime cli build renders backlinks for minimal fixture" {
 }
 
 ///|
+test "runtime cli build ignores ordinary markdown links in backlink index" {
+  let fixture_root = "fixtures/v2/minimal"
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let about_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/about/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(about_html.contains("<h2>Backlinks</h2>"), content="false")
+}
+
+///|
 test "runtime cli build writes minimal fixture html files" {
   let fixture_root = "fixtures/v2/minimal"
   let stale_path = fixture_root + "/dist/stale.txt"

@@ -160,6 +160,25 @@ test "docflow indexed wikilinker supports path and extension targets" {
 }
 
 ///|
+test "docflow indexed wikilinker collects only resolved wikilink targets" {
+  let parsed : @docflow.ParsedDocument = {
+    backend_name: "fake-markdown-parser",
+    source_format: @core.SourceFormat::Markdown,
+    source_path: "articles/hello.md",
+    source_uuid: "article-001",
+    diagnostics: @docflow.empty_document_diagnostics(),
+    backend_payload: Some(
+      "Visit [docs](https://example.com/docs), [[about]], [[about|About again]], and [[missing]].",
+    ),
+  }
+  let linker = @docflow.indexed_wikilinker({ "about": "/about/" }, {})
+  inspect(
+    @docflow.collect_resolved_wikilink_targets(linker, parsed),
+    content="[\"/about/\", \"/about/\"]",
+  )
+}
+
+///|
 test "docflow indexed wikilinker ignores non-markdown payloads" {
   let parsed : @docflow.ParsedDocument = {
     backend_name: "html-passthrough-parser",
