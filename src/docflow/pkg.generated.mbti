@@ -81,6 +81,8 @@ pub fn run_article_pipeline(ParserAdapter, WikiLinker, RenderAdapter, SourceDocu
 
 pub fn run_docflow_build_pipeline(Array[String], ParserAdapter, WikiLinker, RenderAdapter) -> SiteAssembly
 
+pub fn scan_markdown_wikilinks(String) -> Array[WikiLinkScanEntry]
+
 // Errors
 pub(all) suberror AdapterRegistryError {
   MissingParserAdapter(@core.SourceFormat)
@@ -224,6 +226,12 @@ pub(all) struct TemplatedPage {
   source_uuid : String
   html : String
   note : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct WikiLinkScanEntry {
+  raw : String
+  target : String
+  label : String
 } derive(Eq, @debug.Debug)
 
 pub(all) struct WikiLinker {

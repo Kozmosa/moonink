@@ -1,8 +1,19 @@
 ///|
+pub(all) struct WikiLinkScanEntry {
+  raw : String
+  target : String
+  label : String
+} derive(Debug, Eq)
+
+///|
 fn find_wikilink_close(payload : String, start : Int) -> Int? {
   let mut cursor = start
   while cursor + 1 < payload.length() {
-    if payload[cursor:cursor + 2].to_string() == "]]" {
+    let segment = payload[cursor:cursor + 2].to_string()
+    if segment == "[[" {
+      return None
+    }
+    if segment == "]]" {
       return Some(cursor)
     }
     cursor = cursor + 1
@@ -34,6 +45,41 @@ fn parse_wikilink_inner(inner : String) -> (String, String) {
       (target, target)
     }
   }
+}
+
+///|
+fn scan_wikilink_entry(payload : String, start : Int) -> WikiLinkScanEntry? {
+  let close = find_wikilink_close(payload, start + 2)
+  match close {
+    Some(close_cursor) => {
+      let inner = payload[start + 2:close_cursor].to_string()
+      let raw = payload[start:close_cursor + 2].to_string()
+      let (target, label) = parse_wikilink_inner(inner)
+      Some({ raw, target, label })
+    }
+    None => None
+  }
+}
+
+///|
+pub fn scan_markdown_wikilinks(payload : String) -> Array[WikiLinkScanEntry] {
+  let entries = []
+  let mut cursor = 0
+  while cursor < payload.length() {
+    if cursor + 1 < payload.length() &&
+      payload[cursor:cursor + 2].to_string() == "[[" {
+      match scan_wikilink_entry(payload, cursor) {
+        Some(entry) => {
+          entries.push(entry)
+          cursor = cursor + entry.raw.length()
+        }
+        None => cursor = cursor + 2
+      }
+    } else {
+      cursor = cursor + 1
+    }
+  }
+  entries
 }
 
 ///|
@@ -87,40 +133,36 @@ fn rewrite_markdown_wikilinks(
   while cursor < payload.length() {
     if cursor + 1 < payload.length() &&
       payload[cursor:cursor + 2].to_string() == "[[" {
-      let close = find_wikilink_close(payload, cursor + 2)
-      match close {
-        Some(close_cursor) => {
-          let inner = payload[cursor + 2:close_cursor].to_string()
-          let raw = "[[\{inner}]]"
-          let (target, label) = parse_wikilink_inner(inner)
-          if target == "" {
-            result.write_string(raw)
+      match scan_wikilink_entry(payload, cursor) {
+        Some(entry) => {
+          if entry.target == "" {
+            result.write_string(entry.raw)
           } else {
-            match resolve_wikilink(linker, target) {
-              Ok(url) => result.write_string("[\{label}](\{url})")
+            match resolve_wikilink(linker, entry.target) {
+              Ok(url) => result.write_string("[\{entry.label}](\{url})")
               Err(Some(hint)) => {
-                result.write_string(raw)
+                result.write_string(entry.raw)
                 linked = append_wikilink_diagnostic(
                   linked,
-                  "Ambiguous wikilink target: \{target}",
+                  "Ambiguous wikilink target: \{entry.target}",
                   Some(hint),
                 )
               }
               Err(None) => {
-                result.write_string(raw)
+                result.write_string(entry.raw)
                 linked = append_wikilink_diagnostic(
                   linked,
-                  "Unresolved wikilink target: \{target}",
+                  "Unresolved wikilink target: \{entry.target}",
                   None,
                 )
               }
             }
           }
-          cursor = close_cursor + 2
+          cursor = cursor + entry.raw.length()
         }
         None => {
-          result.write_string(payload[cursor:].to_string())
-          cursor = payload.length()
+          result.write_string("[[")
+          cursor = cursor + 2
         }
       }
     } else {

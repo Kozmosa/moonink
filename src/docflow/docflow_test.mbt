@@ -75,6 +75,31 @@ test "docflow wikilinker contract remains explicit no-op" {
 }
 
 ///|
+test "docflow scan_markdown_wikilinks extracts normalized targets and labels" {
+  let entries = @docflow.scan_markdown_wikilinks(
+    "See [[guide/install]] and [[./about|About page]].",
+  )
+  inspect(entries.length(), content="2")
+  inspect(entries[0].raw, content="[[guide/install]]")
+  inspect(entries[0].target, content="guide/install")
+  inspect(entries[0].label, content="guide/install")
+  inspect(entries[1].raw, content="[[./about|About page]]")
+  inspect(entries[1].target, content="about")
+  inspect(entries[1].label, content="About page")
+}
+
+///|
+test "docflow scan_markdown_wikilinks ignores unclosed entries and keeps scanning" {
+  let entries = @docflow.scan_markdown_wikilinks(
+    "Ignore [[broken] but keep [[hello]].",
+  )
+  inspect(entries.length(), content="1")
+  inspect(entries[0].raw, content="[[hello]]")
+  inspect(entries[0].target, content="hello")
+  inspect(entries[0].label, content="hello")
+}
+
+///|
 test "docflow indexed wikilinker stores exact and ambiguous targets" {
   let linker = @docflow.indexed_wikilinker(
     { "hello": "/hello/" },
