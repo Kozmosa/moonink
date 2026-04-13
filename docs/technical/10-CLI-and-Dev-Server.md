@@ -35,7 +35,16 @@ Current implementation: phases 1–2 are real; phases 3–6 remain scaffold plac
 
 ### `serve`
 
-Run a local development server for previewing the generated site. V1 begins with simple rebuild-and-refresh behavior. Currently a placeholder.
+Run a local development preview flow for the generated site.
+
+Current MVP behavior:
+
+1. Load `moonink.json`.
+2. Reuse the build pipeline to regenerate `output_dir`.
+3. Validate the preview root and prepare a preview launch record with default `127.0.0.1:3000`.
+4. Return a runtime status message that exposes the preview address and built output directory.
+
+The preview runner is now isolated behind `src/runtime/serve.mbt`. Tests currently exercise the dry-run validation path so the standard wasm-gc test suite can verify serve orchestration without starting a native server. A native mocket runner slot is reserved for the native-only entrypoint.
 
 ## 3. CLI Output Style
 

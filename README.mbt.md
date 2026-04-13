@@ -22,4 +22,4 @@ Current status:
 - site assembly now derives automatic page-only navigation, `nav_title`, and `nav_hidden` metadata for templates and default layout rendering;
 - template rendering supports either the built-in page template or a configured `template_file`, with flat string variables including `site_name`, `page_title`, `navigation_html`, `current_section_title`, `current_section_url`, `page_header_title`, and `page_header_html`;
 - the built-in template now renders automatic navigation plus section metadata and page header context for pages and section landing pages while articles stay outside the navigation tree;
-- `serve` remains a placeholder module.
+- `serve` now reuses the runtime build pipeline, validates the generated preview root, and reports the local preview address plus output directory before handing off to the preview runner boundary.
