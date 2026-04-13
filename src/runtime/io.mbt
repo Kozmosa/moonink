@@ -122,3 +122,65 @@ pub fn io_write_string(
     err => raise @core.project_io_error("write_file", path, err.to_string())
   }
 }
+
+///|
+pub fn io_copy_file(
+  source_path : String,
+  target_path : String,
+) -> Unit raise @core.ProjectIOError {
+  let parent = @core.dirname_relative_path(target_path) catch {
+    err =>
+      raise @core.project_io_error(
+        "copy_file",
+        target_path,
+        @core.format_path_policy_error(err),
+      )
+  }
+  io_ensure_dir(parent)
+  let bytes = @fs.read_file_to_bytes(source_path) catch {
+    err =>
+      raise @core.project_io_error("copy_file", source_path, err.to_string())
+  }
+  @fs.write_bytes_to_file(target_path, bytes) catch {
+    err =>
+      raise @core.project_io_error("copy_file", target_path, err.to_string())
+  }
+}
+
+///|
+pub fn io_copy_dir_recursive(
+  source_dir : String,
+  target_dir : String,
+) -> Unit raise @core.ProjectIOError {
+  let is_dir = io_is_dir(source_dir)
+  if !is_dir {
+    raise @core.project_io_error(
+      "copy_directory", source_dir, "source path is not a directory",
+    )
+  }
+  io_ensure_dir(target_dir)
+  let entries = io_read_dir(source_dir)
+  for entry in entries {
+    let source_child = @core.join_relative_path(source_dir, entry) catch {
+      err =>
+        raise @core.project_io_error(
+          "copy_directory",
+          source_dir,
+          @core.format_path_policy_error(err),
+        )
+    }
+    let target_child = @core.join_relative_path(target_dir, entry) catch {
+      err =>
+        raise @core.project_io_error(
+          "copy_directory",
+          target_dir,
+          @core.format_path_policy_error(err),
+        )
+    }
+    if io_is_dir(source_child) {
+      io_copy_dir_recursive(source_child, target_child)
+    } else if io_is_file(source_child) {
+      io_copy_file(source_child, target_child)
+    }
+  }
+}

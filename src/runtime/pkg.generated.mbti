@@ -15,6 +15,10 @@ pub fn discover_content_task(@core.MooninkConfig) -> RuntimeIOTask[Result[@core.
 
 pub fn dry_run_preview_runner() -> PreviewRunner
 
+pub fn io_copy_dir_recursive(String, String) -> Unit raise @core.ProjectIOError
+
+pub fn io_copy_file(String, String) -> Unit raise @core.ProjectIOError
+
 pub fn io_create_dir(String) -> Unit raise @core.ProjectIOError
 
 pub fn io_ensure_dir(String) -> Unit raise @core.ProjectIOError
