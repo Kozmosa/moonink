@@ -429,8 +429,25 @@ test "cli run keeps build behind runtime boundary" {
 }
 
 ///|
-test "cli run returns serve placeholder" {
-  inspect(@cli.cli_run(["moonink", "serve"]).exit_code, content="0")
+test "cli run keeps serve behind runtime boundary" {
+  inspect(
+    @cli.cli_run(["moonink", "serve"]).message,
+    content=(
+      #|[serve] runtime execution required
+      #|address: http://127.0.0.1:3000
+      #|preview root: dist
+    ),
+  )
+}
+
+///|
+test "cli exec routes serve through runtime skeleton" {
+  let outcome = @cli.cli_exec(["moonink", "serve"])
+  inspect(outcome.exit_code, content="0")
+  inspect(
+    outcome.message.contains("[serve] runtime ready"),
+    content="true",
+  )
 }
 
 ///|

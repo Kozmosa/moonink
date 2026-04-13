@@ -100,7 +100,7 @@ pub fn run_runtime_cli_command(command : CliCommand) -> CliOutcome {
     CliCommand::Help => run_help_command()
     CliCommand::Onboard => run_native_onboard_command()
     CliCommand::Build => run_native_build_command()
-    CliCommand::Serve => run_serve_command()
+    CliCommand::Serve => run_native_serve_command()
     CliCommand::Unknown(command_name) => run_unknown_command(command_name)
   }
 }

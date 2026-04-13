@@ -1,14 +1,15 @@
 {
   "name": "username/moonink",
   "version": "0.2.0",
-  "source": "src",
   "deps": {
     "moonbitlang/x": "0.4.41",
-    "mizchi/markdown": "0.4.7"
+    "mizchi/markdown": "0.4.7",
+    "oboard/mocket": "0.6.5"
   },
   "readme": "README.mbt.md",
   "repository": "",
   "license": "Apache-2.0",
   "keywords": [],
-  "description": ""
+  "description": "",
+  "source": "src"
 }
