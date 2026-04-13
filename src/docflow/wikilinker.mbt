@@ -22,6 +22,18 @@ fn find_wikilink_close(payload : String, start : Int) -> Int? {
 }
 
 ///|
+fn find_wikilink_rewrite_close(payload : String, start : Int) -> Int? {
+  let mut cursor = start
+  while cursor + 1 < payload.length() {
+    if payload[cursor:cursor + 2].to_string() == "]]" {
+      return Some(cursor)
+    }
+    cursor = cursor + 1
+  }
+  None
+}
+
+///|
 fn normalize_wikilink_target(target : String) -> String {
   let trimmed = target.trim().to_string()
   if trimmed.has_prefix("./") {
@@ -133,36 +145,39 @@ fn rewrite_markdown_wikilinks(
   while cursor < payload.length() {
     if cursor + 1 < payload.length() &&
       payload[cursor:cursor + 2].to_string() == "[[" {
-      match scan_wikilink_entry(payload, cursor) {
-        Some(entry) => {
-          if entry.target == "" {
-            result.write_string(entry.raw)
+      match find_wikilink_rewrite_close(payload, cursor + 2) {
+        Some(close_cursor) => {
+          let inner = payload[cursor + 2:close_cursor].to_string()
+          let raw = payload[cursor:close_cursor + 2].to_string()
+          let (target, label) = parse_wikilink_inner(inner)
+          if target == "" {
+            result.write_string(raw)
           } else {
-            match resolve_wikilink(linker, entry.target) {
-              Ok(url) => result.write_string("[\{entry.label}](\{url})")
+            match resolve_wikilink(linker, target) {
+              Ok(url) => result.write_string("[\{label}](\{url})")
               Err(Some(hint)) => {
-                result.write_string(entry.raw)
+                result.write_string(raw)
                 linked = append_wikilink_diagnostic(
                   linked,
-                  "Ambiguous wikilink target: \{entry.target}",
+                  "Ambiguous wikilink target: \{target}",
                   Some(hint),
                 )
               }
               Err(None) => {
-                result.write_string(entry.raw)
+                result.write_string(raw)
                 linked = append_wikilink_diagnostic(
                   linked,
-                  "Unresolved wikilink target: \{entry.target}",
+                  "Unresolved wikilink target: \{target}",
                   None,
                 )
               }
             }
           }
-          cursor = cursor + entry.raw.length()
+          cursor = close_cursor + 2
         }
         None => {
-          result.write_string("[[")
-          cursor = cursor + 2
+          result.write_string(payload[cursor:].to_string())
+          cursor = payload.length()
         }
       }
     } else {
