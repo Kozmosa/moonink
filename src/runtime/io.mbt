@@ -148,7 +148,10 @@ pub fn io_copy_file(
 }
 
 ///|
-fn join_io_path(base : String, child : String) -> String raise @core.ProjectIOError {
+fn join_io_path(
+  base : String,
+  child : String,
+) -> String raise @core.ProjectIOError {
   let normalized_child = @core.normalize_relative_path(child) catch {
     err =>
       raise @core.project_io_error(
