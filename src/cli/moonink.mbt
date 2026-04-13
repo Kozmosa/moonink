@@ -4,6 +4,7 @@ pub enum CliCommand {
   Help
   Onboard
   Build
+  Check
   Serve
   Unknown(String)
 } derive(Debug, Eq)
@@ -14,6 +15,7 @@ pub impl Show for CliCommand with output(self, logger) {
     CliCommand::Help => logger.write_string("Help")
     CliCommand::Onboard => logger.write_string("Onboard")
     CliCommand::Build => logger.write_string("Build")
+    CliCommand::Check => logger.write_string("Check")
     CliCommand::Serve => logger.write_string("Serve")
     CliCommand::Unknown(command) => {
       logger.write_string("Unknown(\"")
@@ -38,6 +40,8 @@ fn parse_command_and_payload(command : String) -> CliCommand {
     CliCommand::Onboard
   } else if command == "build" {
     CliCommand::Build
+  } else if command == "check" {
+    CliCommand::Check
   } else if command == "serve" {
     CliCommand::Serve
   } else {
@@ -88,6 +92,7 @@ fn dispatch_cli_command(command : CliCommand) -> CliOutcome {
     CliCommand::Help => run_help_command()
     CliCommand::Onboard => run_onboard_command_pure()
     CliCommand::Build => run_build_command()
+    CliCommand::Check => run_check_command()
     CliCommand::Serve => run_serve_command()
     CliCommand::Unknown(command_name) => run_unknown_command(command_name)
   }
@@ -100,6 +105,7 @@ pub fn run_runtime_cli_command(command : CliCommand) -> CliOutcome {
     CliCommand::Help => run_help_command()
     CliCommand::Onboard => run_native_onboard_command()
     CliCommand::Build => run_native_build_command()
+    CliCommand::Check => run_native_check_command()
     CliCommand::Serve => run_native_serve_command()
     CliCommand::Unknown(command_name) => run_unknown_command(command_name)
   }

@@ -401,6 +401,7 @@ test "parse cli command supports raw command tokens" {
   inspect(@cli.parse_cli_command([]), content="Help")
   inspect(@cli.parse_cli_command(["help"]), content="Help")
   inspect(@cli.parse_cli_command(["build"]), content="Build")
+  inspect(@cli.parse_cli_command(["check"]), content="Check")
   inspect(@cli.parse_cli_command(["serve"]), content="Serve")
   inspect(@cli.parse_cli_command(["onboard"]), content="Onboard")
 }
@@ -409,6 +410,7 @@ test "parse cli command supports raw command tokens" {
 test "parse cli command supports full argv forms" {
   inspect(@cli.parse_cli_command(["moonink"]), content="Help")
   inspect(@cli.parse_cli_command(["moonink", "build"]), content="Build")
+  inspect(@cli.parse_cli_command(["moonink", "check"]), content="Check")
   inspect(@cli.parse_cli_command(["moonink", "serve"]), content="Serve")
   inspect(@cli.parse_cli_command(["moonink", "onboard"]), content="Onboard")
   inspect(
@@ -424,6 +426,17 @@ test "cli run keeps build behind runtime boundary" {
     content=(
       #|[build] runtime execution required
       #|status: use cli_exec or the runtime IO boundary to load config and discover content
+    ),
+  )
+}
+
+///|
+test "cli run keeps check behind runtime boundary" {
+  inspect(
+    @cli.cli_run(["moonink", "check"]).message,
+    content=(
+      #|[check] runtime execution required
+      #|status: use cli_exec or the runtime IO boundary to load config, discover content, and collect diagnostics
     ),
   )
 }
@@ -446,6 +459,16 @@ test "cli exec routes serve through runtime skeleton" {
   inspect(outcome.exit_code, content="1")
   inspect(
     outcome.message.contains("[build] failed during config loading"),
+    content="true",
+  )
+}
+
+///|
+test "cli exec routes check through runtime skeleton" {
+  let outcome = @cli.cli_exec(["moonink", "check"])
+  inspect(outcome.exit_code, content="1")
+  inspect(
+    outcome.message.contains("[check] failed during config loading"),
     content="true",
   )
 }
@@ -482,6 +505,57 @@ test "runtime cli serve reports missing config before preview skeleton" {
   inspect(outcome.exit_code, content="1")
   inspect(
     outcome.message.contains("[build] failed during config loading"),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli check succeeds for minimal fixture without diagnostics" {
+  let fixture_root = "fixtures/v2/minimal"
+  let stale_path = fixture_root + "/dist/check-stale.txt"
+  let _ = try? @runtime.io_create_dir(fixture_root + "/dist")
+  @runtime.io_write_string(stale_path, "stale") catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(outcome.message.contains("[check] completed"), content="true")
+  inspect(outcome.message.contains("diagnostics: 0"), content="true")
+  inspect(@runtime.io_path_exists(stale_path), content="true")
+}
+
+///|
+test "runtime cli check reports wikilink diagnostics without writing output" {
+  let fixture_root = "fixtures/v2/check_wikilink_warning"
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(
+    outcome.message.contains("[check] completed with diagnostics"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("Unresolved wikilink target: missing-page"),
+    content="true",
+  )
+  inspect(outcome.message.contains("[hello.md]"), content="true")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="false",
+  )
+}
+
+///|
+test "runtime cli check reports missing config" {
+  let outcome = @cli.run_check_command_runtime_from_config(
+    "fixtures/v2/missing_config/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(
+    outcome.message.contains("[check] failed during config loading"),
     content="true",
   )
 }

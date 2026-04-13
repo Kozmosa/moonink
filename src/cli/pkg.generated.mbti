@@ -39,6 +39,10 @@ pub fn run_build_command_runtime() -> CliOutcome
 
 pub fn run_build_command_runtime_from_config(String) -> CliOutcome
 
+pub fn run_check_command_runtime() -> CliOutcome
+
+pub fn run_check_command_runtime_from_config(String) -> CliOutcome
+
 pub fn run_runtime_cli_command(CliCommand) -> CliOutcome
 
 pub fn run_serve_command_runtime_from_config(String) -> CliOutcome
@@ -61,6 +65,12 @@ pub(all) suberror BuildCommandError {
   ProjectIO(@core.ProjectIOError)
 } derive(Eq, @debug.Debug)
 
+pub(all) suberror CheckCommandError {
+  ContentDiscovery(@core.ContentDiscoveryError)
+  AdapterRegistry(@docflow.AdapterRegistryError)
+  FatalParse(@docflow.FatalParseError)
+} derive(Eq, @debug.Debug)
+
 // Types and methods
 pub(all) struct BuildSummary {
   output_dir : String
@@ -70,10 +80,23 @@ pub(all) struct BuildSummary {
   page_count : Int
 } derive(Eq, @debug.Debug)
 
+pub(all) struct CheckDiagnostic {
+  source_path : String
+  entry : @docflow.DocumentDiagnostic
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CheckSummary {
+  processed_sources : Int
+  article_count : Int
+  page_count : Int
+  diagnostic_count : Int
+} derive(Eq, @debug.Debug)
+
 pub enum CliCommand {
   Help
   Onboard
   Build
+  Check
   Serve
   Unknown(String)
 } derive(Eq, @debug.Debug)

@@ -16,6 +16,27 @@ pub(all) struct BuildSummary {
 } derive(Debug, Eq)
 
 ///|
+pub(all) suberror CheckCommandError {
+  ContentDiscovery(@core.ContentDiscoveryError)
+  AdapterRegistry(@docflow.AdapterRegistryError)
+  FatalParse(@docflow.FatalParseError)
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CheckSummary {
+  processed_sources : Int
+  article_count : Int
+  page_count : Int
+  diagnostic_count : Int
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CheckDiagnostic {
+  source_path : String
+  entry : @docflow.DocumentDiagnostic
+} derive(Debug, Eq)
+
+///|
 fn format_runtime_config_error(err : @core.ConfigError) -> String {
   "[build] failed during config loading\n\{@core.format_config_error(err)}"
 }
@@ -23,6 +44,18 @@ fn format_runtime_config_error(err : @core.ConfigError) -> String {
 ///|
 fn format_runtime_content_error(err : @core.ContentDiscoveryError) -> String {
   "[build] failed during content discovery\n\{@core.format_content_discovery_error(err)}"
+}
+
+///|
+fn format_check_runtime_config_error(err : @core.ConfigError) -> String {
+  "[check] failed during config loading\n\{@core.format_config_error(err)}"
+}
+
+///|
+fn format_check_runtime_content_error(
+  err : @core.ContentDiscoveryError,
+) -> String {
+  "[check] failed during content discovery\n\{@core.format_content_discovery_error(err)}"
 }
 
 ///|
@@ -36,6 +69,37 @@ fn format_build_command_error(err : BuildCommandError) -> String {
       "[build] failed during document parsing\n\{inner.to_string()}"
     BuildCommandError::ProjectIO(inner) =>
       "[build] failed during file emission\n\{@core.format_project_io_error(inner)}"
+  }
+}
+
+///|
+fn format_check_command_error(err : CheckCommandError) -> String {
+  match err {
+    CheckCommandError::ContentDiscovery(inner) =>
+      "[check] failed during content preparation\n\{@core.format_content_discovery_error(inner)}"
+    CheckCommandError::AdapterRegistry(inner) =>
+      "[check] failed during adapter lookup\n\{inner.to_string()}"
+    CheckCommandError::FatalParse(inner) =>
+      "[check] failed during document parsing\n\{inner.to_string()}"
+  }
+}
+
+///|
+fn check_parser_for_format(
+  format : @core.SourceFormat,
+) -> Result[@docflow.ParserAdapter, CheckCommandError] {
+  let registry = @docflow.register_parser_adapter(
+    @docflow.register_parser_adapter(
+      @docflow.empty_parser_registry(),
+      @core.SourceFormat::Markdown,
+      @docflow.markdown_parser_adapter(),
+    ),
+    @core.SourceFormat::Html,
+    @docflow.html_passthrough_parser_adapter(),
+  )
+  match @docflow.lookup_parser_adapter(registry, format) {
+    Ok(adapter) => Ok(adapter)
+    Err(err) => Err(CheckCommandError::AdapterRegistry(err))
   }
 }
 
@@ -803,6 +867,98 @@ fn summarize_build_success(
 }
 
 ///|
+fn format_check_diagnostic_lines(
+  diagnostics : Array[CheckDiagnostic],
+) -> String {
+  let lines : Array[String] = []
+  for diagnostic in diagnostics {
+    lines.push("[\{diagnostic.source_path}]")
+    lines.push(@docflow.format_document_diagnostic(diagnostic.entry))
+  }
+  lines.iter().join("\n")
+}
+
+///|
+fn summarize_check_success(
+  config : @core.MooninkConfig,
+  inventory : @core.ContentInventory,
+  summary : CheckSummary,
+  diagnostics : Array[CheckDiagnostic],
+) -> CliOutcome {
+  let header = if summary.diagnostic_count == 0 {
+    "[check] completed"
+  } else {
+    "[check] completed with diagnostics"
+  }
+  let details = if diagnostics.is_empty() {
+    ""
+  } else {
+    "\n---\n" + format_check_diagnostic_lines(diagnostics)
+  }
+  {
+    exit_code: if summary.diagnostic_count == 0 {
+      0
+    } else {
+      1
+    },
+    message: header +
+    "\nsite: \{config.site_name}\nconfig: \{config.config_path}\ncontent root: \{inventory.root}\nprocessed: \{summary.processed_sources}\narticles: \{summary.article_count}\npages: \{summary.page_count}\ndiagnostics: \{summary.diagnostic_count}" +
+    details,
+  }
+}
+
+///|
+fn check_site_result(
+  config : @core.MooninkConfig,
+  inventory : @core.ContentInventory,
+) -> Result[(CheckSummary, Array[CheckDiagnostic]), CheckCommandError] {
+  let inputs = match @runtime.load_build_inputs_result(config, inventory) {
+    Ok(inputs) => inputs
+    Err(err) => return Err(CheckCommandError::ContentDiscovery(err))
+  }
+  let wikilinker = build_wikilinker(inputs)
+  let diagnostics : Array[CheckDiagnostic] = []
+  let mut article_count = 0
+  let mut page_count = 0
+  for input in inputs {
+    let parser = match check_parser_for_format(input.meta.format) {
+      Ok(parser) => parser
+      Err(err) => return Err(err)
+    }
+    let source_input : @docflow.SourceDocumentInput = {
+      path: input.meta.source_path,
+      format: input.meta.format,
+      content: input.docflow_content,
+      uuid: input.meta.source_path,
+    }
+    let parsed = match
+      @docflow.parse_with_adapter_result(parser, source_input) {
+      Ok(parsed) => parsed
+      Err(err) => return Err(CheckCommandError::FatalParse(err))
+    }
+    let linked = @docflow.apply_wikilinker(wikilinker, parsed)
+    for entry in linked.diagnostics.entries {
+      diagnostics.push({ source_path: input.meta.source_path, entry })
+    }
+    match input.meta.content_kind {
+      @core.ContentKind::Article => article_count = article_count + 1
+      @core.ContentKind::Page => page_count = page_count + 1
+    }
+  }
+  Ok(
+    (
+      {
+        processed_sources: inputs.length(),
+        article_count,
+        page_count,
+        diagnostic_count: diagnostics.length(),
+      },
+      diagnostics,
+    ),
+  )
+}
+
+///|
 pub fn run_build_command_runtime_from_config(
   config_path : String,
 ) -> CliOutcome {
@@ -827,8 +983,54 @@ pub fn run_build_command_runtime_from_config(
 }
 
 ///|
+pub fn run_check_command_runtime_from_config(
+  config_path : String,
+) -> CliOutcome {
+  let config_result = @runtime.load_config_result(config_path)
+  let config = match config_result {
+    Ok(config) => config
+    Err(err) =>
+      return { exit_code: 1, message: format_check_runtime_config_error(err) }
+  }
+  let inventory = match
+    @runtime.run_runtime_io_task(@runtime.discover_content_task(config)) {
+    Ok(inventory) => inventory
+    Err(err) =>
+      return { exit_code: 1, message: format_check_runtime_content_error(err) }
+  }
+  let check_result = match check_site_result(config, inventory) {
+    Ok(result) => result
+    Err(err) =>
+      return { exit_code: 1, message: format_check_command_error(err) }
+  }
+  let (summary, diagnostics) = check_result
+  summarize_check_success(config, inventory, summary, diagnostics)
+}
+
+///|
+pub fn run_check_command_runtime() -> CliOutcome {
+  run_check_command_runtime_from_config("moonink.json")
+}
+
+///|
 pub fn run_build_command_runtime() -> CliOutcome {
   run_build_command_runtime_from_config("moonink.json")
+}
+
+///|
+fn run_check_command() -> CliOutcome {
+  {
+    exit_code: 0,
+    message: "[check] runtime execution required\nstatus: use cli_exec or the runtime IO boundary to load config, discover content, and collect diagnostics",
+  }
+}
+
+///|
+fn run_native_check_command() -> CliOutcome {
+  @runtime.run_native_runtime_io_task_with_policy(
+    @runtime.RuntimeIOTask::Ready(run_check_command_runtime()),
+    @runtime.native_runtime_adapter().policy,
+  )
 }
 
 ///|

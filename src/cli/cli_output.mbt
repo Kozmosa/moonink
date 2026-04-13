@@ -8,6 +8,7 @@ pub fn cli_help_text() -> String {
     #|  moonink help
     #|  moonink onboard
     #|  moonink build
+    #|  moonink check
     #|  moonink serve
     #|
     #|Status:
