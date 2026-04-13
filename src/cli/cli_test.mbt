@@ -765,6 +765,47 @@ test "runtime cli build writes minimal fixture html files" {
 }
 
 ///|
+test "runtime cli build copies public assets into output" {
+  let fixture_root = "fixtures/v2/public_assets_basic"
+  let stale_path = fixture_root + "/dist/stale.txt"
+  let _ = try? @runtime.io_create_dir(fixture_root + "/dist")
+  @runtime.io_write_string(stale_path, "stale") catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(@runtime.io_path_exists(stale_path), content="false")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/robots.txt"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/css/site.css"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/images/logo.bin"),
+    content="true",
+  )
+  let robots = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/robots.txt",
+  ) catch {
+    _ => panic()
+  }
+  let css = @runtime.io_read_file_to_string(fixture_root + "/dist/css/site.css") catch {
+    _ => panic()
+  }
+  inspect(robots.contains("User-agent: *"), content="true")
+  inspect(css.contains("background: #fafafa"), content="true")
+}
+
+///|
 test "runtime cli build formats io errors when no config exists" {
   let outcome = @cli.cli_exec(["moonink", "build"])
   inspect(outcome.exit_code, content="1")
