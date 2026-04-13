@@ -25,7 +25,11 @@ pub fn cli_help_text() -> String
 
 pub fn cli_run(Array[String]) -> CliOutcome
 
+pub fn format_runtime_ready_message(ServeSession) -> String
+
 pub fn parse_cli_command(Array[String]) -> CliCommand
+
+pub fn prepare_serve_runtime_session(String) -> Result[ServeSession, String]
 
 pub fn prepare_serve_session(String, host? : String, port? : Int, note? : String) -> ServeSession
 
@@ -80,7 +84,7 @@ pub(all) struct CliOutcome {
   message : String
 } derive(Eq, @debug.Debug)
 
-pub(all) struct ServeSession {
+pub struct ServeSession {
   host : String
   port : Int
   preview_root : String

@@ -1,0 +1,16 @@
+{
+  "name": "username/moonink-native-serve",
+  "version": "0.2.0",
+  "deps": {
+    "username/moonink": {
+      "path": ".."
+    },
+    "oboard/mocket": "0.6.5"
+  },
+  "readme": "../README.mbt.md",
+  "repository": "",
+  "license": "Apache-2.0",
+  "keywords": [],
+  "description": "",
+  "source": "src"
+}

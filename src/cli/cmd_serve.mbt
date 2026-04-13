@@ -33,17 +33,17 @@ pub fn format_runtime_ready_message(session : ServeSession) -> String {
 }
 
 ///|
-pub fn prepare_serve_runtime_session(config_path : String) -> Result[ServeSession, String] {
+pub fn prepare_serve_runtime_session(
+  config_path : String,
+) -> Result[ServeSession, String] {
   let config = match @runtime.load_config_result(config_path) {
     Ok(config) => config
-    Err(err) =>
-      return Err(format_runtime_config_error(err))
+    Err(err) => return Err(format_runtime_config_error(err))
   }
   let inventory = match
     @runtime.run_runtime_io_task(@runtime.discover_content_task(config)) {
     Ok(inventory) => inventory
-    Err(err) =>
-      return Err(format_runtime_content_error(err))
+    Err(err) => return Err(format_runtime_content_error(err))
   }
   match build_site_result(config, inventory) {
     Ok(_) => {
@@ -53,7 +53,11 @@ pub fn prepare_serve_runtime_session(config_path : String) -> Result[ServeSessio
         DEFAULT_SERVE_HOST,
         DEFAULT_SERVE_PORT,
       )
-      match @runtime.launch_preview_result(@runtime.dry_run_preview_runner(), launch) {
+      match
+        @runtime.launch_preview_result(
+          @runtime.dry_run_preview_runner(),
+          launch,
+        ) {
         Ok(preview) =>
           Ok(
             prepare_serve_session(

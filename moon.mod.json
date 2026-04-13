@@ -3,8 +3,7 @@
   "version": "0.2.0",
   "deps": {
     "moonbitlang/x": "0.4.41",
-    "mizchi/markdown": "0.4.7",
-    "oboard/mocket": "0.6.5"
+    "mizchi/markdown": "0.4.7"
   },
   "readme": "README.mbt.md",
   "repository": "",
