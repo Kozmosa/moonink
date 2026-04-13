@@ -176,6 +176,24 @@ test "docflow indexed wikilinker ignores non-markdown payloads" {
 }
 
 ///|
+test "docflow indexed wikilinker collects resolved markdown urls" {
+  let parsed : @docflow.ParsedDocument = {
+    backend_name: "markdown-parser-adapter",
+    source_format: @core.SourceFormat::Markdown,
+    source_path: "notes/index.md",
+    source_uuid: "doc-7",
+    diagnostics: @docflow.empty_document_diagnostics(),
+    backend_payload: Some("Visit [[about]] [[missing]] [[hello|Read more]] [[intro]]."),
+  }
+  let linker = @docflow.indexed_wikilinker(
+    { "about": "/about/", "hello": "/hello/" },
+    { "intro": ["/guides/intro/", "/reference/intro/"] },
+  )
+  let urls = @docflow.collect_resolved_wikilink_urls(linker, parsed)
+  inspect(urls, content="[\"/about/\", \"/hello/\"]")
+}
+
+///|
 test "docflow indexed wikilinker leaves unresolved wikilinks and warns" {
   let parsed : @docflow.ParsedDocument = {
     backend_name: "fake-markdown-parser",

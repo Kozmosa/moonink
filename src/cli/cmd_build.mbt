@@ -347,21 +347,24 @@ pub fn build_backlink_index(
     }
     let source_url = input.meta.url_path
     let seen_targets : Map[String, Bool] = {}
-    for target in @docflow.parse_wikilink_targets(input.docflow_content) {
-      match @docflow.resolve_wikilink(wikilinker, target) {
-        Ok(target_url) => {
-          if seen_targets.get(target_url) is Some(_) {
-            continue
-          }
-          seen_targets[target_url] = true
-          let sources = match backlinks.get(target_url) {
-            Some(entries) => entries
-            None => []
-          }
-          backlinks[target_url] = sources + [source_url]
-        }
-        Err(_) => ()
+    let parsed : @docflow.ParsedDocument = {
+      backend_name: wikilinker.name,
+      source_format: input.meta.format,
+      source_path: input.meta.source_path,
+      source_uuid: input.absolute_source_path,
+      diagnostics: @docflow.empty_document_diagnostics(),
+      backend_payload: Some(input.docflow_content),
+    }
+    for target_url in @docflow.collect_resolved_wikilink_urls(wikilinker, parsed) {
+      if seen_targets.get(target_url) is Some(_) {
+        continue
       }
+      seen_targets[target_url] = true
+      let sources = match backlinks.get(target_url) {
+        Some(entries) => entries
+        None => []
+      }
+      backlinks[target_url] = sources + [source_url]
     }
   }
   backlinks
