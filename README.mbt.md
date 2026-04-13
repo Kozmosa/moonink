@@ -20,7 +20,8 @@ Current status:
 - site assembly now derives automatic page-only navigation, `nav_title`, and `nav_hidden` metadata for templates and default layout rendering;
 - template rendering supports either the built-in page template or a configured `template_file`, with flat string variables including `site_name`, `page_title`, `navigation_html`, `current_section_title`, `current_section_url`, `page_header_title`, and `page_header_html`;
 - `serve` in the main workspace now reuses the runtime build pipeline, validates the generated preview root, and reports the local preview address plus output directory through a dry-run preview boundary;
-- real native preview serving now lives in the standalone `native-serve/` subproject, which depends on `oboard/mocket` without polluting the main workspace wasm-gc test/build graph.
+- real native preview serving now lives in the standalone `native-serve/` subproject, which depends on `oboard/mocket` without polluting the main workspace wasm-gc test/build graph;
+- Theme MVP now prefers `theme/layout.html` over `template_file`, copies `theme/assets/` into `dist/assets/`, and exposes `theme_name`, `theme_asset_root`, and `page_body_class` to theme templates.
 
 ### Native preview entry
 
@@ -41,3 +42,16 @@ Notes:
 - the main workspace `moonink serve` remains the dry-run orchestration contract used by tests;
 - the native entry accepts an explicit config path so it can be launched from the repo root or another working directory;
 - `native-serve/` is the only place that pulls in `oboard/mocket`.
+
+### Theme MVP
+
+Theme support currently uses a simple directory convention:
+
+- `theme/layout.html` — preferred over `template_file`
+- `theme/assets/**` — copied to `dist/assets/**`
+
+Theme templates can use these additional variables:
+
+- `{{ theme_name }}`
+- `{{ theme_asset_root }}`
+- `{{ page_body_class }}`
