@@ -165,6 +165,38 @@ fn prepare_output_dir(
 }
 
 ///|
+fn copy_public_assets(
+  config : @core.MooninkConfig,
+) -> Unit raise BuildCommandError {
+  let public_root = @core.join_relative_path(config.project_root, "public") catch {
+    err =>
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "copy_public",
+          "public",
+          @core.format_path_policy_error(err),
+        ),
+      )
+  }
+  if !@runtime.io_path_exists(public_root) {
+    return
+  }
+  let is_dir = @runtime.io_is_dir(public_root) catch {
+    err => raise BuildCommandError::ProjectIO(err)
+  }
+  if !is_dir {
+    raise BuildCommandError::ProjectIO(
+      @core.project_io_error(
+        "copy_public", public_root, "public path exists and is not a directory",
+      ),
+    )
+  }
+  @runtime.io_copy_dir_recursive(public_root, output_root(config)) catch {
+    err => raise BuildCommandError::ProjectIO(err)
+  }
+}
+
+///|
 fn write_build_output(
   config : @core.MooninkConfig,
   relative_output_path : String,
@@ -784,6 +816,9 @@ fn build_site_result(
     Err(err) => return Err(BuildCommandError::ContentDiscovery(err))
   }
   prepare_output_dir(config) catch {
+    err => return Err(err)
+  }
+  copy_public_assets(config) catch {
     err => return Err(err)
   }
   let assembly = build_site_assembly_model(config, inputs, inventory)
