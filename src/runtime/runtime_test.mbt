@@ -139,3 +139,35 @@ test "native runtime adapter executes runtime io tasks" {
   )
   inspect(result, content="42")
 }
+
+///|
+test "preview launch dry run validates built root" {
+  let launch = @runtime.prepare_preview_launch(
+    "fixtures/v2/minimal", "127.0.0.1", 3000,
+  )
+  let result = @runtime.launch_preview_result(
+    @runtime.dry_run_preview_runner(),
+    launch,
+  )
+  inspect(result is Ok(_), content="true")
+  let validated = match result {
+    Ok(validated) => validated
+    Err(_) => panic()
+  }
+  inspect(
+    validated.note.contains("Dry-run preview launch validated"),
+    content="true",
+  )
+}
+
+///|
+test "preview launch rejects missing root directory" {
+  let launch = @runtime.prepare_preview_launch(
+    "fixtures/v2/missing-root", "127.0.0.1", 3000,
+  )
+  let result = @runtime.launch_preview_result(
+    @runtime.dry_run_preview_runner(),
+    launch,
+  )
+  inspect(result is Err(_), content="true")
+}

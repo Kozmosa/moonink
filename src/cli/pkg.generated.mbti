@@ -9,6 +9,10 @@ import {
 }
 
 // Values
+pub const DEFAULT_SERVE_HOST : String = "127.0.0.1"
+
+pub const DEFAULT_SERVE_PORT : Int = 3000
+
 pub fn build_navigation_model(Array[@core.SitePage]) -> @core.NavigationModel
 
 pub fn build_site_assembly_model(@core.MooninkConfig, Array[@runtime.BuildInput], @core.ContentInventory) -> @core.SiteAssemblyModel
@@ -23,7 +27,7 @@ pub fn cli_run(Array[String]) -> CliOutcome
 
 pub fn parse_cli_command(Array[String]) -> CliCommand
 
-pub fn prepare_serve_dummy() -> ServeSession
+pub fn prepare_serve_session(String, host? : String, port? : Int, note? : String) -> ServeSession
 
 pub fn render_navigation_html(@core.NavigationModel, String) -> String
 
@@ -32,6 +36,10 @@ pub fn run_build_command_runtime() -> CliOutcome
 pub fn run_build_command_runtime_from_config(String) -> CliOutcome
 
 pub fn run_runtime_cli_command(CliCommand) -> CliOutcome
+
+pub fn run_serve_command_runtime_from_config(String) -> CliOutcome
+
+pub fn run_serve_command_runtime_from_config_with_runner(String, @runtime.PreviewRunner) -> CliOutcome
 
 pub fn site_page_description(@core.PageMeta) -> String
 
@@ -75,7 +83,7 @@ pub(all) struct CliOutcome {
 pub(all) struct ServeSession {
   host : String
   port : Int
-  mode : String
+  preview_root : String
   note : String
 } derive(Eq, @debug.Debug)
 

@@ -13,6 +13,8 @@ pub fn discover_content_result(@core.MooninkConfig) -> Result[@core.ContentInven
 
 pub fn discover_content_task(@core.MooninkConfig) -> RuntimeIOTask[Result[@core.ContentInventory, @core.ContentDiscoveryError]]
 
+pub fn dry_run_preview_runner() -> PreviewRunner
+
 pub fn io_create_dir(String) -> Unit raise @core.ProjectIOError
 
 pub fn io_ensure_dir(String) -> Unit raise @core.ProjectIOError
@@ -35,6 +37,8 @@ pub fn io_remove_file(String) -> Unit raise @core.ProjectIOError
 
 pub fn io_write_string(String, String) -> Unit raise @core.ProjectIOError
 
+pub fn launch_preview_result(PreviewRunner, PreviewLaunch) -> Result[PreviewLaunch, @core.ProjectIOError]
+
 pub fn load_build_inputs_result(@core.MooninkConfig, @core.ContentInventory) -> Result[Array[BuildInput], @core.ContentDiscoveryError]
 
 pub fn load_build_inputs_task(@core.MooninkConfig, @core.ContentInventory) -> RuntimeIOTask[Result[Array[BuildInput], @core.ContentDiscoveryError]]
@@ -45,7 +49,11 @@ pub fn load_config_task(String) -> RuntimeIOTask[Result[@core.MooninkConfig, @co
 
 pub fn load_template_source_result(@core.MooninkConfig) -> Result[String?, @core.ConfigError]
 
+pub fn native_mocket_preview_runner() -> PreviewRunner
+
 pub fn native_runtime_adapter() -> NativeRuntimeAdapter
+
+pub fn prepare_preview_launch(String, String, Int, note? : String) -> PreviewLaunch
 
 pub fn read_config_source_task(String) -> RuntimeIOTask[Result[(String, String), @core.ConfigError]]
 
@@ -72,6 +80,18 @@ pub(all) struct NativeRuntimeAdapter {
   name : String
   note : String
   policy : RuntimeTaskPolicy
+} derive(Eq, @debug.Debug)
+
+pub(all) struct PreviewLaunch {
+  root_dir : String
+  host : String
+  port : Int
+  note : String
+} derive(Eq, @debug.Debug)
+
+pub enum PreviewRunner {
+  DryRun
+  NativeMocket
 } derive(Eq, @debug.Debug)
 
 pub(all) enum RuntimeCancellationPolicy {

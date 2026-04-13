@@ -443,9 +443,45 @@ test "cli run keeps serve behind runtime boundary" {
 ///|
 test "cli exec routes serve through runtime skeleton" {
   let outcome = @cli.cli_exec(["moonink", "serve"])
+  inspect(outcome.exit_code, content="1")
+  inspect(
+    outcome.message.contains("[build] failed during config loading"),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli serve builds fixture before preview skeleton" {
+  let fixture_root = "fixtures/v2/minimal"
+  let outcome = @cli.run_serve_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
   inspect(outcome.exit_code, content="0")
   inspect(
-    outcome.message.contains("[serve] runtime ready"),
+    outcome.message,
+    content=(
+      #|[serve] runtime ready
+      #|address: http://127.0.0.1:3000
+      #|preview root: fixtures/v2/minimal/dist
+      #|status: Dry-run preview launch validated the built output without starting a server.
+    ),
+  )
+  let hello_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/hello/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(hello_html.contains("<h1>Hello World</h1>"), content="true")
+}
+
+///|
+test "runtime cli serve reports missing config before preview skeleton" {
+  let outcome = @cli.run_serve_command_runtime_from_config(
+    "fixtures/v2/missing_config/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(
+    outcome.message.contains("[build] failed during config loading"),
     content="true",
   )
 }

@@ -28,27 +28,77 @@ fn format_serve_message(session : ServeSession) -> String {
 }
 
 ///|
+fn format_runtime_ready_message(session : ServeSession) -> String {
+  "[serve] runtime ready\naddress: http://\{session.host}:\{session.port}\npreview root: \{session.preview_root}\nstatus: \{session.note}"
+}
+
+///|
 fn run_serve_command() -> CliOutcome {
   let session = prepare_serve_session("dist")
   { exit_code: 0, message: format_serve_message(session) }
 }
 
 ///|
-pub fn run_serve_command_runtime_from_config(config_path : String) -> CliOutcome {
-  ignore(config_path)
-  let session = prepare_serve_session(
-    "dist",
-    note="Serve runtime command skeleton prepared.",
-  )
-  {
-    exit_code: 0,
-    message: "[serve] runtime ready\naddress: http://\{session.host}:\{session.port}\npreview root: \{session.preview_root}\nstatus: serve preview runner not connected yet",
+pub fn run_serve_command_runtime_from_config_with_runner(
+  config_path : String,
+  runner : @runtime.PreviewRunner,
+) -> CliOutcome {
+  let config = match @runtime.load_config_result(config_path) {
+    Ok(config) => config
+    Err(err) =>
+      return { exit_code: 1, message: format_runtime_config_error(err) }
+  }
+  let inventory = match
+    @runtime.run_runtime_io_task(@runtime.discover_content_task(config)) {
+    Ok(inventory) => inventory
+    Err(err) =>
+      return { exit_code: 1, message: format_runtime_content_error(err) }
+  }
+  match build_site_result(config, inventory) {
+    Ok(_) => {
+      let preview_root = output_root(config)
+      let launch = @runtime.prepare_preview_launch(
+        preview_root,
+        DEFAULT_SERVE_HOST,
+        DEFAULT_SERVE_PORT,
+      )
+      match @runtime.launch_preview_result(runner, launch) {
+        Ok(preview) => {
+          let session = prepare_serve_session(
+            preview.root_dir,
+            host=preview.host,
+            port=preview.port,
+            note=preview.note,
+          )
+          { exit_code: 0, message: format_runtime_ready_message(session) }
+        }
+        Err(err) =>
+          {
+            exit_code: 1,
+            message: "[serve] failed during preview launch\n\{@core.format_project_io_error(err)}",
+          }
+      }
+    }
+    Err(err) => { exit_code: 1, message: format_build_command_error(err) }
   }
 }
 
 ///|
+pub fn run_serve_command_runtime_from_config(
+  config_path : String,
+) -> CliOutcome {
+  run_serve_command_runtime_from_config_with_runner(
+    config_path,
+    @runtime.dry_run_preview_runner(),
+  )
+}
+
+///|
 fn run_serve_command_runtime() -> CliOutcome {
-  run_serve_command_runtime_from_config("moonink.json")
+  run_serve_command_runtime_from_config_with_runner(
+    "moonink.json",
+    @runtime.native_mocket_preview_runner(),
+  )
 }
 
 ///|
