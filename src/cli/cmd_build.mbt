@@ -336,7 +336,41 @@ fn register_exact_target(
 }
 
 ///|
-fn build_wikilinker(inputs : Array[@runtime.BuildInput]) -> @docflow.WikiLinker {
+pub fn build_backlink_index(
+  inputs : Array[@runtime.BuildInput],
+  wikilinker : @docflow.WikiLinker,
+) -> Map[String, Array[String]] {
+  let backlinks : Map[String, Array[String]] = {}
+  for input in inputs {
+    if input.meta.format != @core.SourceFormat::Markdown {
+      continue
+    }
+    let source_url = input.meta.url_path
+    let seen_targets : Map[String, Bool] = {}
+    for target in @docflow.parse_wikilink_targets(input.docflow_content) {
+      match @docflow.resolve_wikilink(wikilinker, target) {
+        Ok(target_url) => {
+          if seen_targets.get(target_url) is Some(_) {
+            continue
+          }
+          seen_targets[target_url] = true
+          let sources = match backlinks.get(target_url) {
+            Some(entries) => entries
+            None => []
+          }
+          backlinks[target_url] = sources + [source_url]
+        }
+        Err(_) => ()
+      }
+    }
+  }
+  backlinks
+}
+
+///|
+pub fn build_wikilinker(
+  inputs : Array[@runtime.BuildInput],
+) -> @docflow.WikiLinker {
   let basename_keys : Array[String] = []
   let index_alias_keys : Array[String] = []
   for input in inputs {
@@ -807,6 +841,7 @@ fn build_template_context(
   config : @core.MooninkConfig,
   active_theme : @runtime.ActiveThemeLayout,
   assembly : @core.SiteAssemblyModel,
+  backlink_index : Map[String, Array[String]],
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
 ) -> @docflow.TemplateContext {
@@ -821,6 +856,10 @@ fn build_template_context(
   let current_section_url = match current_section {
     Some(section) => section.url_path
     None => ""
+  }
+  let backlink_urls = match backlink_index.get(input.meta.url_path) {
+    Some(backlinks) => backlinks
+    None => []
   }
   {
     site_name: config.site_name,
@@ -840,6 +879,7 @@ fn build_template_context(
       assembly.navigation,
       input.meta.url_path,
     ),
+    backlink_urls,
     current_section_title,
     current_section_url,
     page_header_title: site_page_title(input.meta),
@@ -857,12 +897,18 @@ fn apply_build_template(
   config : @core.MooninkConfig,
   active_theme : @runtime.ActiveThemeLayout,
   assembly : @core.SiteAssemblyModel,
+  backlink_index : Map[String, Array[String]],
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
   template_source : String,
 ) -> @docflow.TemplatedPage {
   let context = build_template_context(
-    config, active_theme, assembly, input, rendered,
+    config,
+    active_theme,
+    assembly,
+    backlink_index,
+    input,
+    rendered,
   )
   @docflow.apply_template(rendered, context, template_source)
 }
@@ -893,6 +939,7 @@ fn resolve_active_theme_layout(
 fn build_site_result(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
+  backlink_index : Map[String, Array[String]],
 ) -> Result[BuildSummary, BuildCommandError] {
   let inputs = match @runtime.load_build_inputs_result(config, inventory) {
     Ok(inputs) => inputs
@@ -940,7 +987,13 @@ fn build_site_result(
     let linked = @docflow.apply_wikilinker(wikilinker, parsed)
     let rendered = @docflow.render_with_adapter(renderer, linked)
     let templated = apply_build_template(
-      config, active_theme, assembly, input, rendered, template_source,
+      config,
+      active_theme,
+      assembly,
+      backlink_index,
+      input,
+      rendered,
+      template_source,
     )
     let output_path = @core.output_html_path(
       input.meta.source_path,
@@ -1084,7 +1137,18 @@ pub fn run_build_command_runtime_from_config(
     Err(err) =>
       return { exit_code: 1, message: format_runtime_content_error(err) }
   }
-  let summary = match build_site_result(config, inventory) {
+  let inputs = match @runtime.load_build_inputs_result(config, inventory) {
+    Ok(inputs) => inputs
+    Err(err) =>
+      return {
+        exit_code: 1,
+        message: format_build_command_error(
+          BuildCommandError::ContentDiscovery(err),
+        ),
+      }
+  }
+  let backlink_index = build_backlink_index(inputs, build_wikilinker(inputs))
+  let summary = match build_site_result(config, inventory, backlink_index) {
     Ok(summary) => summary
     Err(err) =>
       return { exit_code: 1, message: format_build_command_error(err) }

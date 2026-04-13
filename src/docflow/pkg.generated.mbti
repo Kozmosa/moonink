@@ -61,6 +61,8 @@ pub fn page_site_entry(TemplatedPage) -> SiteEntry
 
 pub fn parse_markdown_backend_contract(String) -> MarkdownBackendContract
 
+pub fn parse_wikilink_targets(String) -> Array[String]
+
 pub fn parse_with_adapter(ParserAdapter, SourceDocumentInput) -> ParsedDocument
 
 pub fn parse_with_adapter_result(ParserAdapter, SourceDocumentInput) -> Result[ParsedDocument, FatalParseError]
@@ -74,6 +76,8 @@ pub fn render_markdown_backend_payload(String) -> String
 pub fn render_template_string(String, TemplateContext) -> String
 
 pub fn render_with_adapter(RenderAdapter, ParsedDocument) -> RenderedDocument
+
+pub fn resolve_wikilink(WikiLinker, String) -> Result[String, String?]
 
 pub fn route_from_source_path(String) -> String
 
@@ -213,6 +217,7 @@ pub(all) struct TemplateContext {
   theme_asset_root : String
   page_body_class : String
   navigation_html : String
+  backlink_urls : Array[String]
   current_section_title : String
   current_section_url : String
   page_header_title : String

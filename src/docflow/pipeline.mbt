@@ -142,6 +142,7 @@ fn lookup_template_variable(context : TemplateContext, name : String) -> String 
     "theme_asset_root" => context.theme_asset_root
     "page_body_class" => context.page_body_class
     "navigation_html" => context.navigation_html
+    "backlink_urls" => context.backlink_urls.iter().join(",")
     "current_section_title" => context.current_section_title
     "current_section_url" => context.current_section_url
     "page_header_title" => context.page_header_title
@@ -215,6 +216,7 @@ pub fn default_template_context(rendered : RenderedDocument) -> TemplateContext 
     theme_asset_root: "",
     page_body_class: "moonink-article",
     navigation_html: "",
+    backlink_urls: [],
     current_section_title: "",
     current_section_url: "",
     page_header_title: "",

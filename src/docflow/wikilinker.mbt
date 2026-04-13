@@ -116,7 +116,33 @@ fn append_wikilink_diagnostic(
 }
 
 ///|
-fn resolve_wikilink(
+pub fn parse_wikilink_targets(payload : String) -> Array[String] {
+  let targets : Array[String] = []
+  let mut cursor = 0
+  while cursor < payload.length() {
+    if cursor + 1 < payload.length() &&
+      payload[cursor:cursor + 2].to_string() == "[[" {
+      let close = find_wikilink_close(payload, cursor + 2)
+      match close {
+        Some(close_cursor) => {
+          let inner = payload[cursor + 2:close_cursor].to_string()
+          let (target, _) = parse_wikilink_inner(inner)
+          if target != "" {
+            targets.push(target)
+          }
+          cursor = close_cursor + 2
+        }
+        None => cursor = payload.length()
+      }
+    } else {
+      cursor = cursor + 1
+    }
+  }
+  targets
+}
+
+///|
+pub fn resolve_wikilink(
   linker : WikiLinker,
   target : String,
 ) -> Result[String, String?] {

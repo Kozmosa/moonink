@@ -117,6 +117,7 @@ pub(all) struct TemplateContext {
   theme_asset_root : String
   page_body_class : String
   navigation_html : String
+  backlink_urls : Array[String]
   current_section_title : String
   current_section_url : String
   page_header_title : String
