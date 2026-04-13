@@ -14,8 +14,56 @@ pub(all) struct ActiveThemeLayout {
 } derive(Debug, Eq)
 
 ///|
+fn built_in_theme_marker_path(root : String) -> String {
+  if root == "/" {
+    "/src/runtime/builtin_theme/layout.html"
+  } else {
+    root + "/src/runtime/builtin_theme/layout.html"
+  }
+}
+
+///|
+fn parent_search_dir(path : String) -> String? {
+  if path == "/" {
+    None
+  } else {
+    let mut last_slash : Int? = None
+    for i in 0..<path.length() {
+      if path[i:i + 1].to_string() == "/" {
+        last_slash = Some(i)
+      }
+    }
+    match last_slash {
+      Some(0) => Some("/")
+      Some(index) => Some(path[:index].to_string())
+      None => None
+    }
+  }
+}
+
+///|
+fn find_workspace_root_from(path : String) -> String? {
+  if io_path_exists(built_in_theme_marker_path(path)) {
+    Some(path)
+  } else {
+    match parent_search_dir(path) {
+      Some(parent) => find_workspace_root_from(parent)
+      None => None
+    }
+  }
+}
+
+///|
 fn built_in_default_theme_root() -> String {
-  "src/runtime/builtin_theme"
+  match @env.current_dir() {
+    Some(cwd) =>
+      match find_workspace_root_from(cwd) {
+        Some(root) if root == "/" => "/src/runtime/builtin_theme"
+        Some(root) => root + "/src/runtime/builtin_theme"
+        None => "src/runtime/builtin_theme"
+      }
+    None => "src/runtime/builtin_theme"
+  }
 }
 
 ///|

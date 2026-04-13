@@ -148,6 +148,25 @@ pub fn io_copy_file(
 }
 
 ///|
+fn join_io_path(base : String, child : String) -> String raise @core.ProjectIOError {
+  let normalized_child = @core.normalize_relative_path(child) catch {
+    err =>
+      raise @core.project_io_error(
+        "join_path",
+        child,
+        @core.format_path_policy_error(err),
+      )
+  }
+  if base == "/" {
+    "/" + normalized_child
+  } else if base.has_suffix("/") {
+    base + normalized_child
+  } else {
+    base + "/" + normalized_child
+  }
+}
+
+///|
 pub fn io_copy_dir_recursive(
   source_dir : String,
   target_dir : String,
@@ -161,21 +180,11 @@ pub fn io_copy_dir_recursive(
   io_ensure_dir(target_dir)
   let entries = io_read_dir(source_dir)
   for entry in entries {
-    let source_child = @core.join_relative_path(source_dir, entry) catch {
-      err =>
-        raise @core.project_io_error(
-          "copy_directory",
-          source_dir,
-          @core.format_path_policy_error(err),
-        )
+    let source_child = join_io_path(source_dir, entry) catch {
+      err => raise err
     }
-    let target_child = @core.join_relative_path(target_dir, entry) catch {
-      err =>
-        raise @core.project_io_error(
-          "copy_directory",
-          target_dir,
-          @core.format_path_policy_error(err),
-        )
+    let target_child = join_io_path(target_dir, entry) catch {
+      err => raise err
     }
     if io_is_dir(source_child) {
       io_copy_dir_recursive(source_child, target_child)
