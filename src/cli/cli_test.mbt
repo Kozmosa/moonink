@@ -954,6 +954,36 @@ test "runtime cli build applies configured template file" {
 }
 
 ///|
+test "runtime cli build prefers theme layout over template file" {
+  let fixture_root = "fixtures/v2/theme_layout_basic"
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(index_html.contains("data-theme-layout=\"true\""), content="true")
+  inspect(index_html.contains("<title>Home :: theme</title>"), content="true")
+  inspect(index_html.contains("class=\"moonink-page\""), content="true")
+  inspect(index_html.contains("data-theme=\"theme\""), content="true")
+  inspect(index_html.contains("href=\"/assets/style.css\""), content="true")
+  inspect(index_html.contains("data-template=\"custom\""), content="false")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/assets/style.css"),
+    content="true",
+  )
+  let theme_css = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/assets/style.css",
+  ) catch {
+    _ => panic()
+  }
+  inspect(theme_css.contains("rebeccapurple"), content="true")
+}
+
+///|
 test "runtime cli build renders automatic navigation for direct routes" {
   let fixture_root = "fixtures/v2/nav_direct_basic"
   let outcome = @cli.run_build_command_runtime_from_config(

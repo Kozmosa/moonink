@@ -207,6 +207,9 @@ pub(all) struct TemplateContext {
   url_path : String
   source_path : String
   content_kind : String
+  theme_name : String
+  theme_asset_root : String
+  page_body_class : String
   navigation_html : String
   current_section_title : String
   current_section_url : String

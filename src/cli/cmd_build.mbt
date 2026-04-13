@@ -197,6 +197,58 @@ fn copy_public_assets(
 }
 
 ///|
+fn copy_theme_assets(
+  config : @core.MooninkConfig,
+) -> Unit raise BuildCommandError {
+  let theme_root = @core.join_relative_path(config.project_root, "theme") catch {
+    err =>
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "copy_theme_assets",
+          "theme",
+          @core.format_path_policy_error(err),
+        ),
+      )
+  }
+  let assets_root = @core.join_relative_path(theme_root, "assets") catch {
+    err =>
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "copy_theme_assets",
+          "theme/assets",
+          @core.format_path_policy_error(err),
+        ),
+      )
+  }
+  if !@runtime.io_path_exists(assets_root) {
+    return
+  }
+  let is_dir = @runtime.io_is_dir(assets_root) catch {
+    err => raise BuildCommandError::ProjectIO(err)
+  }
+  if !is_dir {
+    raise BuildCommandError::ProjectIO(
+      @core.project_io_error(
+        "copy_theme_assets", assets_root, "theme assets path exists and is not a directory",
+      ),
+    )
+  }
+  let target_root = @core.join_relative_path(output_root(config), "assets") catch {
+    err =>
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "copy_theme_assets",
+          output_root(config),
+          @core.format_path_policy_error(err),
+        ),
+      )
+  }
+  @runtime.io_copy_dir_recursive(assets_root, target_root) catch {
+    err => raise BuildCommandError::ProjectIO(err)
+  }
+}
+
+///|
 fn write_build_output(
   config : @core.MooninkConfig,
   relative_output_path : String,
@@ -357,6 +409,38 @@ fn template_content_kind(kind : @core.ContentKind) -> String {
   match kind {
     @core.ContentKind::Article => "article"
     @core.ContentKind::Page => "page"
+  }
+}
+
+///|
+fn theme_name(config : @core.MooninkConfig) -> String {
+  let theme_root = @core.join_relative_path(config.project_root, "theme") catch {
+    _ => return ""
+  }
+  let layout_path = @core.join_relative_path(theme_root, "layout.html") catch {
+    _ => return ""
+  }
+  if @runtime.io_path_exists(layout_path) {
+    "theme"
+  } else {
+    ""
+  }
+}
+
+///|
+fn theme_asset_root(config : @core.MooninkConfig) -> String {
+  if theme_name(config) == "" {
+    ""
+  } else {
+    "/assets/"
+  }
+}
+
+///|
+fn page_body_class(kind : @core.ContentKind) -> String {
+  match kind {
+    @core.ContentKind::Article => "moonink-article"
+    @core.ContentKind::Page => "moonink-page"
   }
 }
 
@@ -774,6 +858,9 @@ fn build_template_context(
     url_path: input.meta.url_path,
     source_path: input.meta.source_path,
     content_kind: template_content_kind(input.meta.content_kind),
+    theme_name: theme_name(config),
+    theme_asset_root: theme_asset_root(config),
+    page_body_class: page_body_class(input.meta.content_kind),
     navigation_html: render_navigation_html(
       assembly.navigation,
       input.meta.url_path,
@@ -807,6 +894,69 @@ fn apply_build_template(
 }
 
 ///|
+fn resolve_build_template_source(
+  config : @core.MooninkConfig,
+) -> Result[String?, BuildCommandError] {
+  let theme_root = @core.join_relative_path(config.project_root, "theme") catch {
+    err =>
+      return Err(
+        BuildCommandError::ProjectIO(
+          @core.project_io_error(
+            "load_template",
+            "theme",
+            @core.format_path_policy_error(err),
+          ),
+        ),
+      )
+  }
+  let theme_layout_path = @core.join_relative_path(theme_root, "layout.html") catch {
+    err =>
+      return Err(
+        BuildCommandError::ProjectIO(
+          @core.project_io_error(
+            "load_template",
+            "theme/layout.html",
+            @core.format_path_policy_error(err),
+          ),
+        ),
+      )
+  }
+  if @runtime.io_path_exists(theme_layout_path) {
+    if !(@runtime.io_is_file(theme_layout_path) catch {
+        err => return Err(BuildCommandError::ProjectIO(err))
+      }) {
+      return Err(
+        BuildCommandError::ProjectIO(
+          @core.project_io_error(
+            "load_template", theme_layout_path, "theme layout exists and is not a file",
+          ),
+        ),
+      )
+    }
+    let source = @runtime.io_read_file_to_string(theme_layout_path) catch {
+      err => return Err(BuildCommandError::ProjectIO(err))
+    }
+    return Ok(Some(source))
+  }
+  match @runtime.load_template_source_result(config) {
+    Ok(template_source) => Ok(template_source)
+    Err(err) =>
+      Err(
+        BuildCommandError::ProjectIO(
+          @core.project_io_error(
+            "load_template",
+            match config.template_file {
+              Some(path) => path
+              None => config.config_path
+            },
+            @core.format_config_error(err),
+          ),
+        ),
+      )
+  }
+}
+
+///|
 fn build_site_result(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
@@ -821,22 +971,13 @@ fn build_site_result(
   copy_public_assets(config) catch {
     err => return Err(err)
   }
+  copy_theme_assets(config) catch {
+    err => return Err(err)
+  }
   let assembly = build_site_assembly_model(config, inputs, inventory)
-  let template_source = match @runtime.load_template_source_result(config) {
+  let template_source = match resolve_build_template_source(config) {
     Ok(template_source) => template_source
-    Err(err) =>
-      return Err(
-        BuildCommandError::ProjectIO(
-          @core.project_io_error(
-            "load_template",
-            match config.template_file {
-              Some(path) => path
-              None => config.config_path
-            },
-            @core.format_config_error(err),
-          ),
-        ),
-      )
+    Err(err) => return Err(err)
   }
   let mut emitted_html_files = 0
   let mut article_count = 0

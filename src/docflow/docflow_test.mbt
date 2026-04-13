@@ -225,13 +225,17 @@ test "docflow native template renderer interpolates navigation html" {
   }
   let context : @docflow.TemplateContext = {
     ..@docflow.default_template_context(rendered),
+    theme_name: "theme",
+    theme_asset_root: "/assets/",
+    page_body_class: "moonink-page",
     navigation_html: "<nav data-moonink-nav=\"auto\"></nav>",
   }
   inspect(
     @docflow.render_template_string(
-      "<aside>{{ navigation_html }}</aside><main>{{ body_html }}</main>", context,
+      "<aside>{{ navigation_html }}</aside><main>{{ body_html }}</main><link href=\"{{ theme_asset_root }}style.css\"><body class=\"{{ page_body_class }}\" data-theme=\"{{ theme_name }}\">",
+      context,
     ),
-    content="<aside><nav data-moonink-nav=\"auto\"></nav></aside><main><h1>Hello</h1></main>",
+    content="<aside><nav data-moonink-nav=\"auto\"></nav></aside><main><h1>Hello</h1></main><link href=\"/assets/style.css\"><body class=\"moonink-page\" data-theme=\"theme\">",
   )
 }
 
@@ -247,10 +251,10 @@ test "docflow native template renderer interpolates built-in variables" {
   let context = @docflow.default_template_context(rendered)
   inspect(
     @docflow.render_template_string(
-      "<title>{{ page_title }}</title><section>{{ body_html }}</section><nav>{{ current_section_title }}</nav><footer data-title=\"{{ page_header_title }}\">{{ page_header_html }}</footer><aside>{{ unknown }}</aside>",
+      "<title>{{ page_title }}</title><section>{{ body_html }}</section><nav>{{ current_section_title }}</nav><footer data-title=\"{{ page_header_title }}\">{{ page_header_html }}</footer><aside>{{ unknown }}</aside><link href=\"{{ theme_asset_root }}style.css\"><body class=\"{{ page_body_class }}\" data-theme=\"{{ theme_name }}\">",
       context,
     ),
-    content="<title>articles/hello.md</title><section><h1>Hello</h1></section><nav></nav><footer data-title=\"\"></footer><aside></aside>",
+    content="<title>articles/hello.md</title><section><h1>Hello</h1></section><nav></nav><footer data-title=\"\"></footer><aside></aside><link href=\"style.css\"><body class=\"moonink-article\" data-theme=\"\">",
   )
 }
 
@@ -339,6 +343,9 @@ test "docflow apply_template uses provided page metadata context" {
       url_path: "/welcome/",
       source_path: "notes/welcome.md",
       content_kind: "page",
+      theme_name: "",
+      theme_asset_root: "",
+      page_body_class: "moonink-page",
       navigation_html: "<nav></nav>",
       current_section_title: "Guide",
       current_section_url: "/guide/",
@@ -374,6 +381,9 @@ test "docflow apply_built_in_template uses provided page metadata context" {
     url_path: "/welcome/",
     source_path: "notes/welcome.md",
     content_kind: "page",
+    theme_name: "",
+    theme_asset_root: "",
+    page_body_class: "moonink-page",
     navigation_html: "<nav></nav>",
     current_section_title: "Guide",
     current_section_url: "/guide/",

@@ -138,6 +138,9 @@ fn lookup_template_variable(context : TemplateContext, name : String) -> String 
     "url_path" => context.url_path
     "source_path" => context.source_path
     "content_kind" => context.content_kind
+    "theme_name" => context.theme_name
+    "theme_asset_root" => context.theme_asset_root
+    "page_body_class" => context.page_body_class
     "navigation_html" => context.navigation_html
     "current_section_title" => context.current_section_title
     "current_section_url" => context.current_section_url
@@ -208,6 +211,9 @@ pub fn default_template_context(rendered : RenderedDocument) -> TemplateContext 
     url_path: route_from_source_path(rendered.source_path),
     source_path: rendered.source_path,
     content_kind: "article",
+    theme_name: "",
+    theme_asset_root: "",
+    page_body_class: "moonink-article",
     navigation_html: "",
     current_section_title: "",
     current_section_url: "",
