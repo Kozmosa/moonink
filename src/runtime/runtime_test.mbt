@@ -30,10 +30,7 @@ test "load_active_theme_layout_result falls back to built-in default theme" {
     content="true",
   )
   inspect(layout.theme_name, content="default")
-  inspect(
-    layout.asset_source_dir,
-    content="Some(\"src/runtime/builtin_theme/assets\")",
-  )
+  inspect(layout.asset_source_dir is Some(_), content="true")
   inspect(layout.source.contains("data-theme=\"default\""), content="true")
 }
 

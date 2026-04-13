@@ -10,11 +10,40 @@ body {
   border-bottom: 1px solid #d9d0c4;
 }
 
+.site-shell {
+  display: grid;
+  grid-template-columns: 16rem minmax(0, 1fr);
+}
+
+.site-shell[data-content-layout="article"] {
+  grid-template-columns: 14rem minmax(0, 44rem);
+}
+
 .site-nav {
   padding: 1rem 2rem;
 }
 
-main {
+.content-shell {
   padding: 2rem;
+}
+
+.content-header {
+  margin-bottom: 1.5rem;
+}
+
+.content-header[data-content-layout="article"] .content-kind-label {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.content-title {
+  margin: 0 0 0.75rem;
+}
+
+.content-context {
+  color: #5c5146;
+}
+
+main {
   max-width: 48rem;
 }

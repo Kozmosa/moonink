@@ -737,6 +737,8 @@ test "runtime cli build writes minimal fixture html files" {
     content="true",
   )
   inspect(index_html.contains("class=\"moonink-page\""), content="true")
+  inspect(index_html.contains("data-content-layout=\"page\""), content="true")
+  inspect(index_html.contains("class=\"content-title\">Home</h1>"), content="true")
   inspect(
     @runtime.io_path_exists(fixture_root + "/dist/assets/moonink-default.css"),
     content="true",
@@ -758,6 +760,8 @@ test "runtime cli build writes minimal fixture html files" {
   inspect(hello_html.contains("Hello World"), content="true")
   inspect(hello_html.contains("<title>Hello</title>"), content="true")
   inspect(hello_html.contains("data-kind=\"article\""), content="true")
+  inspect(hello_html.contains("data-content-layout=\"article\""), content="true")
+  inspect(hello_html.contains("class=\"content-kind-label\">article</p>"), content="true")
   inspect(
     hello_html.contains("href=\"https://example.com/docs\""),
     content="true",

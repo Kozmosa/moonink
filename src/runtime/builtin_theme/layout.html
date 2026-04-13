@@ -9,8 +9,16 @@
     <header class="site-header">
       <a href="{{ site_url }}">{{ site_name }}</a>
     </header>
-    <aside class="site-nav">{{ navigation_html }}</aside>
-    <div class="section-context" data-section-title="{{ current_section_title }}" data-section-url="{{ current_section_url }}">{{ page_header_html }}</div>
-    <main data-source="{{ source_path }}">{{ body_html }}</main>
+    <div class="site-shell" data-content-layout="{{ content_kind }}">
+      <aside class="site-nav">{{ navigation_html }}</aside>
+      <div class="content-shell">
+        <header class="content-header" data-content-layout="{{ content_kind }}">
+          <p class="content-kind-label">{{ content_kind }}</p>
+          <h1 class="content-title">{{ page_header_title }}</h1>
+          <div class="content-context" data-section-title="{{ current_section_title }}" data-section-url="{{ current_section_url }}">{{ page_header_html }}</div>
+        </header>
+        <main data-source="{{ source_path }}">{{ body_html }}</main>
+      </div>
+    </div>
   </body>
 </html>
