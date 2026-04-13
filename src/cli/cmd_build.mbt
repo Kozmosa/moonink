@@ -16,27 +16,6 @@ pub(all) struct BuildSummary {
 } derive(Debug, Eq)
 
 ///|
-pub(all) suberror CheckCommandError {
-  ContentDiscovery(@core.ContentDiscoveryError)
-  AdapterRegistry(@docflow.AdapterRegistryError)
-  FatalParse(@docflow.FatalParseError)
-} derive(Debug, Eq)
-
-///|
-pub(all) struct CheckSummary {
-  processed_sources : Int
-  article_count : Int
-  page_count : Int
-  diagnostic_count : Int
-} derive(Debug, Eq)
-
-///|
-pub(all) struct CheckDiagnostic {
-  source_path : String
-  entry : @docflow.DocumentDiagnostic
-} derive(Debug, Eq)
-
-///|
 fn format_runtime_config_error(err : @core.ConfigError) -> String {
   "[build] failed during config loading\n\{@core.format_config_error(err)}"
 }
@@ -44,18 +23,6 @@ fn format_runtime_config_error(err : @core.ConfigError) -> String {
 ///|
 fn format_runtime_content_error(err : @core.ContentDiscoveryError) -> String {
   "[build] failed during content discovery\n\{@core.format_content_discovery_error(err)}"
-}
-
-///|
-fn format_check_runtime_config_error(err : @core.ConfigError) -> String {
-  "[check] failed during config loading\n\{@core.format_config_error(err)}"
-}
-
-///|
-fn format_check_runtime_content_error(
-  err : @core.ContentDiscoveryError,
-) -> String {
-  "[check] failed during content discovery\n\{@core.format_content_discovery_error(err)}"
 }
 
 ///|
@@ -69,37 +36,6 @@ fn format_build_command_error(err : BuildCommandError) -> String {
       "[build] failed during document parsing\n\{inner.to_string()}"
     BuildCommandError::ProjectIO(inner) =>
       "[build] failed during file emission\n\{@core.format_project_io_error(inner)}"
-  }
-}
-
-///|
-fn format_check_command_error(err : CheckCommandError) -> String {
-  match err {
-    CheckCommandError::ContentDiscovery(inner) =>
-      "[check] failed during content preparation\n\{@core.format_content_discovery_error(inner)}"
-    CheckCommandError::AdapterRegistry(inner) =>
-      "[check] failed during adapter lookup\n\{inner.to_string()}"
-    CheckCommandError::FatalParse(inner) =>
-      "[check] failed during document parsing\n\{inner.to_string()}"
-  }
-}
-
-///|
-fn check_parser_for_format(
-  format : @core.SourceFormat,
-) -> Result[@docflow.ParserAdapter, CheckCommandError] {
-  let registry = @docflow.register_parser_adapter(
-    @docflow.register_parser_adapter(
-      @docflow.empty_parser_registry(),
-      @core.SourceFormat::Markdown,
-      @docflow.markdown_parser_adapter(),
-    ),
-    @core.SourceFormat::Html,
-    @docflow.html_passthrough_parser_adapter(),
-  )
-  match @docflow.lookup_parser_adapter(registry, format) {
-    Ok(adapter) => Ok(adapter)
-    Err(err) => Err(CheckCommandError::AdapterRegistry(err))
   }
 }
 
@@ -160,75 +96,6 @@ fn prepare_output_dir(
     err => raise BuildCommandError::ProjectIO(err)
   }
   @runtime.io_ensure_dir(root) catch {
-    err => raise BuildCommandError::ProjectIO(err)
-  }
-}
-
-///|
-fn copy_public_assets(
-  config : @core.MooninkConfig,
-) -> Unit raise BuildCommandError {
-  let public_root = @core.join_relative_path(config.project_root, "public") catch {
-    err =>
-      raise BuildCommandError::ProjectIO(
-        @core.project_io_error(
-          "copy_public",
-          "public",
-          @core.format_path_policy_error(err),
-        ),
-      )
-  }
-  if !@runtime.io_path_exists(public_root) {
-    return
-  }
-  let is_dir = @runtime.io_is_dir(public_root) catch {
-    err => raise BuildCommandError::ProjectIO(err)
-  }
-  if !is_dir {
-    raise BuildCommandError::ProjectIO(
-      @core.project_io_error(
-        "copy_public", public_root, "public path exists and is not a directory",
-      ),
-    )
-  }
-  @runtime.io_copy_dir_recursive(public_root, output_root(config)) catch {
-    err => raise BuildCommandError::ProjectIO(err)
-  }
-}
-
-///|
-fn copy_selected_theme_assets(
-  config : @core.MooninkConfig,
-  active_theme : @runtime.ActiveThemeLayout,
-) -> Unit raise BuildCommandError {
-  let assets_root = match active_theme.asset_source_dir {
-    Some(path) => path
-    None => return
-  }
-  if !@runtime.io_path_exists(assets_root) {
-    return
-  }
-  let is_dir = @runtime.io_is_dir(assets_root) catch {
-    err => raise BuildCommandError::ProjectIO(err)
-  }
-  if !is_dir {
-    raise BuildCommandError::ProjectIO(
-      @core.project_io_error(
-        "copy_theme_assets", assets_root, "theme assets path exists and is not a directory",
-      ),
-    )
-  }
-  let target_root = @core.join_relative_path(output_root(config), "assets") catch {
-    err =>
-      raise BuildCommandError::ProjectIO(
-        @core.project_io_error(
-          "copy_theme_assets",
-          output_root(config),
-          @core.format_path_policy_error(err),
-        ),
-      )
-  }
-  @runtime.io_copy_dir_recursive(assets_root, target_root) catch {
     err => raise BuildCommandError::ProjectIO(err)
   }
 }
@@ -336,44 +203,7 @@ fn register_exact_target(
 }
 
 ///|
-pub fn build_backlink_index(
-  inputs : Array[@runtime.BuildInput],
-  wikilinker : @docflow.WikiLinker,
-) -> Map[String, Array[String]] {
-  let backlinks : Map[String, Array[String]] = {}
-  for input in inputs {
-    if input.meta.format != @core.SourceFormat::Markdown {
-      continue
-    }
-    let source_url = input.meta.url_path
-    let seen_targets : Map[String, Bool] = {}
-    let parsed : @docflow.ParsedDocument = {
-      backend_name: wikilinker.name,
-      source_format: input.meta.format,
-      source_path: input.meta.source_path,
-      source_uuid: input.absolute_source_path,
-      diagnostics: @docflow.empty_document_diagnostics(),
-      backend_payload: Some(input.docflow_content),
-    }
-    for target_url in @docflow.collect_resolved_wikilink_urls(wikilinker, parsed) {
-      if seen_targets.get(target_url) is Some(_) {
-        continue
-      }
-      seen_targets[target_url] = true
-      let sources = match backlinks.get(target_url) {
-        Some(entries) => entries
-        None => []
-      }
-      backlinks[target_url] = sources + [source_url]
-    }
-  }
-  backlinks
-}
-
-///|
-pub fn build_wikilinker(
-  inputs : Array[@runtime.BuildInput],
-) -> @docflow.WikiLinker {
+fn build_wikilinker(inputs : Array[@runtime.BuildInput]) -> @docflow.WikiLinker {
   let basename_keys : Array[String] = []
   let index_alias_keys : Array[String] = []
   for input in inputs {
@@ -427,31 +257,84 @@ pub fn build_wikilinker(
 }
 
 ///|
+fn render_backlinks_html(
+  current_url : String,
+  pages : Array[@core.SitePage],
+  backlinks : Map[String, Array[String]],
+) -> String {
+  let backlink_urls = match backlinks.get(current_url) {
+    Some(urls) => urls
+    None => []
+  }
+  if backlink_urls.is_empty() {
+    return ""
+  }
+  let items : Array[String] = []
+  for url in backlink_urls {
+    let mut title = url
+    for page in pages {
+      if page.url_path == url {
+        title = page.title
+        break
+      }
+    }
+    items.push(
+      "<li><a href=\"" +
+      escape_html_text(url) +
+      "\">" +
+      escape_html_text(title) +
+      "</a></li>",
+    )
+  }
+  "<aside class=\"page-backlinks\"><section class=\"backlinks\" aria-label=\"Backlinks\"><h2>Backlinks</h2><ul>" +
+  items.iter().join("") +
+  "</ul></section></aside>"
+}
+
+///|
+fn build_backlink_index(
+  inputs : Array[@runtime.BuildInput],
+  wikilinker : @docflow.WikiLinker,
+) -> Map[String, Array[String]] {
+  let backlinks : Map[String, Array[String]] = {}
+  for input in inputs {
+    if input.meta.format != @core.SourceFormat::Markdown {
+      continue
+    }
+    let parsed : @docflow.ParsedDocument = {
+      backend_name: "backlink-scan",
+      source_format: input.meta.format,
+      source_path: input.meta.source_path,
+      source_uuid: input.meta.source_path,
+      diagnostics: @docflow.empty_document_diagnostics(),
+      backend_payload: Some(input.docflow_content),
+    }
+    let resolved_targets = @docflow.collect_resolved_wikilink_targets(
+      wikilinker,
+      parsed,
+    )
+    for url in resolved_targets {
+      let existing = match backlinks.get(url) {
+        Some(urls) => urls
+        None => []
+      }
+      let already_present = existing.search_by(fn(existing_url) {
+          existing_url == input.meta.url_path
+        })
+        is Some(_)
+      if !already_present {
+        backlinks[url] = existing + [input.meta.url_path]
+      }
+    }
+  }
+  backlinks
+}
+
+///|
 fn template_content_kind(kind : @core.ContentKind) -> String {
   match kind {
     @core.ContentKind::Article => "article"
     @core.ContentKind::Page => "page"
-  }
-}
-
-///|
-fn theme_name(active_theme : @runtime.ActiveThemeLayout) -> String {
-  active_theme.theme_name
-}
-
-///|
-fn theme_asset_root(active_theme : @runtime.ActiveThemeLayout) -> String {
-  match active_theme.asset_source_dir {
-    Some(_) => "/assets/"
-    None => ""
-  }
-}
-
-///|
-fn page_body_class(kind : @core.ContentKind) -> String {
-  match kind {
-    @core.ContentKind::Article => "moonink-article"
-    @core.ContentKind::Page => "moonink-page"
   }
 }
 
@@ -842,11 +725,10 @@ pub fn build_site_assembly_model(
 ///|
 fn build_template_context(
   config : @core.MooninkConfig,
-  active_theme : @runtime.ActiveThemeLayout,
   assembly : @core.SiteAssemblyModel,
-  backlink_index : Map[String, Array[String]],
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
+  backlinks : Map[String, Array[String]],
 ) -> @docflow.TemplateContext {
   let current_section = find_current_section_page(
     assembly.pages,
@@ -860,10 +742,6 @@ fn build_template_context(
     Some(section) => section.url_path
     None => ""
   }
-  let backlink_urls = match backlink_index.get(input.meta.url_path) {
-    Some(backlinks) => backlinks
-    None => []
-  }
   {
     site_name: config.site_name,
     site_url: match config.site_url {
@@ -875,14 +753,10 @@ fn build_template_context(
     url_path: input.meta.url_path,
     source_path: input.meta.source_path,
     content_kind: template_content_kind(input.meta.content_kind),
-    theme_name: theme_name(active_theme),
-    theme_asset_root: theme_asset_root(active_theme),
-    page_body_class: page_body_class(input.meta.content_kind),
     navigation_html: render_navigation_html(
       assembly.navigation,
       input.meta.url_path,
     ),
-    backlink_urls,
     current_section_title,
     current_section_url,
     page_header_title: site_page_title(input.meta),
@@ -891,6 +765,11 @@ fn build_template_context(
       assembly.pages,
       input,
     ),
+    backlinks_html: render_backlinks_html(
+      input.meta.url_path,
+      assembly.pages,
+      backlinks,
+    ),
     body_html: rendered.html,
   }
 }
@@ -898,32 +777,39 @@ fn build_template_context(
 ///|
 fn apply_build_template(
   config : @core.MooninkConfig,
-  active_theme : @runtime.ActiveThemeLayout,
   assembly : @core.SiteAssemblyModel,
-  backlink_index : Map[String, Array[String]],
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
-  template_source : String,
+  backlinks : Map[String, Array[String]],
+  template_source : String?,
 ) -> @docflow.TemplatedPage {
   let context = build_template_context(
-    config,
-    active_theme,
-    assembly,
-    backlink_index,
-    input,
-    rendered,
+    config, assembly, input, rendered, backlinks,
   )
-  @docflow.apply_template(rendered, context, template_source)
+  match template_source {
+    Some(template_source) =>
+      @docflow.apply_template(rendered, context, template_source)
+    None => @docflow.apply_built_in_template(rendered, context)
+  }
 }
 
 ///|
-fn resolve_active_theme_layout(
+fn build_site_result(
   config : @core.MooninkConfig,
-) -> Result[@runtime.ActiveThemeLayout, BuildCommandError] {
-  match @runtime.load_active_theme_layout_result(config) {
-    Ok(layout) => Ok(layout)
+  inventory : @core.ContentInventory,
+) -> Result[BuildSummary, BuildCommandError] {
+  let inputs = match @runtime.load_build_inputs_result(config, inventory) {
+    Ok(inputs) => inputs
+    Err(err) => return Err(BuildCommandError::ContentDiscovery(err))
+  }
+  prepare_output_dir(config) catch {
+    err => return Err(err)
+  }
+  let assembly = build_site_assembly_model(config, inputs, inventory)
+  let template_source = match @runtime.load_template_source_result(config) {
+    Ok(template_source) => template_source
     Err(err) =>
-      Err(
+      return Err(
         BuildCommandError::ProjectIO(
           @core.project_io_error(
             "load_template",
@@ -936,37 +822,11 @@ fn resolve_active_theme_layout(
         ),
       )
   }
-}
-
-///|
-fn build_site_result(
-  config : @core.MooninkConfig,
-  inventory : @core.ContentInventory,
-  backlink_index : Map[String, Array[String]],
-) -> Result[BuildSummary, BuildCommandError] {
-  let inputs = match @runtime.load_build_inputs_result(config, inventory) {
-    Ok(inputs) => inputs
-    Err(err) => return Err(BuildCommandError::ContentDiscovery(err))
-  }
-  prepare_output_dir(config) catch {
-    err => return Err(err)
-  }
-  copy_public_assets(config) catch {
-    err => return Err(err)
-  }
-  let active_theme = match resolve_active_theme_layout(config) {
-    Ok(active_theme) => active_theme
-    Err(err) => return Err(err)
-  }
-  copy_selected_theme_assets(config, active_theme) catch {
-    err => return Err(err)
-  }
-  let assembly = build_site_assembly_model(config, inputs, inventory)
-  let template_source = active_theme.source
   let mut emitted_html_files = 0
   let mut article_count = 0
   let mut page_count = 0
   let wikilinker = build_wikilinker(inputs)
+  let backlinks = build_backlink_index(inputs, wikilinker)
   for input in inputs {
     let parser = match parser_for_format(input.meta.format) {
       Ok(parser) => parser
@@ -990,13 +850,7 @@ fn build_site_result(
     let linked = @docflow.apply_wikilinker(wikilinker, parsed)
     let rendered = @docflow.render_with_adapter(renderer, linked)
     let templated = apply_build_template(
-      config,
-      active_theme,
-      assembly,
-      backlink_index,
-      input,
-      rendered,
-      template_source,
+      config, assembly, input, rendered, backlinks, template_source,
     )
     let output_path = @core.output_html_path(
       input.meta.source_path,
@@ -1033,98 +887,6 @@ fn summarize_build_success(
 }
 
 ///|
-fn format_check_diagnostic_lines(
-  diagnostics : Array[CheckDiagnostic],
-) -> String {
-  let lines : Array[String] = []
-  for diagnostic in diagnostics {
-    lines.push("[\{diagnostic.source_path}]")
-    lines.push(@docflow.format_document_diagnostic(diagnostic.entry))
-  }
-  lines.iter().join("\n")
-}
-
-///|
-fn summarize_check_success(
-  config : @core.MooninkConfig,
-  inventory : @core.ContentInventory,
-  summary : CheckSummary,
-  diagnostics : Array[CheckDiagnostic],
-) -> CliOutcome {
-  let header = if summary.diagnostic_count == 0 {
-    "[check] completed"
-  } else {
-    "[check] completed with diagnostics"
-  }
-  let details = if diagnostics.is_empty() {
-    ""
-  } else {
-    "\n---\n" + format_check_diagnostic_lines(diagnostics)
-  }
-  {
-    exit_code: if summary.diagnostic_count == 0 {
-      0
-    } else {
-      1
-    },
-    message: header +
-    "\nsite: \{config.site_name}\nconfig: \{config.config_path}\ncontent root: \{inventory.root}\nprocessed: \{summary.processed_sources}\narticles: \{summary.article_count}\npages: \{summary.page_count}\ndiagnostics: \{summary.diagnostic_count}" +
-    details,
-  }
-}
-
-///|
-fn check_site_result(
-  config : @core.MooninkConfig,
-  inventory : @core.ContentInventory,
-) -> Result[(CheckSummary, Array[CheckDiagnostic]), CheckCommandError] {
-  let inputs = match @runtime.load_build_inputs_result(config, inventory) {
-    Ok(inputs) => inputs
-    Err(err) => return Err(CheckCommandError::ContentDiscovery(err))
-  }
-  let wikilinker = build_wikilinker(inputs)
-  let diagnostics : Array[CheckDiagnostic] = []
-  let mut article_count = 0
-  let mut page_count = 0
-  for input in inputs {
-    let parser = match check_parser_for_format(input.meta.format) {
-      Ok(parser) => parser
-      Err(err) => return Err(err)
-    }
-    let source_input : @docflow.SourceDocumentInput = {
-      path: input.meta.source_path,
-      format: input.meta.format,
-      content: input.docflow_content,
-      uuid: input.meta.source_path,
-    }
-    let parsed = match
-      @docflow.parse_with_adapter_result(parser, source_input) {
-      Ok(parsed) => parsed
-      Err(err) => return Err(CheckCommandError::FatalParse(err))
-    }
-    let linked = @docflow.apply_wikilinker(wikilinker, parsed)
-    for entry in linked.diagnostics.entries {
-      diagnostics.push({ source_path: input.meta.source_path, entry })
-    }
-    match input.meta.content_kind {
-      @core.ContentKind::Article => article_count = article_count + 1
-      @core.ContentKind::Page => page_count = page_count + 1
-    }
-  }
-  Ok(
-    (
-      {
-        processed_sources: inputs.length(),
-        article_count,
-        page_count,
-        diagnostic_count: diagnostics.length(),
-      },
-      diagnostics,
-    ),
-  )
-}
-
-///|
 pub fn run_build_command_runtime_from_config(
   config_path : String,
 ) -> CliOutcome {
@@ -1140,18 +902,7 @@ pub fn run_build_command_runtime_from_config(
     Err(err) =>
       return { exit_code: 1, message: format_runtime_content_error(err) }
   }
-  let inputs = match @runtime.load_build_inputs_result(config, inventory) {
-    Ok(inputs) => inputs
-    Err(err) =>
-      return {
-        exit_code: 1,
-        message: format_build_command_error(
-          BuildCommandError::ContentDiscovery(err),
-        ),
-      }
-  }
-  let backlink_index = build_backlink_index(inputs, build_wikilinker(inputs))
-  let summary = match build_site_result(config, inventory, backlink_index) {
+  let summary = match build_site_result(config, inventory) {
     Ok(summary) => summary
     Err(err) =>
       return { exit_code: 1, message: format_build_command_error(err) }
@@ -1160,54 +911,8 @@ pub fn run_build_command_runtime_from_config(
 }
 
 ///|
-pub fn run_check_command_runtime_from_config(
-  config_path : String,
-) -> CliOutcome {
-  let config_result = @runtime.load_config_result(config_path)
-  let config = match config_result {
-    Ok(config) => config
-    Err(err) =>
-      return { exit_code: 1, message: format_check_runtime_config_error(err) }
-  }
-  let inventory = match
-    @runtime.run_runtime_io_task(@runtime.discover_content_task(config)) {
-    Ok(inventory) => inventory
-    Err(err) =>
-      return { exit_code: 1, message: format_check_runtime_content_error(err) }
-  }
-  let check_result = match check_site_result(config, inventory) {
-    Ok(result) => result
-    Err(err) =>
-      return { exit_code: 1, message: format_check_command_error(err) }
-  }
-  let (summary, diagnostics) = check_result
-  summarize_check_success(config, inventory, summary, diagnostics)
-}
-
-///|
-pub fn run_check_command_runtime() -> CliOutcome {
-  run_check_command_runtime_from_config("moonink.json")
-}
-
-///|
 pub fn run_build_command_runtime() -> CliOutcome {
   run_build_command_runtime_from_config("moonink.json")
-}
-
-///|
-fn run_check_command() -> CliOutcome {
-  {
-    exit_code: 0,
-    message: "[check] runtime execution required\nstatus: use cli_exec or the runtime IO boundary to load config, discover content, and collect diagnostics",
-  }
-}
-
-///|
-fn run_native_check_command() -> CliOutcome {
-  @runtime.run_native_runtime_io_task_with_policy(
-    @runtime.RuntimeIOTask::Ready(run_check_command_runtime()),
-    @runtime.native_runtime_adapter().policy,
-  )
 }
 
 ///|

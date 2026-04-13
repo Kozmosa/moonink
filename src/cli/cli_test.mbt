@@ -792,6 +792,26 @@ test "runtime cli build renders automatic navigation for pretty routes" {
 }
 
 ///|
+test "runtime cli build renders backlinks for minimal fixture" {
+  let fixture_root = "fixtures/v2/minimal"
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let hello_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/hello/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(
+    hello_html.contains(
+      "<aside class=\"page-backlinks\"><section class=\"backlinks\" aria-label=\"Backlinks\"><h2>Backlinks</h2><ul><li><a href=\"/\">Home</a></li></ul></section></aside>",
+    ),
+    content="true",
+  )
+}
+
+///|
 test "runtime cli build writes minimal fixture html files" {
   let fixture_root = "fixtures/v2/minimal"
   let stale_path = fixture_root + "/dist/stale.txt"

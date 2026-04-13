@@ -4,3 +4,5 @@ type: page
 ---
 
 # Home
+
+See [[hello]].

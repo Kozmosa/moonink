@@ -147,6 +147,7 @@ fn lookup_template_variable(context : TemplateContext, name : String) -> String 
     "current_section_url" => context.current_section_url
     "page_header_title" => context.page_header_title
     "page_header_html" => context.page_header_html
+    "backlinks_html" => context.backlinks_html
     "body_html" => context.body_html
     _ => ""
   }
@@ -221,13 +222,14 @@ pub fn default_template_context(rendered : RenderedDocument) -> TemplateContext 
     current_section_url: "",
     page_header_title: "",
     page_header_html: "",
+    backlinks_html: "",
     body_html: rendered.html,
   }
 }
 
 ///|
 pub fn default_page_template() -> String {
-  "<!doctype html>\n<html><head><meta charset=\"utf-8\"><title>{{ page_title }}</title></head><body data-kind=\"{{ content_kind }}\" data-url=\"{{ url_path }}\"><header><a href=\"{{ site_url }}\">{{ site_name }}</a></header><aside class=\"site-nav\">{{ navigation_html }}</aside><div class=\"section-context\" data-section-title=\"{{ current_section_title }}\" data-section-url=\"{{ current_section_url }}\">{{ page_header_html }}</div><main data-source=\"{{ source_path }}\">{{ body_html }}</main></body></html>"
+  "<!doctype html>\n<html><head><meta charset=\"utf-8\"><title>{{ page_title }}</title></head><body data-kind=\"{{ content_kind }}\" data-url=\"{{ url_path }}\"><header><a href=\"{{ site_url }}\">{{ site_name }}</a></header><aside class=\"site-nav\">{{ navigation_html }}</aside><div class=\"section-context\" data-section-title=\"{{ current_section_title }}\" data-section-url=\"{{ current_section_url }}\">{{ page_header_html }}</div><main data-source=\"{{ source_path }}\">{{ body_html }}</main>{{ backlinks_html }}</body></html>"
 }
 
 ///|

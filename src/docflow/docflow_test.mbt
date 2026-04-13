@@ -284,6 +284,60 @@ test "docflow render adapter contract produces html from parsed document" {
 }
 
 ///|
+test "docflow native template renderer interpolates backlinks html" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "articles/hello.md",
+    source_uuid: "article-001",
+    html: "<h1>Hello</h1>",
+    note: "rendered html for backlinks template test",
+  }
+  let context : @docflow.TemplateContext = {
+    ..@docflow.default_template_context(rendered),
+    backlinks_html: "<aside class=\"page-backlinks\"><section class=\"backlinks\"><a href=\"/\">Home</a></section></aside>",
+  }
+  inspect(
+    @docflow.render_template_string(
+      "<main>{{ body_html }}</main><aside>{{ backlinks_html }}</aside>", context,
+    ),
+    content="<main><h1>Hello</h1></main><aside><aside class=\"page-backlinks\"><section class=\"backlinks\"><a href=\"/\">Home</a></section></aside></aside>",
+  )
+}
+
+///|
+test "docflow apply_built_in_template renders backlinks slot when present" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "notes/welcome.md",
+    source_uuid: "page-ctx-001",
+    html: "<p>Welcome</p>",
+    note: "rendered html for built-in template backlinks test",
+  }
+  let templated = @docflow.apply_built_in_template(rendered, {
+    site_name: "Fixture Site",
+    site_url: "https://example.com/docs",
+    page_title: "Welcome",
+    page_description: "Landing page",
+    url_path: "/welcome/",
+    source_path: "notes/welcome.md",
+    content_kind: "page",
+    navigation_html: "<nav></nav>",
+    current_section_title: "Guide",
+    current_section_url: "/guide/",
+    page_header_title: "Welcome",
+    page_header_html: "<nav class=\"breadcrumb\"></nav>",
+    backlinks_html: "<aside class=\"page-backlinks\"><section class=\"backlinks\"><a href=\"/\">Home</a></section></aside>",
+    body_html: rendered.html,
+  })
+  inspect(
+    templated.html.contains(
+      "<aside class=\"page-backlinks\"><section class=\"backlinks\"><a href=\"/\">Home</a></section></aside>",
+    ),
+    content="true",
+  )
+}
+
+///|
 test "docflow native template renderer interpolates navigation html" {
   let rendered : @docflow.RenderedDocument = {
     backend_name: "fake-html-renderer",
@@ -421,6 +475,7 @@ test "docflow apply_template uses provided page metadata context" {
       current_section_url: "/guide/",
       page_header_title: "Welcome",
       page_header_html: "<nav class=\"breadcrumb\"></nav>",
+      backlinks_html: "",
       body_html: rendered.html,
     },
     "<article data-title=\"{{ page_title }}\" data-section=\"{{ current_section_title }}\" data-section-url=\"{{ current_section_url }}\" data-header-title=\"{{ page_header_title }}\">{{ page_header_html }}{{ body_html }}</article>",
@@ -460,6 +515,7 @@ test "docflow apply_built_in_template uses provided page metadata context" {
     current_section_url: "/guide/",
     page_header_title: "Welcome",
     page_header_html: "<nav class=\"breadcrumb\"></nav>",
+    backlinks_html: "",
     body_html: rendered.html,
   })
   inspect(templated.route, content="/welcome/")
