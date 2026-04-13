@@ -31,20 +31,44 @@ Runs the static generation pipeline:
 5. Apply templater and site constructor.
 6. Emit HTML to `output_dir` (default `dist/`).
 
-Current implementation: phases 1–2 are real; phases 3–6 remain scaffold placeholders.
+Current implementation includes the real parser/render/template/site-assembly flow, route-aware pretty/direct output layout, and build-time wikilink rewriting based on discovered page routes.
 
 ### `serve`
 
 Run a local development preview flow for the generated site.
 
-Current MVP behavior:
+Main workspace behavior:
 
 1. Load `moonink.json`.
 2. Reuse the build pipeline to regenerate `output_dir`.
 3. Validate the preview root and prepare a preview launch record with default `127.0.0.1:3000`.
 4. Return a runtime status message that exposes the preview address and built output directory.
 
-The preview runner is now isolated behind `src/runtime/serve.mbt`. Tests currently exercise the dry-run validation path so the standard wasm-gc test suite can verify serve orchestration without starting a native server. A native mocket runner slot is reserved for the native-only entrypoint.
+The preview runner is isolated behind [src/runtime/serve.mbt](src/runtime/serve.mbt). The standard wasm-gc test suite only exercises the dry-run validation path, so serve orchestration stays testable without starting a native server.
+
+### Native preview server
+
+Real HTTP preview serving is implemented in the standalone [native-serve/](native-serve/) subproject.
+
+Responsibilities of the native entry:
+
+1. Parse CLI argv using the same normalization pattern as the main binary.
+2. Reuse `username/moonink/cli.prepare_serve_runtime_session(...)` to load config, discover content, rebuild the site, and validate the preview root.
+3. Start a real `oboard/mocket` static file server rooted at the generated preview directory.
+4. Print the shared runtime-ready message with a native-server note.
+
+Example launch from the repository root:
+
+```bash
+moon run --manifest-path native-serve/moon.mod.json native-serve/src/cmd/main --target native -- serve fixtures/v2/minimal/moonink.json
+```
+
+Design constraints:
+
+- `oboard/mocket` must stay out of the main workspace `src/` dependency graph so `moon test` and wasm-gc build plans remain clean.
+- The main workspace `moonink serve` is the dry-run/orchestration contract.
+- The native subproject is the only place that owns the real preview server dependency.
+- The native entry accepts an explicit config path so it can be launched from the repo root or other working directories.
 
 ## 3. CLI Output Style
 

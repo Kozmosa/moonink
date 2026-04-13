@@ -16,10 +16,28 @@ Current status:
 - command parsing is wired through the root package;
 - `cmd/main` reads real runtime argv;
 - `onboard` creates starter config in-place and injects default frontmatter into markdown files that lack it;
-- `build` loads config, discovers content, parses frontmatter, and classifies `.html` plus `type: page` markdown as pages while other markdown remains article content;
-- DocFlow build now runs an explicit parser -> WikiLinker -> render -> template pipeline with route-aware pretty/direct HTML emission;
-- WikiLinker rewrites Obsidian-style `[[target]]` and `[[target|label]]` syntax using build-time route metadata, leaving unresolved or ambiguous links in place with diagnostics;
+- `build` loads config, discovers content, parses frontmatter, classifies `.html` plus `type: page` markdown as pages, rewrites wikilinks, renders through templates, and emits pretty/direct route-aware HTML output;
 - site assembly now derives automatic page-only navigation, `nav_title`, and `nav_hidden` metadata for templates and default layout rendering;
 - template rendering supports either the built-in page template or a configured `template_file`, with flat string variables including `site_name`, `page_title`, `navigation_html`, `current_section_title`, `current_section_url`, `page_header_title`, and `page_header_html`;
-- the built-in template now renders automatic navigation plus section metadata and page header context for pages and section landing pages while articles stay outside the navigation tree;
-- `serve` now reuses the runtime build pipeline, validates the generated preview root, and reports the local preview address plus output directory before handing off to the preview runner boundary.
+- `serve` in the main workspace now reuses the runtime build pipeline, validates the generated preview root, and reports the local preview address plus output directory through a dry-run preview boundary;
+- real native preview serving now lives in the standalone `native-serve/` subproject, which depends on `oboard/mocket` without polluting the main workspace wasm-gc test/build graph.
+
+### Native preview entry
+
+Use the native-only subproject when you want an actual local HTTP preview server:
+
+```bash
+moon run --manifest-path native-serve/moon.mod.json native-serve/src/cmd/main --target native -- serve <config-path>
+```
+
+Example from the repo root:
+
+```bash
+moon run --manifest-path native-serve/moon.mod.json native-serve/src/cmd/main --target native -- serve fixtures/v2/minimal/moonink.json
+```
+
+Notes:
+
+- the main workspace `moonink serve` remains the dry-run orchestration contract used by tests;
+- the native entry accepts an explicit config path so it can be launched from the repo root or another working directory;
+- `native-serve/` is the only place that pulls in `oboard/mocket`.
