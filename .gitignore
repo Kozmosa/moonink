@@ -13,3 +13,5 @@ fixtures/v2/missing_template_file/dist/
 fixtures/v2/template_direct_route/dist/
 fixtures/v2/nav_pretty_basic/dist/
 fixtures/v2/nav_direct_basic/dist/
+fixtures/v2/public_assets_basic/dist/
+fixtures/v2/theme_layout_basic/dist/
