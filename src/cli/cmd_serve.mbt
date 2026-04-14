@@ -33,10 +33,33 @@ pub fn format_runtime_ready_message(session : ServeSession) -> String {
 }
 
 ///|
+fn apply_serve_output_override_result(
+  config : @core.MooninkConfig,
+  output_dir : String?,
+) -> Result[@core.MooninkConfig, @core.ConfigError] {
+  match output_dir {
+    Some(path) =>
+      try @core.config_with_output_dir(config, path) catch {
+        err => Err(err)
+      } noraise {
+        config => Ok(config)
+      }
+    None => Ok(config)
+  }
+}
+
+///|
 pub fn prepare_serve_runtime_session(
   config_path : String,
+  output_dir : String?,
+  host : String,
+  port : Int,
 ) -> Result[ServeSession, String] {
   let config = match @runtime.load_config_result(config_path) {
+    Ok(config) => config
+    Err(err) => return Err(format_runtime_config_error(err))
+  }
+  let config = match apply_serve_output_override_result(config, output_dir) {
     Ok(config) => config
     Err(err) => return Err(format_runtime_config_error(err))
   }
@@ -48,11 +71,7 @@ pub fn prepare_serve_runtime_session(
   match build_site_result(config, inventory) {
     Ok(_) => {
       let preview_root = output_root(config)
-      let launch = @runtime.prepare_preview_launch(
-        preview_root,
-        DEFAULT_SERVE_HOST,
-        DEFAULT_SERVE_PORT,
-      )
+      let launch = @runtime.prepare_preview_launch(preview_root, host, port)
       match
         @runtime.launch_preview_result(
           @runtime.dry_run_preview_runner(),
@@ -78,17 +97,37 @@ pub fn prepare_serve_runtime_session(
 }
 
 ///|
-fn run_serve_command() -> CliOutcome {
-  let session = prepare_serve_session("dist")
-  { exit_code: 0, message: format_serve_message(session) }
+fn run_serve_command(options : ServeCliOptions) -> CliOutcome {
+  let output_status = match options.output_dir {
+    Some(path) => "\noutput override: \{path}"
+    None => ""
+  }
+  let session = prepare_serve_session(
+    match options.output_dir {
+      Some(path) => path
+      None => "dist"
+    },
+    host=options.host,
+    port=options.port,
+  )
+  {
+    exit_code: 0,
+    message: format_serve_message(session) +
+    "\nconfig: \{options.config_path}" +
+    output_status,
+  }
 }
 
 ///|
 pub fn run_serve_command_runtime_from_config_with_runner(
   config_path : String,
+  output_dir : String?,
+  host : String,
+  port : Int,
   runner : @runtime.PreviewRunner,
 ) -> CliOutcome {
-  let session = match prepare_serve_runtime_session(config_path) {
+  let session = match
+    prepare_serve_runtime_session(config_path, output_dir, host, port) {
     Ok(session) => session
     Err(message) => return { exit_code: 1, message }
   }
@@ -111,22 +150,36 @@ pub fn run_serve_command_runtime_from_config(
 ) -> CliOutcome {
   run_serve_command_runtime_from_config_with_runner(
     config_path,
+    None,
+    DEFAULT_SERVE_HOST,
+    DEFAULT_SERVE_PORT,
     @runtime.dry_run_preview_runner(),
   )
 }
 
 ///|
-fn run_serve_command_runtime() -> CliOutcome {
+pub fn run_serve_command_runtime() -> CliOutcome {
   run_serve_command_runtime_from_config_with_runner(
     "moonink.json",
+    None,
+    DEFAULT_SERVE_HOST,
+    DEFAULT_SERVE_PORT,
     @runtime.native_mocket_preview_runner(),
   )
 }
 
 ///|
-fn run_native_serve_command() -> CliOutcome {
+fn run_native_serve_command(options : ServeCliOptions) -> CliOutcome {
   @runtime.run_native_runtime_io_task_with_policy(
-    @runtime.RuntimeIOTask::Ready(run_serve_command_runtime()),
+    @runtime.RuntimeIOTask::Ready(
+      run_serve_command_runtime_from_config_with_runner(
+        options.config_path,
+        options.output_dir,
+        options.host,
+        options.port,
+        @runtime.native_mocket_preview_runner(),
+      ),
+    ),
     @runtime.native_runtime_adapter().policy,
   )
 }

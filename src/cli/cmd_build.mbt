@@ -1196,11 +1196,33 @@ fn check_site_result(
 }
 
 ///|
-pub fn run_build_command_runtime_from_config(
+fn apply_output_override_result(
+  config : @core.MooninkConfig,
+  output_dir : String?,
+) -> Result[@core.MooninkConfig, @core.ConfigError] {
+  match output_dir {
+    Some(path) =>
+      try @core.config_with_output_dir(config, path) catch {
+        err => Err(err)
+      } noraise {
+        config => Ok(config)
+      }
+    None => Ok(config)
+  }
+}
+
+///|
+pub fn run_build_command_runtime_from_config_with_output(
   config_path : String,
+  output_dir : String?,
 ) -> CliOutcome {
   let config_result = @runtime.load_config_result(config_path)
   let config = match config_result {
+    Ok(config) => config
+    Err(err) =>
+      return { exit_code: 1, message: format_runtime_config_error(err) }
+  }
+  let config = match apply_output_override_result(config, output_dir) {
     Ok(config) => config
     Err(err) =>
       return { exit_code: 1, message: format_runtime_config_error(err) }
@@ -1220,11 +1242,24 @@ pub fn run_build_command_runtime_from_config(
 }
 
 ///|
-pub fn run_check_command_runtime_from_config(
+pub fn run_build_command_runtime_from_config(
   config_path : String,
+) -> CliOutcome {
+  run_build_command_runtime_from_config_with_output(config_path, None)
+}
+
+///|
+pub fn run_check_command_runtime_from_config_with_output(
+  config_path : String,
+  output_dir : String?,
 ) -> CliOutcome {
   let config_result = @runtime.load_config_result(config_path)
   let config = match config_result {
+    Ok(config) => config
+    Err(err) =>
+      return { exit_code: 1, message: format_check_runtime_config_error(err) }
+  }
+  let config = match apply_output_override_result(config, output_dir) {
     Ok(config) => config
     Err(err) =>
       return { exit_code: 1, message: format_check_runtime_config_error(err) }
@@ -1245,6 +1280,13 @@ pub fn run_check_command_runtime_from_config(
 }
 
 ///|
+pub fn run_check_command_runtime_from_config(
+  config_path : String,
+) -> CliOutcome {
+  run_check_command_runtime_from_config_with_output(config_path, None)
+}
+
+///|
 pub fn run_check_command_runtime() -> CliOutcome {
   run_check_command_runtime_from_config("moonink.json")
 }
@@ -1255,33 +1297,53 @@ pub fn run_build_command_runtime() -> CliOutcome {
 }
 
 ///|
-fn run_check_command() -> CliOutcome {
+fn run_check_command(options : CheckCliOptions) -> CliOutcome {
+  let output_status = match options.output_dir {
+    Some(path) => "\noutput override: \{path}"
+    None => ""
+  }
   {
     exit_code: 0,
-    message: "[check] runtime execution required\nstatus: use cli_exec or the runtime IO boundary to load config, discover content, and collect diagnostics",
+    message: "[check] runtime execution required\nconfig: \{options.config_path}\nstatus: use cli_exec or the runtime IO boundary to load config, discover content, and collect diagnostics" +
+    output_status,
   }
 }
 
 ///|
-fn run_native_check_command() -> CliOutcome {
+fn run_native_check_command(options : CheckCliOptions) -> CliOutcome {
   @runtime.run_native_runtime_io_task_with_policy(
-    @runtime.RuntimeIOTask::Ready(run_check_command_runtime()),
+    @runtime.RuntimeIOTask::Ready(
+      run_check_command_runtime_from_config_with_output(
+        options.config_path,
+        options.output_dir,
+      ),
+    ),
     @runtime.native_runtime_adapter().policy,
   )
 }
 
 ///|
-fn run_build_command() -> CliOutcome {
+fn run_build_command(options : BuildCliOptions) -> CliOutcome {
+  let output_status = match options.output_dir {
+    Some(path) => "\noutput override: \{path}"
+    None => ""
+  }
   {
     exit_code: 0,
-    message: "[build] runtime execution required\nstatus: use cli_exec or the runtime IO boundary to load config and discover content",
+    message: "[build] runtime execution required\nconfig: \{options.config_path}\nstatus: use cli_exec or the runtime IO boundary to load config and discover content" +
+    output_status,
   }
 }
 
 ///|
-fn run_native_build_command() -> CliOutcome {
+fn run_native_build_command(options : BuildCliOptions) -> CliOutcome {
   @runtime.run_native_runtime_io_task_with_policy(
-    @runtime.RuntimeIOTask::Ready(run_build_command_runtime()),
+    @runtime.RuntimeIOTask::Ready(
+      run_build_command_runtime_from_config_with_output(
+        options.config_path,
+        options.output_dir,
+      ),
+    ),
     @runtime.native_runtime_adapter().policy,
   )
 }

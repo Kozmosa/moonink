@@ -66,6 +66,28 @@ pub(all) struct MooninkConfig {
 } derive(Debug, Eq)
 
 ///|
+pub fn normalize_output_dir_or_error(
+  value : String,
+) -> String raise ConfigError {
+  normalize_relative_path(value) catch {
+    err => raise config_path_policy_error(value, err)
+  }
+}
+
+///|
+pub fn config_with_output_dir(
+  config : MooninkConfig,
+  output_dir : String,
+) -> MooninkConfig raise ConfigError {
+  {
+    ..config,
+    output_dir: normalize_output_dir_or_error(output_dir) catch {
+      err => raise err
+    },
+  }
+}
+
+///|
 pub impl Show for MooninkConfig with output(self, logger) {
   logger.write_string("MooninkConfig(site_name=\"")
   logger.write_string(self.site_name)
