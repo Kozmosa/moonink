@@ -1290,3 +1290,20 @@ test "runtime cli build resolves wikilinks for direct routes" {
   inspect(hello_html.contains("href=\"/index.html\""), content="true")
   inspect(hello_html.contains(">Home<"), content="true")
 }
+
+///|
+test "runtime cli build renders backlinks for direct routes" {
+  let fixture_root = "fixtures/v2/wikilinks_direct"
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let about_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/about.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(about_html.contains("aria-label=\"Backlinks\""), content="true")
+  inspect(about_html.contains("href=\"/hello.html\""), content="true")
+  inspect(about_html.contains(">Hello<"), content="true")
+}
