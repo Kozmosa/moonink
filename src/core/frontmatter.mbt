@@ -23,6 +23,7 @@ pub(all) struct Frontmatter {
   draft : Bool
   extra : Map[String, String]
   field_shapes : Map[String, FrontmatterFieldShape]
+  invalid_scalar_fields : Map[String, Bool]
 } derive(Debug, Eq)
 
 ///|
@@ -36,6 +37,7 @@ pub fn Frontmatter::default() -> Frontmatter {
     draft: false,
     extra: {},
     field_shapes: {},
+    invalid_scalar_fields: {},
   }
 }
 
@@ -83,6 +85,7 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
   let fields : Map[String, String] = {}
   let list_fields : Map[String, Array[String]] = {}
   let field_shapes : Map[String, FrontmatterFieldShape] = {}
+  let invalid_scalar_fields : Map[String, Bool] = {}
   for line_view in yaml.split("\n") {
     let line = line_view.to_string().trim().to_string()
     if line.is_empty() || line.has_prefix("#") {
@@ -126,6 +129,9 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
           }
           fields[key] = clean
           field_shapes[key] = FrontmatterFieldShape::Scalar
+          if key == "draft" && clean != "true" && clean != "false" {
+            invalid_scalar_fields[key] = true
+          }
         }
       }
       None => ()
@@ -154,7 +160,17 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
       extra[key] = value
     }
   }
-  { title, description, content_type, date, tags, draft, extra, field_shapes }
+  {
+    title,
+    description,
+    content_type,
+    date,
+    tags,
+    draft,
+    extra,
+    field_shapes,
+    invalid_scalar_fields,
+  }
 }
 
 ///|

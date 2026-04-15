@@ -112,8 +112,16 @@ pub(all) struct Frontmatter {
   tags : Array[String]
   draft : Bool
   extra : Map[String, String]
+  field_shapes : Map[String, FrontmatterFieldShape]
+  invalid_scalar_fields : Map[String, Bool]
 } derive(Eq, @debug.Debug)
 pub fn Frontmatter::default() -> Self
+
+pub(all) enum FrontmatterFieldShape {
+  Scalar
+  List
+} derive(Eq, @debug.Debug)
+pub impl Show for FrontmatterFieldShape
 
 pub(all) struct MooninkConfig {
   config_path : String

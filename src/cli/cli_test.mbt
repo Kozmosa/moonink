@@ -809,7 +809,10 @@ test "runtime cli check reports wikilink diagnostics without writing output" {
     outcome.message.contains("Unresolved wikilink target: missing-page"),
     content="true",
   )
-  inspect(outcome.message.contains("[check] summary: 0 errors, 1 warnings"), content="true")
+  inspect(
+    outcome.message.contains("[check] summary: 0 errors, 1 warnings"),
+    content="true",
+  )
   inspect(outcome.message.contains("[check] completed"), content="true")
   inspect(
     @runtime.io_path_exists(fixture_root + "/dist/index.html"),
@@ -824,10 +827,7 @@ test "runtime cli check reports missing configured template file" {
     fixture_root + "/moonink.json",
   )
   inspect(outcome.exit_code, content="1")
-  inspect(
-    outcome.message.contains("[check] theme/template"),
-    content="true",
-  )
+  inspect(outcome.message.contains("[check] theme/template"), content="true")
   inspect(
     outcome.message.contains("error: Failed to load active theme layout"),
     content="true",
@@ -913,6 +913,31 @@ test "runtime cli check reports mixed blocking and warning diagnostics" {
     content="true",
   )
   inspect(outcome.message.contains("[check] failed"), content="true")
+}
+
+///|
+test "runtime cli check reports invalid draft scalar as blocking" {
+  let fixture_root = "fixtures/v2/check_frontmatter_invalid_draft"
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("[check] frontmatter"), content="true")
+  inspect(
+    outcome.message.contains(
+      "error: Frontmatter field `draft` must be a boolean",
+    ),
+    content="true",
+  )
+  inspect(outcome.message.contains("[index.md]"), content="true")
+  inspect(
+    outcome.message.contains("[check] summary: 1 errors, 0 warnings"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="false",
+  )
 }
 
 ///|
@@ -1058,6 +1083,7 @@ test "runtime cli build renders automatic navigation for pretty routes" {
   )
 }
 
+///|
 test "runtime cli build renders backlinks for minimal fixture" {
   let fixture_root = prepare_isolated_fixture_copy(
     "fixtures/v2/minimal", "minimal-build-backlinks",

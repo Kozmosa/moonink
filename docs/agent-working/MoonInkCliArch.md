@@ -134,14 +134,23 @@ Current behavior:
 1. Reads config and discovers content.
 2. Loads build inputs.
 3. Builds the WikiLink target index.
-4. Parses each document through format-appropriate parser adapters.
-5. Applies WikiLink resolution and collects document diagnostics.
-6. Reports processed counts and diagnostic count.
-7. Returns exit code `0` when diagnostics are empty, otherwise `1`.
-8. Does not clear `dist/`, write HTML, or copy assets.
+4. Aggregates non-emitting diagnostics into grouped categories:
+   - `theme/template`
+   - `frontmatter`
+   - `routes`
+   - `document`
+5. Applies blocking validation for:
+   - active theme/template resolution failures;
+   - obvious frontmatter type mismatches, including invalid boolean-like `draft` values;
+   - final emitted output path conflicts.
+6. Parses each document through format-appropriate parser adapters.
+7. Applies WikiLink resolution and records unresolved/ambiguous WikiLink diagnostics as warning-only document diagnostics.
+8. Reports processed counts plus grouped error/warning summaries.
+9. Returns exit code `0` when only warnings or no diagnostics are present, and `1` when blocking errors are present.
+10. Does not clear `dist/`, write HTML, or copy assets.
 
-This makes `check` the non-emitting validation pass for content/configuration issues
-that surface during parse and WikiLink resolution.
+This makes `check` the non-emitting validation pass for build-affecting
+configuration/content issues while keeping WikiLink quality issues as warnings.
 
 ### serve
 

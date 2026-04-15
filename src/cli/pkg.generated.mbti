@@ -99,22 +99,44 @@ pub(all) struct BuildSummary {
   page_count : Int
 } derive(Eq, @debug.Debug)
 
+pub(all) enum CheckCategory {
+  ThemeTemplate
+  Frontmatter
+  Document
+  Routes
+} derive(Eq, @debug.Debug)
+
 pub struct CheckCliOptions {
   config_path : String
   output_dir : String?
 } derive(Eq, @debug.Debug)
 pub impl Show for CheckCliOptions
 
-pub(all) struct CheckDiagnostic {
-  source_path : String
-  entry : @docflow.DocumentDiagnostic
+pub(all) struct CheckEntry {
+  category : CheckCategory
+  severity : CheckSeverity
+  source_path : String?
+  message : String
+  hint : String?
+  line : Int?
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CheckReport {
+  entries : Array[CheckEntry]
+  error_count : Int
+  warning_count : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum CheckSeverity {
+  Warning
+  Error
 } derive(Eq, @debug.Debug)
 
 pub(all) struct CheckSummary {
   processed_sources : Int
   article_count : Int
   page_count : Int
-  diagnostic_count : Int
+  report : CheckReport
 } derive(Eq, @debug.Debug)
 
 pub enum CliCommand {

@@ -364,7 +364,9 @@ fn register_exact_target(
 }
 
 ///|
-pub fn build_wikilinker(inputs : Array[@runtime.BuildInput]) -> @docflow.WikiLinker {
+pub fn build_wikilinker(
+  inputs : Array[@runtime.BuildInput],
+) -> @docflow.WikiLinker {
   let basename_keys : Array[String] = []
   let index_alias_keys : Array[String] = []
   for input in inputs {
@@ -436,8 +438,7 @@ pub fn build_backlink_index(
       backend_payload: Some(input.docflow_content),
     }
     let resolved_targets = @docflow.collect_resolved_wikilink_targets(
-      wikilinker,
-      parsed,
+      wikilinker, parsed,
     )
     for url in resolved_targets {
       let existing = match backlinks.get(url) {
@@ -463,7 +464,10 @@ fn collect_output_path_sources(
 ) -> Map[String, Array[String]] {
   let output_paths : Map[String, Array[String]] = {}
   for input in inputs {
-    let output_path = @core.output_html_path(input.meta.source_path, route_style)
+    let output_path = @core.output_html_path(
+      input.meta.source_path,
+      route_style,
+    )
     let existing = match output_paths.get(output_path) {
       Some(paths) => paths
       None => []
@@ -489,7 +493,9 @@ fn append_route_conflicts(
         severity: CheckSeverity::Error,
         source_path: None,
         message: "Final output path conflict",
-        hint: Some("`" + output_path + "` is produced by " + sources.iter().join(", ")),
+        hint: Some(
+          "`" + output_path + "` is produced by " + sources.iter().join(", "),
+        ),
         line: None,
       })
     }
@@ -1051,10 +1057,12 @@ fn validate_check_active_theme_layout(
       report_with_entry(report, {
         category: CheckCategory::ThemeTemplate,
         severity: CheckSeverity::Error,
-        source_path: Some(match config.template_file {
-          Some(path) => path
-          None => config.config_path
-        }),
+        source_path: Some(
+          match config.template_file {
+            Some(path) => path
+            None => config.config_path
+          },
+        ),
         message: "Failed to load active theme layout",
         hint: Some(@core.format_config_error(err)),
         line: None,
@@ -1114,13 +1122,7 @@ fn build_site_result(
     let linked = @docflow.apply_wikilinker(wikilinker, parsed)
     let rendered = @docflow.render_with_adapter(renderer, linked)
     let templated = apply_build_template(
-      config,
-      active_theme,
-      assembly,
-      backlinks,
-      input,
-      rendered,
-      template_source,
+      config, active_theme, assembly, backlinks, input, rendered, template_source,
     )
     let output_path = @core.output_html_path(
       input.meta.source_path,
@@ -1165,16 +1167,10 @@ fn empty_check_report() -> CheckReport {
 fn report_with_entry(report : CheckReport, entry : CheckEntry) -> CheckReport {
   let entries = report.entries + [entry]
   match entry.severity {
-    CheckSeverity::Error => {
-      ..report,
-      entries,
-      error_count: report.error_count + 1,
-    }
-    CheckSeverity::Warning => {
-      ..report,
-      entries,
-      warning_count: report.warning_count + 1,
-    }
+    CheckSeverity::Error =>
+      { ..report, entries, error_count: report.error_count + 1 }
+    CheckSeverity::Warning =>
+      { ..report, entries, warning_count: report.warning_count + 1 }
   }
 }
 
@@ -1258,6 +1254,18 @@ fn validate_frontmatter_for_check(
         severity: CheckSeverity::Error,
         source_path: Some(source_path),
         message: "Frontmatter field `tags` must be an array",
+        hint: None,
+        line: None,
+      })
+    _ => ()
+  }
+  match frontmatter.invalid_scalar_fields.get("draft") {
+    Some(true) =>
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Frontmatter,
+        severity: CheckSeverity::Error,
+        source_path: Some(source_path),
+        message: "Frontmatter field `draft` must be a boolean",
         hint: None,
         line: None,
       })
@@ -1455,6 +1463,7 @@ pub fn run_build_command_runtime_from_config_with_output(
   summarize_build_success(config, inventory, summary)
 }
 
+///|
 pub fn run_build_command_runtime_from_config(
   config_path : String,
 ) -> CliOutcome {

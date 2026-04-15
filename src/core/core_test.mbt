@@ -205,6 +205,14 @@ test "parse_frontmatter records scalar tags shape mismatch" {
 }
 
 ///|
+test "parse_frontmatter records invalid scalar draft value" {
+  let fm = @core.parse_frontmatter("title: Demo\ndraft: maybe")
+  inspect(fm.draft, content="false")
+  inspect(fm.field_shapes.get("draft"), content="Some(Scalar)")
+  inspect(fm.invalid_scalar_fields.get("draft"), content="Some(true)")
+}
+
+///|
 test "parse_frontmatter records list title shape mismatch" {
   let fm = @core.parse_frontmatter("title: [Demo]\n")
   inspect(fm.title, content="None")
