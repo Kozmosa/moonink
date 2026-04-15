@@ -36,6 +36,7 @@ pub(all) enum CheckCategory {
   ThemeTemplate
   Frontmatter
   Document
+  Routes
 } derive(Debug, Eq)
 
 ///|
@@ -453,6 +454,47 @@ pub fn build_backlink_index(
     }
   }
   backlinks
+}
+
+///|
+fn collect_output_path_sources(
+  inputs : Array[@runtime.BuildInput],
+  route_style : @core.RouteStyle,
+) -> Map[String, Array[String]] {
+  let output_paths : Map[String, Array[String]] = {}
+  for input in inputs {
+    let output_path = @core.output_html_path(input.meta.source_path, route_style)
+    let existing = match output_paths.get(output_path) {
+      Some(paths) => paths
+      None => []
+    }
+    output_paths[output_path] = existing + [input.meta.source_path]
+  }
+  output_paths
+}
+
+///|
+fn append_route_conflicts(
+  inputs : Array[@runtime.BuildInput],
+  route_style : @core.RouteStyle,
+  report : CheckReport,
+) -> CheckReport {
+  let mut next_report = report
+  let output_paths = collect_output_path_sources(inputs, route_style)
+  for entry in output_paths {
+    let (output_path, sources) = entry
+    if sources.length() > 1 {
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Routes,
+        severity: CheckSeverity::Error,
+        source_path: None,
+        message: "Final output path conflict",
+        hint: Some("`" + output_path + "` is produced by " + sources.iter().join(", ")),
+        line: None,
+      })
+    }
+  }
+  next_report
 }
 
 ///|
@@ -1230,6 +1272,7 @@ fn check_category_label(category : CheckCategory) -> String {
     CheckCategory::ThemeTemplate => "theme/template"
     CheckCategory::Frontmatter => "frontmatter"
     CheckCategory::Document => "document"
+    CheckCategory::Routes => "routes"
   }
 }
 
@@ -1326,6 +1369,7 @@ fn check_site_result(
   }
   let mut report = empty_check_report()
   report = validate_check_active_theme_layout(config, report)
+  report = append_route_conflicts(inputs, config.route_style, report)
   let wikilinker = build_wikilinker(inputs)
   let mut article_count = 0
   let mut page_count = 0
