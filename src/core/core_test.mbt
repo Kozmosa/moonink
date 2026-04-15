@@ -270,6 +270,18 @@ test "search index excerpt derives plain text from markdown body" {
 }
 
 ///|
+test "search index excerpt preserves literal punctuation inside markdown text" {
+  inspect(
+    @core.search_index_excerpt(
+      None,
+      "Use `search_index` with C# and config.yaml in [docs](guide.md).",
+      @core.SourceFormat::Markdown,
+    ),
+    content="Use search_index with C# and config.yaml in docs.",
+  )
+}
+
+///|
 test "search index excerpt strips html tags for html pages" {
   inspect(
     @core.search_index_excerpt(
@@ -278,6 +290,30 @@ test "search index excerpt strips html tags for html pages" {
       @core.SourceFormat::Html,
     ),
     content="About This is a static HTML page.",
+  )
+}
+
+///|
+test "search index excerpt preserves non-tag angle bracket text" {
+  inspect(
+    @core.search_index_excerpt(
+      None,
+      "Compare a < b and Vector<T> while keeping <literal text.",
+      @core.SourceFormat::Html,
+    ),
+    content="Compare a < b and Vector<T> while keeping <literal text.",
+  )
+}
+
+///|
+test "search index excerpt strips actual html tags with attributes" {
+  inspect(
+    @core.search_index_excerpt(
+      None,
+      "<code class=\"lang\">search_index</code> <br/> ready",
+      @core.SourceFormat::Html,
+    ),
+    content="search_index ready",
   )
 }
 
