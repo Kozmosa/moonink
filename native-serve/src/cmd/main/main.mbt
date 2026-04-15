@@ -38,7 +38,24 @@ fn main {
         options.host,
         options.port,
       ) {
-        Ok(session) => launch_native_preview(session)
+        Ok(prepared) => {
+          let startup = match @cli.start_prepared_serve_session_result(
+            prepared.session,
+            @runtime.native_mocket_preview_runner(),
+          ) {
+            Ok(session) => session
+            Err(message) => {
+              println(message)
+              return
+            }
+          }
+          match prepared.build_stage {
+            @cli.ServeBuildStage::Clean(_) => println("[serve] build completed")
+            @cli.ServeBuildStage::WithWarnings(_, diagnostics) =>
+              println(@cli.format_serve_build_warnings(diagnostics))
+          }
+          launch_native_preview(startup)
+        }
         Err(message) => println(message)
       }
     _ => {
