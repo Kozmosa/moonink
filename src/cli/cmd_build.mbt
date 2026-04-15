@@ -34,6 +34,7 @@ pub(all) struct CheckSummary {
 ///|
 pub(all) enum CheckCategory {
   ThemeTemplate
+  Frontmatter
   Document
 } derive(Debug, Eq)
 
@@ -1154,9 +1155,80 @@ fn check_entry_from_docflow_diagnostic(
 }
 
 ///|
+fn validate_frontmatter_for_check(
+  source_path : String,
+  frontmatter : @core.Frontmatter,
+  report : CheckReport,
+) -> CheckReport {
+  let mut next_report = report
+  match frontmatter.field_shapes.get("title") {
+    Some(@core.FrontmatterFieldShape::List) =>
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Frontmatter,
+        severity: CheckSeverity::Error,
+        source_path: Some(source_path),
+        message: "Frontmatter field `title` must be a string",
+        hint: None,
+        line: None,
+      })
+    _ => ()
+  }
+  match frontmatter.field_shapes.get("description") {
+    Some(@core.FrontmatterFieldShape::List) =>
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Frontmatter,
+        severity: CheckSeverity::Error,
+        source_path: Some(source_path),
+        message: "Frontmatter field `description` must be a string",
+        hint: None,
+        line: None,
+      })
+    _ => ()
+  }
+  match frontmatter.field_shapes.get("type") {
+    Some(@core.FrontmatterFieldShape::List) =>
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Frontmatter,
+        severity: CheckSeverity::Error,
+        source_path: Some(source_path),
+        message: "Frontmatter field `type` must be a string",
+        hint: None,
+        line: None,
+      })
+    _ => ()
+  }
+  match frontmatter.field_shapes.get("date") {
+    Some(@core.FrontmatterFieldShape::List) =>
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Frontmatter,
+        severity: CheckSeverity::Error,
+        source_path: Some(source_path),
+        message: "Frontmatter field `date` must be a string",
+        hint: None,
+        line: None,
+      })
+    _ => ()
+  }
+  match frontmatter.field_shapes.get("tags") {
+    Some(@core.FrontmatterFieldShape::Scalar) =>
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Frontmatter,
+        severity: CheckSeverity::Error,
+        source_path: Some(source_path),
+        message: "Frontmatter field `tags` must be an array",
+        hint: None,
+        line: None,
+      })
+    _ => ()
+  }
+  next_report
+}
+
+///|
 fn check_category_label(category : CheckCategory) -> String {
   match category {
     CheckCategory::ThemeTemplate => "theme/template"
+    CheckCategory::Frontmatter => "frontmatter"
     CheckCategory::Document => "document"
   }
 }
@@ -1174,7 +1246,7 @@ fn format_check_entry(entry : CheckEntry) -> String {
   let lines : Array[String] = []
   lines.push("[check] " + check_category_label(entry.category))
   let source_line = match entry.source_path {
-    Some(path) => path
+    Some(path) => "[" + path + "]"
     None => ""
   }
   if source_line != "" {
@@ -1258,6 +1330,11 @@ fn check_site_result(
   let mut article_count = 0
   let mut page_count = 0
   for input in inputs {
+    report = validate_frontmatter_for_check(
+      input.meta.source_path,
+      input.meta.frontmatter,
+      report,
+    )
     let parser = match check_parser_for_format(input.meta.format) {
       Ok(parser) => parser
       Err(err) => return Err(err)
