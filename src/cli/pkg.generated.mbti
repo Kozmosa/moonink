@@ -13,11 +13,15 @@ pub const DEFAULT_SERVE_HOST : String = "127.0.0.1"
 
 pub const DEFAULT_SERVE_PORT : Int = 3000
 
+pub fn build_backlink_index(Array[@runtime.BuildInput], @docflow.WikiLinker) -> Map[String, Array[String]]
+
 pub fn build_navigation_model(Array[@core.SitePage]) -> @core.NavigationModel
 
 pub fn build_site_assembly_model(@core.MooninkConfig, Array[@runtime.BuildInput], @core.ContentInventory) -> @core.SiteAssemblyModel
 
 pub fn build_site_pages(Array[@runtime.BuildInput]) -> Array[@core.SitePage]
+
+pub fn build_wikilinker(Array[@runtime.BuildInput]) -> @docflow.WikiLinker
 
 pub fn cli_exec(Array[String]) -> CliOutcome
 

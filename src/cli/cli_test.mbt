@@ -76,6 +76,106 @@ test "build site assembly model combines pages and navigation" {
 }
 
 ///|
+test "build backlink index records markdown source urls once per page" {
+  let inputs : Array[@runtime.BuildInput] = [
+    {
+      absolute_source_path: "fixtures/v2/minimal/index.md",
+      relative_source_path: "index.md",
+      source_content: "[[hello]] [[hello]]",
+      docflow_content: "[[hello]] [[hello]]",
+      meta: {
+        source_path: "index.md",
+        url_path: "/",
+        content_kind: @core.ContentKind::Page,
+        format: @core.SourceFormat::Markdown,
+        frontmatter: {
+          ..@core.Frontmatter::default(),
+          content_type: Some("page"),
+        },
+        sort_key: "index.md",
+      },
+    },
+    {
+      absolute_source_path: "fixtures/v2/minimal/hello.md",
+      relative_source_path: "hello.md",
+      source_content: "# Hello",
+      docflow_content: "# Hello",
+      meta: {
+        source_path: "hello.md",
+        url_path: "/hello/",
+        content_kind: @core.ContentKind::Article,
+        format: @core.SourceFormat::Markdown,
+        frontmatter: @core.Frontmatter::default(),
+        sort_key: "hello.md",
+      },
+    },
+  ]
+  let backlinks = @cli.build_backlink_index(
+    inputs,
+    @cli.build_wikilinker(inputs),
+  )
+  inspect(backlinks.get("/hello/"), content="Some([\"/\"])")
+}
+
+///|
+test "build backlink index ignores unresolved and ambiguous wikilinks" {
+  let inputs : Array[@runtime.BuildInput] = [
+    {
+      absolute_source_path: "fixtures/v2/minimal/index.md",
+      relative_source_path: "index.md",
+      source_content: "[[missing]] [[intro]]",
+      docflow_content: "[[missing]] [[intro]]",
+      meta: {
+        source_path: "index.md",
+        url_path: "/",
+        content_kind: @core.ContentKind::Page,
+        format: @core.SourceFormat::Markdown,
+        frontmatter: {
+          ..@core.Frontmatter::default(),
+          content_type: Some("page"),
+        },
+        sort_key: "index.md",
+      },
+    },
+    {
+      absolute_source_path: "fixtures/v2/minimal/guide/intro.md",
+      relative_source_path: "guide/intro.md",
+      source_content: "# Guide Intro",
+      docflow_content: "# Guide Intro",
+      meta: {
+        source_path: "guide/intro.md",
+        url_path: "/guide/intro/",
+        content_kind: @core.ContentKind::Article,
+        format: @core.SourceFormat::Markdown,
+        frontmatter: @core.Frontmatter::default(),
+        sort_key: "guide/intro.md",
+      },
+    },
+    {
+      absolute_source_path: "fixtures/v2/minimal/reference/intro.md",
+      relative_source_path: "reference/intro.md",
+      source_content: "# Reference Intro",
+      docflow_content: "# Reference Intro",
+      meta: {
+        source_path: "reference/intro.md",
+        url_path: "/reference/intro/",
+        content_kind: @core.ContentKind::Article,
+        format: @core.SourceFormat::Markdown,
+        frontmatter: @core.Frontmatter::default(),
+        sort_key: "reference/intro.md",
+      },
+    },
+  ]
+  let backlinks = @cli.build_backlink_index(
+    inputs,
+    @cli.build_wikilinker(inputs),
+  )
+  inspect(backlinks.get("/missing/"), content="None")
+  inspect(backlinks.get("/guide/intro/"), content="None")
+  inspect(backlinks.get("/reference/intro/"), content="None")
+}
+
+///|
 test "render navigation html marks active and ancestor items" {
   let navigation : @core.NavigationModel = {
     items: [
@@ -878,6 +978,27 @@ test "runtime cli build renders automatic navigation for pretty routes" {
   )
 }
 
+test "runtime cli build renders backlinks for minimal fixture" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-build-backlinks",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let hello_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/hello/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(
+    hello_html.contains(
+      "<aside class=\"page-backlinks\"><section class=\"backlinks\" aria-label=\"Backlinks\"><h2>Backlinks</h2><ul><li><a href=\"/\">Home</a></li></ul></section></aside>",
+    ),
+    content="true",
+  )
+}
+
 ///|
 test "runtime cli build respects output override" {
   let fixture_root = prepare_isolated_fixture_copy(
@@ -892,6 +1013,23 @@ test "runtime cli build respects output override" {
     @runtime.io_path_exists(fixture_root + "/dist-alt/hello/index.html"),
     content="true",
   )
+}
+
+///|
+test "runtime cli build ignores ordinary markdown links in backlink index" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-build-backlinks-ignore-markdown",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let about_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/about/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(about_html.contains("<h2>Backlinks</h2>"), content="false")
 }
 
 ///|

@@ -132,6 +132,57 @@ fn rewrite_markdown_wikilinks(
 }
 
 ///|
+fn collect_resolved_wikilink_targets_from_payload(
+  linker : WikiLinker,
+  payload : String,
+) -> Array[String] {
+  let targets : Array[String] = []
+  let mut cursor = 0
+  while cursor < payload.length() {
+    if cursor + 1 < payload.length() &&
+      payload[cursor:cursor + 2].to_string() == "[[" {
+      let close = find_wikilink_close(payload, cursor + 2)
+      match close {
+        Some(close_cursor) => {
+          let inner = payload[cursor + 2:close_cursor].to_string()
+          let (target, _) = parse_wikilink_inner(inner)
+          if target != "" {
+            match resolve_wikilink(linker, target) {
+              Ok(url) => targets.push(url)
+              Err(_) => ()
+            }
+          }
+          cursor = close_cursor + 2
+        }
+        None => cursor = payload.length()
+      }
+    } else {
+      cursor = cursor + 1
+    }
+  }
+  targets
+}
+
+///|
+/// Collect resolved WikiLink destinations without inspecting rendered markdown links.
+pub fn collect_resolved_wikilink_targets(
+  linker : WikiLinker,
+  parsed : ParsedDocument,
+) -> Array[String] {
+  match parsed.source_format {
+    @core.SourceFormat::Markdown =>
+      match parsed.backend_payload {
+        Some(payload) => collect_resolved_wikilink_targets_from_payload(
+          linker,
+          payload,
+        )
+        None => []
+      }
+    _ => []
+  }
+}
+
+///|
 /// Apply the semantic linker boundary for route-aware markdown wikilinks.
 pub fn apply_wikilinker(
   linker : WikiLinker,

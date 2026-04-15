@@ -19,6 +19,8 @@ pub fn article_site_entry(TemplatedPage) -> SiteEntry
 
 pub fn broken_parser_adapter(name? : String, note? : String) -> ParserAdapter
 
+pub fn collect_resolved_wikilink_targets(WikiLinker, ParsedDocument) -> Array[String]
+
 pub fn construct_site(Array[SiteEntry]) -> SiteAssembly
 
 pub fn default_page_template() -> String
@@ -211,6 +213,7 @@ pub(all) struct TemplateContext {
   theme_asset_root : String
   page_body_class : String
   navigation_html : String
+  backlink_urls : Array[String]
   current_section_title : String
   current_section_url : String
   page_header_title : String
