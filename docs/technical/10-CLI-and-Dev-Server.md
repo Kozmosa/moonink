@@ -35,16 +35,18 @@ Current implementation includes the real parser/render/template/site-assembly fl
 
 ### `serve`
 
-Run a local development preview flow for the generated site.
+Run a local preview flow for the generated site.
 
 Main workspace behavior:
 
 1. Load `moonink.json`.
 2. Reuse the build pipeline to regenerate `output_dir`.
-3. Validate the preview root and prepare a preview launch record with default `127.0.0.1:3000`.
-4. Return a runtime status message that exposes the preview address and built output directory.
+3. If build finishes with warnings, print them and continue.
+4. If build fails fatally, stop before preview startup.
+5. Validate the preview root and prepare the preview launch using the requested `--host` / `--port` values.
+6. Return a runtime status message that distinguishes build-stage and preview-startup outcomes.
 
-The preview runner is isolated behind [src/runtime/serve.mbt](src/runtime/serve.mbt). The standard wasm-gc test suite only exercises the dry-run validation path, so serve orchestration stays testable without starting a native server.
+The preview runner is isolated behind [src/runtime/serve.mbt](src/runtime/serve.mbt). The standard wasm-gc test suite exercises the build-orchestration and dry-run preview validation path, while the standalone native server remains responsible for the actual HTTP listener.
 
 ### Native preview server
 
@@ -53,9 +55,10 @@ Real HTTP preview serving is implemented in the standalone [native-serve/](nativ
 Responsibilities of the native entry:
 
 1. Parse CLI argv using the same normalization pattern as the main binary.
-2. Reuse `username/moonink/cli.prepare_serve_runtime_session(...)` to load config, discover content, rebuild the site, and validate the preview root.
-3. Start a real `oboard/mocket` static file server rooted at the generated preview directory.
-4. Print the shared runtime-ready message with a native-server note.
+2. Reuse `username/moonink/cli.prepare_serve_runtime_session(...)` to load config, discover content, and rebuild the site into a staged preview session.
+3. Reuse `username/moonink/cli.start_prepared_serve_session_result(...)` to validate preview startup before handing off to the real server.
+4. Print the shared build-stage message plus the runtime-ready message with a native-server note.
+5. Start a real `oboard/mocket` static file server rooted at the generated preview directory.
 
 Example launch from the repository root:
 

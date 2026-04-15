@@ -16,6 +16,18 @@ pub(all) struct BuildSummary {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct BuildDiagnostic {
+  source_path : String
+  entry : @docflow.DocumentDiagnostic
+} derive(Debug, Eq)
+
+///|
+pub(all) struct BuildWithDiagnostics {
+  summary : BuildSummary
+  diagnostics : Array[BuildDiagnostic]
+} derive(Debug, Eq)
+
+///|
 pub(all) suberror CheckCommandError {
   ContentDiscovery(@core.ContentDiscoveryError)
   AdapterRegistry(@docflow.AdapterRegistryError)
@@ -339,7 +351,9 @@ fn register_exact_target(
 }
 
 ///|
-pub fn build_wikilinker(inputs : Array[@runtime.BuildInput]) -> @docflow.WikiLinker {
+pub fn build_wikilinker(
+  inputs : Array[@runtime.BuildInput],
+) -> @docflow.WikiLinker {
   let basename_keys : Array[String] = []
   let index_alias_keys : Array[String] = []
   for input in inputs {
@@ -411,8 +425,7 @@ pub fn build_backlink_index(
       backend_payload: Some(input.docflow_content),
     }
     let resolved_targets = @docflow.collect_resolved_wikilink_targets(
-      wikilinker,
-      parsed,
+      wikilinker, parsed,
     )
     for url in resolved_targets {
       let existing = match backlinks.get(url) {
@@ -1037,7 +1050,7 @@ fn validate_check_active_theme_layout(
 fn build_site_result(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
-) -> Result[BuildSummary, BuildCommandError] {
+) -> Result[BuildWithDiagnostics, BuildCommandError] {
   let inputs = match @runtime.load_build_inputs_result(config, inventory) {
     Ok(inputs) => inputs
     Err(err) => return Err(BuildCommandError::ContentDiscovery(err))
@@ -1060,6 +1073,7 @@ fn build_site_result(
   let mut emitted_html_files = 0
   let mut article_count = 0
   let mut page_count = 0
+  let diagnostics : Array[BuildDiagnostic] = []
   let wikilinker = build_wikilinker(inputs)
   let backlinks = build_backlink_index(inputs, wikilinker)
   for input in inputs {
@@ -1083,15 +1097,12 @@ fn build_site_result(
       Err(err) => return Err(BuildCommandError::FatalParse(err))
     }
     let linked = @docflow.apply_wikilinker(wikilinker, parsed)
+    for entry in linked.diagnostics.entries {
+      diagnostics.push(build_runtime_diagnostic(input, entry))
+    }
     let rendered = @docflow.render_with_adapter(renderer, linked)
     let templated = apply_build_template(
-      config,
-      active_theme,
-      assembly,
-      backlinks,
-      input,
-      rendered,
-      template_source,
+      config, active_theme, assembly, backlinks, input, rendered, template_source,
     )
     let output_path = @core.output_html_path(
       input.meta.source_path,
@@ -1110,11 +1121,14 @@ fn build_site_result(
     err => return Err(err)
   }
   Ok({
-    output_dir: config.output_dir,
-    processed_sources: inputs.length(),
-    emitted_html_files,
-    article_count,
-    page_count,
+    summary: {
+      output_dir: config.output_dir,
+      processed_sources: inputs.length(),
+      emitted_html_files,
+      article_count,
+      page_count,
+    },
+    diagnostics,
   })
 }
 
@@ -1123,10 +1137,28 @@ fn summarize_build_success(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
   summary : BuildSummary,
+  diagnostics : Array[BuildDiagnostic],
 ) -> CliOutcome {
+  let header = if diagnostics.is_empty() {
+    "[build] completed"
+  } else {
+    "[build] completed with diagnostics"
+  }
+  let details = if diagnostics.is_empty() {
+    ""
+  } else {
+    let lines : Array[String] = []
+    for diagnostic in diagnostics {
+      lines.push("[\{diagnostic.source_path}]")
+      lines.push(@docflow.format_document_diagnostic(diagnostic.entry))
+    }
+    "\n---\n" + lines.iter().join("\n")
+  }
   {
     exit_code: 0,
-    message: "[build] completed\nsite: \{config.site_name}\nconfig: \{config.config_path}\ncontent root: \{inventory.root}\nprocessed: \{summary.processed_sources}\narticles: \{summary.article_count}\npages: \{summary.page_count}\noutput: \{summary.output_dir}\nemitted html: \{summary.emitted_html_files}",
+    message: header +
+    "\nsite: \{config.site_name}\nconfig: \{config.config_path}\ncontent root: \{inventory.root}\nprocessed: \{summary.processed_sources}\narticles: \{summary.article_count}\npages: \{summary.page_count}\noutput: \{summary.output_dir}\nemitted html: \{summary.emitted_html_files}" +
+    details,
   }
 }
 
@@ -1140,6 +1172,14 @@ fn format_check_diagnostic_lines(
     lines.push(@docflow.format_document_diagnostic(diagnostic.entry))
   }
   lines.iter().join("\n")
+}
+
+///|
+fn build_runtime_diagnostic(
+  input : @runtime.BuildInput,
+  entry : @docflow.DocumentDiagnostic,
+) -> BuildDiagnostic {
+  { source_path: input.meta.source_path, entry }
 }
 
 ///|
@@ -1263,14 +1303,16 @@ pub fn run_build_command_runtime_from_config_with_output(
     Err(err) =>
       return { exit_code: 1, message: format_runtime_content_error(err) }
   }
-  let summary = match build_site_result(config, inventory) {
-    Ok(summary) => summary
+  let result = match build_site_result(config, inventory) {
+    Ok(result) => result
     Err(err) =>
       return { exit_code: 1, message: format_build_command_error(err) }
   }
-  summarize_build_success(config, inventory, summary)
+  let summary = result.summary
+  summarize_build_success(config, inventory, summary, result.diagnostics)
 }
 
+///|
 pub fn run_build_command_runtime_from_config(
   config_path : String,
 ) -> CliOutcome {
