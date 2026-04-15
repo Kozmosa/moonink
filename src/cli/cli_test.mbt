@@ -76,6 +76,106 @@ test "build site assembly model combines pages and navigation" {
 }
 
 ///|
+test "build backlink index records markdown source urls once per page" {
+  let inputs : Array[@runtime.BuildInput] = [
+    {
+      absolute_source_path: "fixtures/v2/minimal/index.md",
+      relative_source_path: "index.md",
+      source_content: "[[hello]] [[hello]]",
+      docflow_content: "[[hello]] [[hello]]",
+      meta: {
+        source_path: "index.md",
+        url_path: "/",
+        content_kind: @core.ContentKind::Page,
+        format: @core.SourceFormat::Markdown,
+        frontmatter: {
+          ..@core.Frontmatter::default(),
+          content_type: Some("page"),
+        },
+        sort_key: "index.md",
+      },
+    },
+    {
+      absolute_source_path: "fixtures/v2/minimal/hello.md",
+      relative_source_path: "hello.md",
+      source_content: "# Hello",
+      docflow_content: "# Hello",
+      meta: {
+        source_path: "hello.md",
+        url_path: "/hello/",
+        content_kind: @core.ContentKind::Article,
+        format: @core.SourceFormat::Markdown,
+        frontmatter: @core.Frontmatter::default(),
+        sort_key: "hello.md",
+      },
+    },
+  ]
+  let backlinks = @cli.build_backlink_index(
+    inputs,
+    @cli.build_wikilinker(inputs),
+  )
+  inspect(backlinks.get("/hello/"), content="Some([\"/\"])")
+}
+
+///|
+test "build backlink index ignores unresolved and ambiguous wikilinks" {
+  let inputs : Array[@runtime.BuildInput] = [
+    {
+      absolute_source_path: "fixtures/v2/minimal/index.md",
+      relative_source_path: "index.md",
+      source_content: "[[missing]] [[intro]]",
+      docflow_content: "[[missing]] [[intro]]",
+      meta: {
+        source_path: "index.md",
+        url_path: "/",
+        content_kind: @core.ContentKind::Page,
+        format: @core.SourceFormat::Markdown,
+        frontmatter: {
+          ..@core.Frontmatter::default(),
+          content_type: Some("page"),
+        },
+        sort_key: "index.md",
+      },
+    },
+    {
+      absolute_source_path: "fixtures/v2/minimal/guide/intro.md",
+      relative_source_path: "guide/intro.md",
+      source_content: "# Guide Intro",
+      docflow_content: "# Guide Intro",
+      meta: {
+        source_path: "guide/intro.md",
+        url_path: "/guide/intro/",
+        content_kind: @core.ContentKind::Article,
+        format: @core.SourceFormat::Markdown,
+        frontmatter: @core.Frontmatter::default(),
+        sort_key: "guide/intro.md",
+      },
+    },
+    {
+      absolute_source_path: "fixtures/v2/minimal/reference/intro.md",
+      relative_source_path: "reference/intro.md",
+      source_content: "# Reference Intro",
+      docflow_content: "# Reference Intro",
+      meta: {
+        source_path: "reference/intro.md",
+        url_path: "/reference/intro/",
+        content_kind: @core.ContentKind::Article,
+        format: @core.SourceFormat::Markdown,
+        frontmatter: @core.Frontmatter::default(),
+        sort_key: "reference/intro.md",
+      },
+    },
+  ]
+  let backlinks = @cli.build_backlink_index(
+    inputs,
+    @cli.build_wikilinker(inputs),
+  )
+  inspect(backlinks.get("/missing/"), content="None")
+  inspect(backlinks.get("/guide/intro/"), content="None")
+  inspect(backlinks.get("/reference/intro/"), content="None")
+}
+
+///|
 test "render navigation html marks active and ancestor items" {
   let navigation : @core.NavigationModel = {
     items: [
@@ -496,6 +596,20 @@ fn expected_serve_runtime_message(
 }
 
 ///|
+fn prepare_isolated_fixture_copy(source_root : String, name : String) -> String {
+  let scratch_parent = "fixtures/v2/_test_runs"
+  let target_root = scratch_parent + "/" + name
+  let _ = try? @runtime.io_remove_dir_all(target_root)
+  @runtime.io_ensure_dir(scratch_parent) catch {
+    _ => panic()
+  }
+  @runtime.io_copy_dir_recursive(source_root, target_root) catch {
+    _ => panic()
+  }
+  target_root
+}
+
+///|
 test "cli run keeps build behind runtime boundary" {
   inspect(
     @cli.cli_run(["moonink", "build"]).message,
@@ -579,7 +693,9 @@ test "cli exec rejects invalid flag combinations" {
 
 ///|
 test "runtime cli serve builds fixture before preview skeleton" {
-  let fixture_root = "fixtures/v2/minimal"
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-serve-default",
+  )
   let outcome = @cli.run_serve_command_runtime_from_config(
     fixture_root + "/moonink.json",
   )
@@ -589,7 +705,7 @@ test "runtime cli serve builds fixture before preview skeleton" {
     content=(
       #|[serve] runtime ready
       #|address: http://127.0.0.1:3000
-      #|preview root: fixtures/v2/minimal/dist
+      #|preview root: fixtures/v2/_test_runs/minimal-serve-default/dist
       #|status: Dry-run preview launch validated the built output without starting a server.
     ),
   )
@@ -603,7 +719,9 @@ test "runtime cli serve builds fixture before preview skeleton" {
 
 ///|
 test "runtime cli serve respects host port and output override" {
-  let fixture_root = "fixtures/v2/minimal"
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-serve-preview-dist",
+  )
   let outcome = @cli.run_serve_command_runtime_from_config_with_runner(
     fixture_root + "/moonink.json",
     Some("preview-dist"),
@@ -617,7 +735,7 @@ test "runtime cli serve respects host port and output override" {
     content=(
       #|[serve] runtime ready
       #|address: http://0.0.0.0:4173
-      #|preview root: fixtures/v2/minimal/preview-dist
+      #|preview root: fixtures/v2/_test_runs/minimal-serve-preview-dist/preview-dist
       #|status: Dry-run preview launch validated the built output without starting a server.
     ),
   )
@@ -641,7 +759,9 @@ test "runtime cli serve reports missing config before preview skeleton" {
 
 ///|
 test "runtime cli check succeeds for minimal fixture without diagnostics" {
-  let fixture_root = "fixtures/v2/minimal"
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-check-default",
+  )
   let stale_path = fixture_root + "/dist/check-stale.txt"
   let _ = try? @runtime.io_create_dir(fixture_root + "/dist")
   @runtime.io_write_string(stale_path, "stale") catch {
@@ -858,9 +978,32 @@ test "runtime cli build renders automatic navigation for pretty routes" {
   )
 }
 
+test "runtime cli build renders backlinks for minimal fixture" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-build-backlinks",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let hello_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/hello/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(
+    hello_html.contains(
+      "<aside class=\"page-backlinks\"><section class=\"backlinks\" aria-label=\"Backlinks\"><h2>Backlinks</h2><ul><li><a href=\"/\">Home</a></li></ul></section></aside>",
+    ),
+    content="true",
+  )
+}
+
 ///|
 test "runtime cli build respects output override" {
-  let fixture_root = "fixtures/v2/minimal"
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-build-dist-alt",
+  )
   let outcome = @cli.run_build_command_runtime_from_config_with_output(
     fixture_root + "/moonink.json",
     Some("dist-alt"),
@@ -873,8 +1016,27 @@ test "runtime cli build respects output override" {
 }
 
 ///|
+test "runtime cli build ignores ordinary markdown links in backlink index" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-build-backlinks-ignore-markdown",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let about_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/about/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(about_html.contains("<h2>Backlinks</h2>"), content="false")
+}
+
+///|
 test "runtime cli build writes minimal fixture html files" {
-  let fixture_root = "fixtures/v2/minimal"
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-build-default",
+  )
   let stale_path = fixture_root + "/dist/stale.txt"
   let _ = try? @runtime.io_create_dir(fixture_root + "/dist")
   @runtime.io_write_string(stale_path, "stale") catch {

@@ -135,6 +135,25 @@ test "docflow indexed wikilinker supports path and extension targets" {
 }
 
 ///|
+test "docflow indexed wikilinker collects only resolved wikilink targets" {
+  let parsed : @docflow.ParsedDocument = {
+    backend_name: "fake-markdown-parser",
+    source_format: @core.SourceFormat::Markdown,
+    source_path: "articles/hello.md",
+    source_uuid: "article-001",
+    diagnostics: @docflow.empty_document_diagnostics(),
+    backend_payload: Some(
+      "Visit [docs](https://example.com/docs), [[about]], [[about|About again]], and [[missing]].",
+    ),
+  }
+  let linker = @docflow.indexed_wikilinker({ "about": "/about/" }, {})
+  inspect(
+    @docflow.collect_resolved_wikilink_targets(linker, parsed),
+    content="[\"/about/\", \"/about/\"]",
+  )
+}
+
+///|
 test "docflow indexed wikilinker ignores non-markdown payloads" {
   let parsed : @docflow.ParsedDocument = {
     backend_name: "html-passthrough-parser",
@@ -193,6 +212,32 @@ test "docflow indexed wikilinker leaves ambiguous wikilinks and warns" {
 }
 
 ///|
+test "docflow indexed wikilinker preserves malformed nested wikilinks during rewrite" {
+  let parsed : @docflow.ParsedDocument = {
+    backend_name: "fake-markdown-parser",
+    source_format: @core.SourceFormat::Markdown,
+    source_path: "articles/hello.md",
+    source_uuid: "article-001",
+    diagnostics: @docflow.empty_document_diagnostics(),
+    backend_payload: Some("Visit [[outer [[inner]] today."),
+  }
+  let linker = @docflow.indexed_wikilinker(
+    { "inner": "/inner/" },
+    {},
+  )
+  let linked = @docflow.apply_wikilinker(linker, parsed)
+  inspect(
+    linked.backend_payload,
+    content="Some(\"Visit [[outer [[inner]] today.\")",
+  )
+  inspect(linked.diagnostics.entries.length(), content="1")
+  inspect(
+    @docflow.format_document_diagnostic(linked.diagnostics.entries[0]),
+    content="(WARN) Unresolved wikilink target: outer [[inner",
+  )
+}
+
+///|
 test "docflow render adapter contract produces html from parsed document" {
   let parsed : @docflow.ParsedDocument = {
     backend_name: "fake-markdown-parser",
@@ -211,6 +256,64 @@ test "docflow render adapter contract produces html from parsed document" {
   inspect(
     rendered.html,
     content="<article data-renderer=\"fake-html-renderer\" data-source-format=\"Markdown\"><h1>Hello</h1></article>",
+  )
+}
+
+///|
+test "docflow native template renderer interpolates backlinks html" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "articles/hello.md",
+    source_uuid: "article-001",
+    html: "<h1>Hello</h1>",
+    note: "rendered html for backlinks template test",
+  }
+  let context : @docflow.TemplateContext = {
+    ..@docflow.default_template_context(rendered),
+    backlinks_html: "<aside class=\"page-backlinks\"><section class=\"backlinks\"><a href=\"/\">Home</a></section></aside>",
+  }
+  inspect(
+    @docflow.render_template_string(
+      "<main>{{ body_html }}</main><aside>{{ backlinks_html }}</aside>", context,
+    ),
+    content="<main><h1>Hello</h1></main><aside><aside class=\"page-backlinks\"><section class=\"backlinks\"><a href=\"/\">Home</a></section></aside></aside>",
+  )
+}
+
+///|
+test "docflow apply_built_in_template renders backlinks slot when present" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "notes/welcome.md",
+    source_uuid: "page-ctx-001",
+    html: "<p>Welcome</p>",
+    note: "rendered html for built-in template backlinks test",
+  }
+  let templated = @docflow.apply_built_in_template(rendered, {
+    site_name: "Fixture Site",
+    site_url: "https://example.com/docs",
+    page_title: "Welcome",
+    page_description: "Landing page",
+    url_path: "/welcome/",
+    source_path: "notes/welcome.md",
+    content_kind: "page",
+    theme_name: "",
+    theme_asset_root: "",
+    page_body_class: "moonink-page",
+    navigation_html: "<nav></nav>",
+    backlink_urls: [],
+    current_section_title: "Guide",
+    current_section_url: "/guide/",
+    page_header_title: "Welcome",
+    page_header_html: "<nav class=\"breadcrumb\"></nav>",
+    backlinks_html: "<aside class=\"page-backlinks\"><section class=\"backlinks\"><a href=\"/\">Home</a></section></aside>",
+    body_html: rendered.html,
+  })
+  inspect(
+    templated.html.contains(
+      "<aside class=\"page-backlinks\"><section class=\"backlinks\"><a href=\"/\">Home</a></section></aside>",
+    ),
+    content="true",
   )
 }
 
@@ -347,6 +450,7 @@ test "docflow apply_template uses provided page metadata context" {
       theme_asset_root: "",
       page_body_class: "moonink-page",
       navigation_html: "<nav></nav>",
+      backlink_urls: [],
       current_section_title: "Guide",
       current_section_url: "/guide/",
       page_header_title: "Welcome",
@@ -386,6 +490,7 @@ test "docflow apply_built_in_template uses provided page metadata context" {
     theme_asset_root: "",
     page_body_class: "moonink-page",
     navigation_html: "<nav></nav>",
+    backlink_urls: [],
     current_section_title: "Guide",
     current_section_url: "/guide/",
     page_header_title: "Welcome",
