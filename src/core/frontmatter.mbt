@@ -1,5 +1,19 @@
 ///|
 /// Parsed frontmatter from a markdown file's YAML front matter.
+pub(all) enum FrontmatterFieldShape {
+  Scalar
+  List
+} derive(Debug, Eq)
+
+///|
+pub impl Show for FrontmatterFieldShape with output(self, logger) {
+  match self {
+    Scalar => logger.write_string("Scalar")
+    List => logger.write_string("List")
+  }
+}
+
+///|
 pub(all) struct Frontmatter {
   title : String?
   description : String?
@@ -8,6 +22,7 @@ pub(all) struct Frontmatter {
   tags : Array[String]
   draft : Bool
   extra : Map[String, String]
+  field_shapes : Map[String, FrontmatterFieldShape]
 } derive(Debug, Eq)
 
 ///|
@@ -20,6 +35,7 @@ pub fn Frontmatter::default() -> Frontmatter {
     tags: [],
     draft: false,
     extra: {},
+    field_shapes: {},
   }
 }
 
@@ -66,6 +82,7 @@ pub fn extract_frontmatter_raw(source : String) -> (String?, String) {
 pub fn parse_frontmatter(yaml : String) -> Frontmatter {
   let fields : Map[String, String] = {}
   let list_fields : Map[String, Array[String]] = {}
+  let field_shapes : Map[String, FrontmatterFieldShape] = {}
   for line_view in yaml.split("\n") {
     let line = line_view.to_string().trim().to_string()
     if line.is_empty() || line.has_prefix("#") {
@@ -97,6 +114,7 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
             }
           }
           list_fields[key] = items
+          field_shapes[key] = FrontmatterFieldShape::List
         } else {
           // Strip optional surrounding quotes
           let clean = if value.length() >= 2 &&
@@ -107,6 +125,7 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
             value
           }
           fields[key] = clean
+          field_shapes[key] = FrontmatterFieldShape::Scalar
         }
       }
       None => ()
@@ -135,7 +154,7 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
       extra[key] = value
     }
   }
-  { title, description, content_type, date, tags, draft, extra }
+  { title, description, content_type, date, tags, draft, extra, field_shapes }
 }
 
 ///|
