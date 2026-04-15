@@ -16,6 +16,18 @@ pub(all) struct BuildSummary {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct BuildDiagnostic {
+  source_path : String
+  entry : @docflow.DocumentDiagnostic
+} derive(Debug, Eq)
+
+///|
+pub(all) struct BuildWithDiagnostics {
+  summary : BuildSummary
+  diagnostics : Array[BuildDiagnostic]
+} derive(Debug, Eq)
+
+///|
 pub(all) suberror CheckCommandError {
   ContentDiscovery(@core.ContentDiscoveryError)
   AdapterRegistry(@docflow.AdapterRegistryError)
@@ -998,7 +1010,7 @@ fn validate_check_active_theme_layout(
 fn build_site_result(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
-) -> Result[BuildSummary, BuildCommandError] {
+) -> Result[BuildWithDiagnostics, BuildCommandError] {
   let inputs = match @runtime.load_build_inputs_result(config, inventory) {
     Ok(inputs) => inputs
     Err(err) => return Err(BuildCommandError::ContentDiscovery(err))
@@ -1021,6 +1033,7 @@ fn build_site_result(
   let mut emitted_html_files = 0
   let mut article_count = 0
   let mut page_count = 0
+  let diagnostics : Array[BuildDiagnostic] = []
   let wikilinker = build_wikilinker(inputs)
   let backlinks = build_backlink_index(inputs, wikilinker)
   for input in inputs {
@@ -1044,6 +1057,9 @@ fn build_site_result(
       Err(err) => return Err(BuildCommandError::FatalParse(err))
     }
     let linked = @docflow.apply_wikilinker(wikilinker, parsed)
+    for entry in linked.diagnostics.entries {
+      diagnostics.push(build_runtime_diagnostic(input, entry))
+    }
     let rendered = @docflow.render_with_adapter(renderer, linked)
     let templated = apply_build_template(
       config,
@@ -1068,11 +1084,14 @@ fn build_site_result(
     }
   }
   Ok({
-    output_dir: config.output_dir,
-    processed_sources: inputs.length(),
-    emitted_html_files,
-    article_count,
-    page_count,
+    summary: {
+      output_dir: config.output_dir,
+      processed_sources: inputs.length(),
+      emitted_html_files,
+      article_count,
+      page_count,
+    },
+    diagnostics,
   })
 }
 
@@ -1098,6 +1117,14 @@ fn format_check_diagnostic_lines(
     lines.push(@docflow.format_document_diagnostic(diagnostic.entry))
   }
   lines.iter().join("\n")
+}
+
+///|
+fn build_runtime_diagnostic(
+  input : @runtime.BuildInput,
+  entry : @docflow.DocumentDiagnostic,
+) -> BuildDiagnostic {
+  { source_path: input.meta.source_path, entry }
 }
 
 ///|
@@ -1221,11 +1248,12 @@ pub fn run_build_command_runtime_from_config_with_output(
     Err(err) =>
       return { exit_code: 1, message: format_runtime_content_error(err) }
   }
-  let summary = match build_site_result(config, inventory) {
-    Ok(summary) => summary
+  let result = match build_site_result(config, inventory) {
+    Ok(result) => result
     Err(err) =>
       return { exit_code: 1, message: format_build_command_error(err) }
   }
+  let summary = result.summary
   summarize_build_success(config, inventory, summary)
 }
 
