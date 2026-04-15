@@ -496,6 +496,20 @@ fn expected_serve_runtime_message(
 }
 
 ///|
+fn prepare_isolated_fixture_copy(source_root : String, name : String) -> String {
+  let scratch_parent = "fixtures/v2/_test_runs"
+  let target_root = scratch_parent + "/" + name
+  let _ = try? @runtime.io_remove_dir_all(target_root)
+  @runtime.io_ensure_dir(scratch_parent) catch {
+    _ => panic()
+  }
+  @runtime.io_copy_dir_recursive(source_root, target_root) catch {
+    _ => panic()
+  }
+  target_root
+}
+
+///|
 test "cli run keeps build behind runtime boundary" {
   inspect(
     @cli.cli_run(["moonink", "build"]).message,
@@ -579,7 +593,9 @@ test "cli exec rejects invalid flag combinations" {
 
 ///|
 test "runtime cli serve builds fixture before preview skeleton" {
-  let fixture_root = "fixtures/v2/minimal"
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-serve-default",
+  )
   let outcome = @cli.run_serve_command_runtime_from_config(
     fixture_root + "/moonink.json",
   )
@@ -589,7 +605,7 @@ test "runtime cli serve builds fixture before preview skeleton" {
     content=(
       #|[serve] runtime ready
       #|address: http://127.0.0.1:3000
-      #|preview root: fixtures/v2/minimal/dist
+      #|preview root: fixtures/v2/_test_runs/minimal-serve-default/dist
       #|status: Dry-run preview launch validated the built output without starting a server.
     ),
   )
@@ -603,7 +619,9 @@ test "runtime cli serve builds fixture before preview skeleton" {
 
 ///|
 test "runtime cli serve respects host port and output override" {
-  let fixture_root = "fixtures/v2/minimal"
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-serve-preview-dist",
+  )
   let outcome = @cli.run_serve_command_runtime_from_config_with_runner(
     fixture_root + "/moonink.json",
     Some("preview-dist"),
@@ -617,7 +635,7 @@ test "runtime cli serve respects host port and output override" {
     content=(
       #|[serve] runtime ready
       #|address: http://0.0.0.0:4173
-      #|preview root: fixtures/v2/minimal/preview-dist
+      #|preview root: fixtures/v2/_test_runs/minimal-serve-preview-dist/preview-dist
       #|status: Dry-run preview launch validated the built output without starting a server.
     ),
   )
@@ -641,7 +659,9 @@ test "runtime cli serve reports missing config before preview skeleton" {
 
 ///|
 test "runtime cli check succeeds for minimal fixture without diagnostics" {
-  let fixture_root = "fixtures/v2/minimal"
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-check-default",
+  )
   let stale_path = fixture_root + "/dist/check-stale.txt"
   let _ = try? @runtime.io_create_dir(fixture_root + "/dist")
   @runtime.io_write_string(stale_path, "stale") catch {
@@ -860,7 +880,9 @@ test "runtime cli build renders automatic navigation for pretty routes" {
 
 ///|
 test "runtime cli build respects output override" {
-  let fixture_root = "fixtures/v2/minimal"
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-build-dist-alt",
+  )
   let outcome = @cli.run_build_command_runtime_from_config_with_output(
     fixture_root + "/moonink.json",
     Some("dist-alt"),
@@ -874,7 +896,9 @@ test "runtime cli build respects output override" {
 
 ///|
 test "runtime cli build writes minimal fixture html files" {
-  let fixture_root = "fixtures/v2/minimal"
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-build-default",
+  )
   let stale_path = fixture_root + "/dist/stale.txt"
   let _ = try? @runtime.io_create_dir(fixture_root + "/dist")
   @runtime.io_write_string(stale_path, "stale") catch {
