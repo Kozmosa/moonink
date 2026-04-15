@@ -8,7 +8,7 @@ import {
 options(
   "native-stub": [ "search_index_clock.c" ],
   targets: {
-    "search_index_clock.mbt": [ "wasm", "wasm-gc" ],
+    "search_index_clock_wasm.mbt": [ "wasm", "wasm-gc" ],
     "search_index_clock_native.mbt": [ "native", "llvm" ],
     "search_index_clock_js.mbt": [ "js" ],
   },

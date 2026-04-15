@@ -26,8 +26,3 @@ pub fn current_utc_iso8601_second() -> String {
   pad_two(plain.second()) +
   "Z"
 }
-
-///|
-fn current_unix_second() -> Int64 {
-  @env.now().reinterpret_as_int64() / 1000L
-}
