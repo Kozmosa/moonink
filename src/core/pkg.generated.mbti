@@ -48,6 +48,10 @@ pub fn parse_frontmatter_from_source(String) -> (Frontmatter, String)
 
 pub fn project_io_error(String, String, String) -> ProjectIOError
 
+pub fn search_index_document_to_json(SearchIndexDocument) -> String
+
+pub fn search_index_excerpt(String?, String, SourceFormat) -> String
+
 pub fn should_exclude(String, Array[String]) -> Bool
 
 // Errors
@@ -159,6 +163,20 @@ pub(all) enum RouteStyle {
   Direct
 } derive(Eq, @debug.Debug)
 pub impl Show for RouteStyle
+
+pub(all) struct SearchIndexDocument {
+  version : Int
+  generated_at : String
+  items : Array[SearchIndexItem]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct SearchIndexItem {
+  title : String
+  url : String
+  excerpt : String
+  tags : Array[String]
+  date : String?
+} derive(Eq, @debug.Debug)
 
 pub(all) struct SiteAssemblyModel {
   pages : Array[SitePage]

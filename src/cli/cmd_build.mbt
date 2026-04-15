@@ -893,6 +893,45 @@ pub fn build_site_assembly_model(
 }
 
 ///|
+fn build_search_index_item(
+  input : @runtime.BuildInput,
+) -> @core.SearchIndexItem {
+  let frontmatter = input.meta.frontmatter
+  {
+    title: site_page_title(input.meta),
+    url: input.meta.url_path,
+    excerpt: @core.search_index_excerpt(
+      frontmatter.extra.get("excerpt"),
+      input.docflow_content,
+      input.meta.format,
+    ),
+    tags: frontmatter.tags,
+    date: frontmatter.date,
+  }
+}
+
+///|
+fn build_search_index_document(
+  inputs : Array[@runtime.BuildInput],
+) -> @core.SearchIndexDocument {
+  let items : Array[@core.SearchIndexItem] = []
+  for input in inputs {
+    items.push(build_search_index_item(input))
+  }
+  { version: 1, generated_at: @runtime.current_utc_iso8601_second(), items }
+}
+
+///|
+fn write_search_index_output(
+  config : @core.MooninkConfig,
+  inputs : Array[@runtime.BuildInput],
+) -> Unit raise BuildCommandError {
+  let document = build_search_index_document(inputs)
+  let json = @core.search_index_document_to_json(document)
+  write_build_output(config, "search-index.json", json)
+}
+
+///|
 fn build_template_context(
   config : @core.MooninkConfig,
   active_theme : @runtime.ActiveThemeLayout,
@@ -1077,6 +1116,9 @@ fn build_site_result(
       @core.ContentKind::Article => article_count = article_count + 1
       @core.ContentKind::Page => page_count = page_count + 1
     }
+  }
+  write_search_index_output(config, inputs) catch {
+    err => return Err(err)
   }
   Ok({
     summary: {

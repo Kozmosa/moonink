@@ -7,6 +7,8 @@ import {
 }
 
 // Values
+pub fn current_utc_iso8601_second() -> String
+
 pub fn default_runtime_task_policy() -> RuntimeTaskPolicy
 
 pub fn discover_content_result(@core.MooninkConfig) -> Result[@core.ContentInventory, @core.ContentDiscoveryError]
