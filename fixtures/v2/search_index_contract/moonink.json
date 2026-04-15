@@ -1,0 +1,11 @@
+{
+  "site_name": "Search Contract Fixture",
+  "site_url": "https://example.com/search",
+  "content_dir": ".",
+  "output_dir": "dist",
+  "exclude": ["dist"],
+  "route_style": "pretty",
+  "search": {
+    "enabled": true
+  }
+}

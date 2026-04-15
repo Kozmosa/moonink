@@ -1074,6 +1074,14 @@ test "runtime cli build writes minimal fixture html files" {
   ) catch {
     _ => panic()
   }
+  let search_index_path = fixture_root + "/dist/search-index.json"
+  inspect(
+    @runtime.io_path_exists(search_index_path),
+    content="true",
+  )
+  let search_index = @runtime.io_read_file_to_string(search_index_path) catch {
+    _ => panic()
+  }
   inspect(index_html.contains("data-theme=\"default\""), content="true")
   inspect(
     index_html.contains("href=\"/assets/moonink-default.css\""),
@@ -1125,6 +1133,16 @@ test "runtime cli build writes minimal fixture html files" {
     about_html.contains("href=\"https://example.com/docs\">Fixture Site</a>"),
     content="true",
   )
+  inspect(search_index.contains("\"version\":"), content="true")
+  inspect(search_index.contains("\"generated_at\":"), content="true")
+  inspect(search_index.contains("\"title\":\"Home\""), content="true")
+  inspect(search_index.contains("\"title\":\"Hello\""), content="true")
+  inspect(search_index.contains("\"title\":\"about\""), content="true")
+  inspect(search_index.contains("\"url\":\"/\""), content="true")
+  inspect(search_index.contains("\"url\":\"/hello/\""), content="true")
+  inspect(search_index.contains("\"url\":\"/about/\""), content="true")
+  inspect(search_index.contains("\"tags\":[]"), content="true")
+  inspect(search_index.contains("\"date\":null"), content="true")
 }
 
 ///|
@@ -1213,8 +1231,19 @@ test "runtime cli build respects direct route layout" {
   ) catch {
     _ => panic()
   }
+  let search_index_path = fixture_root + "/dist/search-index.json"
+  inspect(
+    @runtime.io_path_exists(search_index_path),
+    content="true",
+  )
+  let search_index = @runtime.io_read_file_to_string(search_index_path) catch {
+    _ => panic()
+  }
   inspect(hello_html.contains("Hello World"), content="true")
   inspect(about_html.contains("This is a static HTML page."), content="true")
+  inspect(search_index.contains("\"url\":\"/index.html\""), content="true")
+  inspect(search_index.contains("\"url\":\"/hello.html\""), content="true")
+  inspect(search_index.contains("\"url\":\"/about.html\""), content="true")
 }
 
 ///|
@@ -1566,6 +1595,47 @@ test "runtime cli build applies configured template file with direct routes" {
   inspect(about_html.contains("href=\"/index.html\">Home</a>"), content="true")
   inspect(about_html.contains("data-section-title=\"\""), content="true")
   inspect(about_html.contains("data-section-url=\"\""), content="true")
+}
+
+///|
+test "runtime cli build emits search index contract fixture" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/search_index_contract", "search-index-contract-build",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let search_index_path = fixture_root + "/dist/search-index.json"
+  inspect(
+    @runtime.io_path_exists(search_index_path),
+    content="true",
+  )
+  let search_index = @runtime.io_read_file_to_string(search_index_path) catch {
+    _ => panic()
+  }
+  inspect(search_index.contains("\"title\":\"Home\""), content="true")
+  inspect(search_index.contains("\"title\":\"Guide\""), content="true")
+  inspect(search_index.contains("\"title\":\"about\""), content="true")
+  inspect(
+    search_index.contains("\"excerpt\":\"Explicit home excerpt wins.\""),
+    content="true",
+  )
+  inspect(
+    search_index.contains("\"excerpt\":\"Explicit guide excerpt wins.\""),
+    content="true",
+  )
+  inspect(
+    search_index.contains("\"excerpt\":\"HTML fallback excerpt from body copy.\""),
+    content="true",
+  )
+  inspect(
+    search_index.contains("\"tags\":[\"search\",\"contract\"]"),
+    content="true",
+  )
+  inspect(search_index.contains("\"date\":\"2026-04-15\""), content="true")
+  inspect(search_index.contains("\"url\":\"/guide/\""), content="true")
+  inspect(search_index.contains("\"url\":\"/about/\""), content="true")
 }
 
 ///|
