@@ -746,6 +746,79 @@ test "runtime cli serve respects host port and output override" {
 }
 
 ///|
+test "runtime cli serve continues after build warnings" {
+  let fixture_root = "fixtures/v2/check_wikilink_warning"
+  let outcome = @cli.run_serve_command_runtime_from_config_with_runner(
+    fixture_root + "/moonink.json",
+    None,
+    "127.0.0.1",
+    3000,
+    @runtime.dry_run_preview_runner(),
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(outcome.message.contains("[serve] build completed with warnings"), content="true")
+  inspect(
+    outcome.message.contains("Unresolved wikilink target: missing-page"),
+    content="true",
+  )
+  inspect(outcome.message.contains("[serve] runtime ready"), content="true")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli serve blocks preview startup on fatal build failure" {
+  let outcome = @cli.run_serve_command_runtime_from_config(
+    "fixtures/v2/missing_config/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(
+    outcome.message.contains("[serve] build failed before preview startup"),
+    content="true",
+  )
+  inspect(outcome.message.contains("[build] failed during config loading"), content="true")
+  inspect(outcome.message.contains("[serve] runtime ready"), content="false")
+}
+
+///|
+test "runtime cli serve reports preview startup failure separately from build" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-serve-missing-preview-root",
+  )
+  let outcome = @cli.run_serve_command_runtime_from_config_with_runner(
+    fixture_root + "/moonink.json",
+    Some("preview-dist"),
+    "127.0.0.1",
+    3000,
+    @runtime.dry_run_preview_runner(),
+  )
+  @runtime.io_remove_dir_all(fixture_root + "/preview-dist") catch {
+    _ => panic()
+  }
+  let startup = @cli.start_prepared_serve_session_result(
+    @cli.prepare_serve_session(
+      fixture_root + "/preview-dist",
+      host="127.0.0.1",
+      port=3000,
+      note="manually prepared for serve-startup failure",
+    ),
+    @runtime.dry_run_preview_runner(),
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(startup.is_err(), content="true")
+  inspect(
+    startup.err().contains("[serve] failed during preview startup"),
+    content="true",
+  )
+  inspect(
+    startup.err().contains("preview root does not exist"),
+    content="true",
+  )
+}
+
+///|
 test "runtime cli serve reports missing config before preview skeleton" {
   let outcome = @cli.run_serve_command_runtime_from_config(
     "fixtures/v2/missing_config/moonink.json",
