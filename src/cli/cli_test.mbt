@@ -1075,10 +1075,7 @@ test "runtime cli build writes minimal fixture html files" {
     _ => panic()
   }
   let search_index_path = fixture_root + "/dist/search-index.json"
-  inspect(
-    @runtime.io_path_exists(search_index_path),
-    content="true",
-  )
+  inspect(@runtime.io_path_exists(search_index_path), content="true")
   let search_index = @runtime.io_read_file_to_string(search_index_path) catch {
     _ => panic()
   }
@@ -1232,10 +1229,7 @@ test "runtime cli build respects direct route layout" {
     _ => panic()
   }
   let search_index_path = fixture_root + "/dist/search-index.json"
-  inspect(
-    @runtime.io_path_exists(search_index_path),
-    content="true",
-  )
+  inspect(@runtime.io_path_exists(search_index_path), content="true")
   let search_index = @runtime.io_read_file_to_string(search_index_path) catch {
     _ => panic()
   }
@@ -1607,10 +1601,7 @@ test "runtime cli build emits search index contract fixture" {
   )
   inspect(outcome.exit_code, content="0")
   let search_index_path = fixture_root + "/dist/search-index.json"
-  inspect(
-    @runtime.io_path_exists(search_index_path),
-    content="true",
-  )
+  inspect(@runtime.io_path_exists(search_index_path), content="true")
   let search_index = @runtime.io_read_file_to_string(search_index_path) catch {
     _ => panic()
   }
@@ -1626,7 +1617,9 @@ test "runtime cli build emits search index contract fixture" {
     content="true",
   )
   inspect(
-    search_index.contains("\"excerpt\":\"HTML fallback excerpt from body copy.\""),
+    search_index.contains(
+      "\"excerpt\":\"About Search HTML fallback excerpt from body copy.\"",
+    ),
     content="true",
   )
   inspect(
