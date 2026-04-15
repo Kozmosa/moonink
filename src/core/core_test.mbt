@@ -198,6 +198,28 @@ test "extract_frontmatter_raw handles no frontmatter" {
 }
 
 ///|
+test "parse_frontmatter records scalar tags shape mismatch" {
+  let fm = @core.parse_frontmatter("title: Demo\ntags: moonbit")
+  inspect(fm.tags.length(), content="0")
+  inspect(fm.field_shapes.get("tags"), content="Some(Scalar)")
+}
+
+///|
+test "parse_frontmatter records invalid scalar draft value" {
+  let fm = @core.parse_frontmatter("title: Demo\ndraft: maybe")
+  inspect(fm.draft, content="false")
+  inspect(fm.field_shapes.get("draft"), content="Some(Scalar)")
+  inspect(fm.invalid_scalar_fields.get("draft"), content="Some(true)")
+}
+
+///|
+test "parse_frontmatter records list title shape mismatch" {
+  let fm = @core.parse_frontmatter("title: [Demo]\n")
+  inspect(fm.title, content="None")
+  inspect(fm.field_shapes.get("title"), content="Some(List)")
+}
+
+///|
 test "parse_frontmatter parses core fields" {
   let yaml = "title: My Article\ndescription: A test\ntype: article\ndate: 2026-04-01\ndraft: true"
   let fm = @core.parse_frontmatter(yaml)

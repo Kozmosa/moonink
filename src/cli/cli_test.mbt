@@ -855,7 +855,7 @@ test "runtime cli check respects output override without writing output" {
     fixture_root + "/moonink.json",
     Some("check-preview"),
   )
-  inspect(outcome.exit_code, content="1")
+  inspect(outcome.exit_code, content="0")
   inspect(
     outcome.message.contains("[check] completed with diagnostics"),
     content="true",
@@ -875,7 +875,7 @@ test "runtime cli check reports wikilink diagnostics without writing output" {
   let outcome = @cli.run_check_command_runtime_from_config(
     fixture_root + "/moonink.json",
   )
-  inspect(outcome.exit_code, content="1")
+  inspect(outcome.exit_code, content="0")
   inspect(
     outcome.message.contains("[check] completed with diagnostics"),
     content="true",
@@ -884,7 +884,11 @@ test "runtime cli check reports wikilink diagnostics without writing output" {
     outcome.message.contains("Unresolved wikilink target: missing-page"),
     content="true",
   )
-  inspect(outcome.message.contains("[hello.md]"), content="true")
+  inspect(
+    outcome.message.contains("[check] summary: 0 errors, 1 warnings"),
+    content="true",
+  )
+  inspect(outcome.message.contains("[check] completed"), content="true")
   inspect(
     @runtime.io_path_exists(fixture_root + "/dist/index.html"),
     content="false",
@@ -898,12 +902,113 @@ test "runtime cli check reports missing configured template file" {
     fixture_root + "/moonink.json",
   )
   inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("[check] theme/template"), content="true")
   inspect(
-    outcome.message.contains("[check] failed during theme loading"),
+    outcome.message.contains("error: Failed to load active theme layout"),
     content="true",
   )
-  inspect(outcome.message.contains("load_template"), content="true")
   inspect(outcome.message.contains("templates/missing.html"), content="true")
+  inspect(
+    outcome.message.contains("[check] summary: 1 errors, 0 warnings"),
+    content="true",
+  )
+  inspect(outcome.message.contains("[check] failed"), content="true")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="false",
+  )
+}
+
+///|
+test "runtime cli check reports frontmatter type mismatch as blocking" {
+  let fixture_root = "fixtures/v2/check_frontmatter_type_mismatch"
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("[check] frontmatter"), content="true")
+  inspect(
+    outcome.message.contains("error: Frontmatter field `tags` must be an array"),
+    content="true",
+  )
+  inspect(outcome.message.contains("[index.md]"), content="true")
+  inspect(
+    outcome.message.contains("[check] summary: 1 errors, 0 warnings"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="false",
+  )
+}
+
+///|
+test "runtime cli check reports final route conflicts as blocking" {
+  let fixture_root = "fixtures/v2/check_route_conflict"
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("[check] routes"), content="true")
+  inspect(
+    outcome.message.contains("error: Final output path conflict"),
+    content="true",
+  )
+  inspect(outcome.message.contains("index.md"), content="true")
+  inspect(outcome.message.contains("index.html"), content="true")
+  inspect(
+    outcome.message.contains("[check] summary: 1 errors, 0 warnings"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="false",
+  )
+}
+
+///|
+test "runtime cli check reports mixed blocking and warning diagnostics" {
+  let fixture_root = "fixtures/v2/check_mixed_diagnostics"
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("[check] routes"), content="true")
+  inspect(outcome.message.contains("[check] document"), content="true")
+  inspect(
+    outcome.message.contains("Unresolved wikilink target: missing-page"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("Final output path conflict"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("[check] summary: 1 errors, 1 warnings"),
+    content="true",
+  )
+  inspect(outcome.message.contains("[check] failed"), content="true")
+}
+
+///|
+test "runtime cli check reports invalid draft scalar as blocking" {
+  let fixture_root = "fixtures/v2/check_frontmatter_invalid_draft"
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("[check] frontmatter"), content="true")
+  inspect(
+    outcome.message.contains(
+      "error: Frontmatter field `draft` must be a boolean",
+    ),
+    content="true",
+  )
+  inspect(outcome.message.contains("[index.md]"), content="true")
+  inspect(
+    outcome.message.contains("[check] summary: 1 errors, 0 warnings"),
+    content="true",
+  )
   inspect(
     @runtime.io_path_exists(fixture_root + "/dist/index.html"),
     content="false",

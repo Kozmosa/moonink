@@ -76,10 +76,9 @@ fn is_markdown_emphasis_marker(source : String, index : Int) -> Bool {
   if char != "*" && char != "_" && char != "`" {
     return false
   }
-  let previous_is_word =
-    index > 0 && is_word_char(char_at(source, index - 1))
-  let next_is_word =
-    index + 1 < source.length() && is_word_char(char_at(source, index + 1))
+  let previous_is_word = index > 0 && is_word_char(char_at(source, index - 1))
+  let next_is_word = index + 1 < source.length() &&
+    is_word_char(char_at(source, index + 1))
   !(previous_is_word && next_is_word)
 }
 
@@ -136,7 +135,8 @@ fn strip_markdown_link(source : String, start : Int) -> (String, Int)? {
   while label_end < source.length() && char_at(source, label_end) != "]" {
     label_end += 1
   }
-  if label_end >= source.length() || label_end + 1 >= source.length() ||
+  if label_end >= source.length() ||
+    label_end + 1 >= source.length() ||
     char_at(source, label_end + 1) != "(" {
     return None
   }
@@ -155,12 +155,16 @@ fn trim_space_before_punctuation(source : String) -> String {
   let result = StringBuilder::new()
   for i in 0..<source.length() {
     let char = char_at(source, i)
-    let next_is_punctuation =
-      i + 1 < source.length() &&
-      (char_at(source, i + 1) == "." || char_at(source, i + 1) == "," ||
-      char_at(source, i + 1) == ":" || char_at(source, i + 1) == ";" ||
-      char_at(source, i + 1) == "!" || char_at(source, i + 1) == "?" ||
-      char_at(source, i + 1) == ")")
+    let next_is_punctuation = i + 1 < source.length() &&
+      (
+        char_at(source, i + 1) == "." ||
+        char_at(source, i + 1) == "," ||
+        char_at(source, i + 1) == ":" ||
+        char_at(source, i + 1) == ";" ||
+        char_at(source, i + 1) == "!" ||
+        char_at(source, i + 1) == "?" ||
+        char_at(source, i + 1) == ")"
+      )
     if char == " " && next_is_punctuation {
       continue
     }
@@ -280,7 +284,10 @@ fn append_json_string(builder : StringBuilder, source : String) -> Unit {
 }
 
 ///|
-fn append_json_string_array(builder : StringBuilder, items : Array[String]) -> Unit {
+fn append_json_string_array(
+  builder : StringBuilder,
+  items : Array[String],
+) -> Unit {
   builder.write_string("[")
   for index in 0..<items.length() {
     if index > 0 {

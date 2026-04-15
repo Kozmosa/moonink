@@ -40,13 +40,38 @@ pub(all) struct CheckSummary {
   processed_sources : Int
   article_count : Int
   page_count : Int
-  diagnostic_count : Int
+  report : CheckReport
 } derive(Debug, Eq)
 
 ///|
-pub(all) struct CheckDiagnostic {
-  source_path : String
-  entry : @docflow.DocumentDiagnostic
+pub(all) enum CheckCategory {
+  ThemeTemplate
+  Frontmatter
+  Document
+  Routes
+} derive(Debug, Eq)
+
+///|
+pub(all) enum CheckSeverity {
+  Warning
+  Error
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CheckEntry {
+  category : CheckCategory
+  severity : CheckSeverity
+  source_path : String?
+  message : String
+  hint : String?
+  line : Int?
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CheckReport {
+  entries : Array[CheckEntry]
+  error_count : Int
+  warning_count : Int
 } derive(Debug, Eq)
 
 ///|
@@ -442,6 +467,52 @@ pub fn build_backlink_index(
     }
   }
   backlinks
+}
+
+///|
+fn collect_output_path_sources(
+  inputs : Array[@runtime.BuildInput],
+  route_style : @core.RouteStyle,
+) -> Map[String, Array[String]] {
+  let output_paths : Map[String, Array[String]] = {}
+  for input in inputs {
+    let output_path = @core.output_html_path(
+      input.meta.source_path,
+      route_style,
+    )
+    let existing = match output_paths.get(output_path) {
+      Some(paths) => paths
+      None => []
+    }
+    output_paths[output_path] = existing + [input.meta.source_path]
+  }
+  output_paths
+}
+
+///|
+fn append_route_conflicts(
+  inputs : Array[@runtime.BuildInput],
+  route_style : @core.RouteStyle,
+  report : CheckReport,
+) -> CheckReport {
+  let mut next_report = report
+  let output_paths = collect_output_path_sources(inputs, route_style)
+  for entry in output_paths {
+    let (output_path, sources) = entry
+    if sources.length() > 1 {
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Routes,
+        severity: CheckSeverity::Error,
+        source_path: None,
+        message: "Final output path conflict",
+        hint: Some(
+          "`" + output_path + "` is produced by " + sources.iter().join(", "),
+        ),
+        line: None,
+      })
+    }
+  }
+  next_report
 }
 
 ///|
@@ -1029,20 +1100,24 @@ fn resolve_active_theme_layout(
 ///|
 fn validate_check_active_theme_layout(
   config : @core.MooninkConfig,
-) -> Unit raise CheckCommandError {
+  report : CheckReport,
+) -> CheckReport {
   match @runtime.load_active_theme_layout_result(config) {
-    Ok(_) => ()
+    Ok(_) => report
     Err(err) =>
-      raise CheckCommandError::ThemeLoad(
-        @core.project_io_error(
-          "load_template",
+      report_with_entry(report, {
+        category: CheckCategory::ThemeTemplate,
+        severity: CheckSeverity::Error,
+        source_path: Some(
           match config.template_file {
             Some(path) => path
             None => config.config_path
           },
-          @core.format_config_error(err),
         ),
-      )
+        message: "Failed to load active theme layout",
+        hint: Some(@core.format_config_error(err)),
+        line: None,
+      })
   }
 }
 
@@ -1163,15 +1238,183 @@ fn summarize_build_success(
 }
 
 ///|
-fn format_check_diagnostic_lines(
-  diagnostics : Array[CheckDiagnostic],
-) -> String {
+fn empty_check_report() -> CheckReport {
+  { entries: [], error_count: 0, warning_count: 0 }
+}
+
+///|
+fn report_with_entry(report : CheckReport, entry : CheckEntry) -> CheckReport {
+  let entries = report.entries + [entry]
+  match entry.severity {
+    CheckSeverity::Error =>
+      { ..report, entries, error_count: report.error_count + 1 }
+    CheckSeverity::Warning =>
+      { ..report, entries, warning_count: report.warning_count + 1 }
+  }
+}
+
+///|
+fn check_entry_from_docflow_diagnostic(
+  source_path : String,
+  entry : @docflow.DocumentDiagnostic,
+) -> CheckEntry {
+  {
+    category: CheckCategory::Document,
+    severity: match entry.severity {
+      @docflow.DiagnosticSeverity::Error => CheckSeverity::Error
+      _ => CheckSeverity::Warning
+    },
+    source_path: Some(source_path),
+    message: entry.message,
+    hint: entry.hint,
+    line: entry.line,
+  }
+}
+
+///|
+fn validate_frontmatter_for_check(
+  source_path : String,
+  frontmatter : @core.Frontmatter,
+  report : CheckReport,
+) -> CheckReport {
+  let mut next_report = report
+  match frontmatter.field_shapes.get("title") {
+    Some(@core.FrontmatterFieldShape::List) =>
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Frontmatter,
+        severity: CheckSeverity::Error,
+        source_path: Some(source_path),
+        message: "Frontmatter field `title` must be a string",
+        hint: None,
+        line: None,
+      })
+    _ => ()
+  }
+  match frontmatter.field_shapes.get("description") {
+    Some(@core.FrontmatterFieldShape::List) =>
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Frontmatter,
+        severity: CheckSeverity::Error,
+        source_path: Some(source_path),
+        message: "Frontmatter field `description` must be a string",
+        hint: None,
+        line: None,
+      })
+    _ => ()
+  }
+  match frontmatter.field_shapes.get("type") {
+    Some(@core.FrontmatterFieldShape::List) =>
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Frontmatter,
+        severity: CheckSeverity::Error,
+        source_path: Some(source_path),
+        message: "Frontmatter field `type` must be a string",
+        hint: None,
+        line: None,
+      })
+    _ => ()
+  }
+  match frontmatter.field_shapes.get("date") {
+    Some(@core.FrontmatterFieldShape::List) =>
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Frontmatter,
+        severity: CheckSeverity::Error,
+        source_path: Some(source_path),
+        message: "Frontmatter field `date` must be a string",
+        hint: None,
+        line: None,
+      })
+    _ => ()
+  }
+  match frontmatter.field_shapes.get("tags") {
+    Some(@core.FrontmatterFieldShape::Scalar) =>
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Frontmatter,
+        severity: CheckSeverity::Error,
+        source_path: Some(source_path),
+        message: "Frontmatter field `tags` must be an array",
+        hint: None,
+        line: None,
+      })
+    _ => ()
+  }
+  match frontmatter.invalid_scalar_fields.get("draft") {
+    Some(true) =>
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Frontmatter,
+        severity: CheckSeverity::Error,
+        source_path: Some(source_path),
+        message: "Frontmatter field `draft` must be a boolean",
+        hint: None,
+        line: None,
+      })
+    _ => ()
+  }
+  next_report
+}
+
+///|
+fn check_category_label(category : CheckCategory) -> String {
+  match category {
+    CheckCategory::ThemeTemplate => "theme/template"
+    CheckCategory::Frontmatter => "frontmatter"
+    CheckCategory::Document => "document"
+    CheckCategory::Routes => "routes"
+  }
+}
+
+///|
+fn check_severity_label(severity : CheckSeverity) -> String {
+  match severity {
+    CheckSeverity::Error => "error"
+    CheckSeverity::Warning => "warning"
+  }
+}
+
+///|
+fn format_check_entry(entry : CheckEntry) -> String {
   let lines : Array[String] = []
-  for diagnostic in diagnostics {
-    lines.push("[\{diagnostic.source_path}]")
-    lines.push(@docflow.format_document_diagnostic(diagnostic.entry))
+  lines.push("[check] " + check_category_label(entry.category))
+  let source_line = match entry.source_path {
+    Some(path) => "[" + path + "]"
+    None => ""
+  }
+  if source_line != "" {
+    lines.push(source_line)
+  }
+  lines.push(check_severity_label(entry.severity) + ": " + entry.message)
+  match entry.line {
+    Some(line) => lines.push("line: " + line.to_string())
+    None => ()
+  }
+  match entry.hint {
+    Some(hint) if hint != "" => lines.push(hint)
+    _ => ()
   }
   lines.iter().join("\n")
+}
+
+///|
+fn format_check_report(report : CheckReport) -> String {
+  let sections : Array[String] = []
+  for entry in report.entries {
+    sections.push(format_check_entry(entry))
+  }
+  sections.push(
+    "[check] summary: " +
+    report.error_count.to_string() +
+    " errors, " +
+    report.warning_count.to_string() +
+    " warnings",
+  )
+  sections.push(
+    if report.error_count == 0 {
+      "[check] completed"
+    } else {
+      "[check] failed"
+    },
+  )
+  sections.iter().join("\n---\n")
 }
 
 ///|
@@ -1187,27 +1430,26 @@ fn summarize_check_success(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
   summary : CheckSummary,
-  diagnostics : Array[CheckDiagnostic],
 ) -> CliOutcome {
-  let header = if summary.diagnostic_count == 0 {
+  let header = if summary.report.entries.is_empty() {
     "[check] completed"
   } else {
     "[check] completed with diagnostics"
   }
-  let details = if diagnostics.is_empty() {
+  let report_details = if summary.report.entries.is_empty() {
     ""
   } else {
-    "\n---\n" + format_check_diagnostic_lines(diagnostics)
+    "\n---\n" + format_check_report(summary.report)
   }
   {
-    exit_code: if summary.diagnostic_count == 0 {
+    exit_code: if summary.report.error_count == 0 {
       0
     } else {
       1
     },
     message: header +
-    "\nsite: \{config.site_name}\nconfig: \{config.config_path}\ncontent root: \{inventory.root}\nprocessed: \{summary.processed_sources}\narticles: \{summary.article_count}\npages: \{summary.page_count}\ndiagnostics: \{summary.diagnostic_count}" +
-    details,
+    "\nsite: \{config.site_name}\nconfig: \{config.config_path}\ncontent root: \{inventory.root}\nprocessed: \{summary.processed_sources}\narticles: \{summary.article_count}\npages: \{summary.page_count}\ndiagnostics: \{summary.report.entries.length()}" +
+    report_details,
   }
 }
 
@@ -1215,19 +1457,23 @@ fn summarize_check_success(
 fn check_site_result(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
-) -> Result[(CheckSummary, Array[CheckDiagnostic]), CheckCommandError] {
+) -> Result[CheckSummary, CheckCommandError] {
   let inputs = match @runtime.load_build_inputs_result(config, inventory) {
     Ok(inputs) => inputs
     Err(err) => return Err(CheckCommandError::ContentDiscovery(err))
   }
-  validate_check_active_theme_layout(config) catch {
-    err => return Err(err)
-  }
+  let mut report = empty_check_report()
+  report = validate_check_active_theme_layout(config, report)
+  report = append_route_conflicts(inputs, config.route_style, report)
   let wikilinker = build_wikilinker(inputs)
-  let diagnostics : Array[CheckDiagnostic] = []
   let mut article_count = 0
   let mut page_count = 0
   for input in inputs {
+    report = validate_frontmatter_for_check(
+      input.meta.source_path,
+      input.meta.frontmatter,
+      report,
+    )
     let parser = match check_parser_for_format(input.meta.format) {
       Ok(parser) => parser
       Err(err) => return Err(err)
@@ -1245,24 +1491,17 @@ fn check_site_result(
     }
     let linked = @docflow.apply_wikilinker(wikilinker, parsed)
     for entry in linked.diagnostics.entries {
-      diagnostics.push({ source_path: input.meta.source_path, entry })
+      report = report_with_entry(
+        report,
+        check_entry_from_docflow_diagnostic(input.meta.source_path, entry),
+      )
     }
     match input.meta.content_kind {
       @core.ContentKind::Article => article_count = article_count + 1
       @core.ContentKind::Page => page_count = page_count + 1
     }
   }
-  Ok(
-    (
-      {
-        processed_sources: inputs.length(),
-        article_count,
-        page_count,
-        diagnostic_count: diagnostics.length(),
-      },
-      diagnostics,
-    ),
-  )
+  Ok({ processed_sources: inputs.length(), article_count, page_count, report })
 }
 
 ///|
@@ -1346,8 +1585,7 @@ pub fn run_check_command_runtime_from_config_with_output(
     Err(err) =>
       return { exit_code: 1, message: format_check_command_error(err) }
   }
-  let (summary, diagnostics) = check_result
-  summarize_check_success(config, inventory, summary, diagnostics)
+  summarize_check_success(config, inventory, check_result)
 }
 
 ///|
