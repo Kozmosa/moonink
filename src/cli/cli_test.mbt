@@ -1092,6 +1092,30 @@ test "runtime cli build respects output override" {
 }
 
 ///|
+test "runtime cli build surfaces wikilink diagnostics after successful output" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/check_wikilink_warning", "check-wikilink-warning-build",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(
+    outcome.message.contains("[build] completed with diagnostics"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("Unresolved wikilink target: missing-page"),
+    content="true",
+  )
+  inspect(outcome.message.contains("[hello.md]"), content="true")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="true",
+  )
+}
+
+///|
 test "runtime cli build ignores ordinary markdown links in backlink index" {
   let fixture_root = prepare_isolated_fixture_copy(
     "fixtures/v2/minimal", "minimal-build-backlinks-ignore-markdown",

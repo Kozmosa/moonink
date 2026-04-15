@@ -1095,10 +1095,28 @@ fn summarize_build_success(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
   summary : BuildSummary,
+  diagnostics : Array[BuildDiagnostic],
 ) -> CliOutcome {
+  let header = if diagnostics.is_empty() {
+    "[build] completed"
+  } else {
+    "[build] completed with diagnostics"
+  }
+  let details = if diagnostics.is_empty() {
+    ""
+  } else {
+    let lines : Array[String] = []
+    for diagnostic in diagnostics {
+      lines.push("[\{diagnostic.source_path}]")
+      lines.push(@docflow.format_document_diagnostic(diagnostic.entry))
+    }
+    "\n---\n" + lines.iter().join("\n")
+  }
   {
     exit_code: 0,
-    message: "[build] completed\nsite: \{config.site_name}\nconfig: \{config.config_path}\ncontent root: \{inventory.root}\nprocessed: \{summary.processed_sources}\narticles: \{summary.article_count}\npages: \{summary.page_count}\noutput: \{summary.output_dir}\nemitted html: \{summary.emitted_html_files}",
+    message: header +
+    "\nsite: \{config.site_name}\nconfig: \{config.config_path}\ncontent root: \{inventory.root}\nprocessed: \{summary.processed_sources}\narticles: \{summary.article_count}\npages: \{summary.page_count}\noutput: \{summary.output_dir}\nemitted html: \{summary.emitted_html_files}" +
+    details,
   }
 }
 
@@ -1249,7 +1267,7 @@ pub fn run_build_command_runtime_from_config_with_output(
       return { exit_code: 1, message: format_build_command_error(err) }
   }
   let summary = result.summary
-  summarize_build_success(config, inventory, summary)
+  summarize_build_success(config, inventory, summary, result.diagnostics)
 }
 
 ///|
