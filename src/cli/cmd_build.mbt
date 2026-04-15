@@ -24,17 +24,23 @@ pub(all) suberror CheckCommandError {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct CheckSummary {
+  processed_sources : Int
+  article_count : Int
+  page_count : Int
+  report : CheckReport
+} derive(Debug, Eq)
+
+///|
 pub(all) enum CheckCategory {
   ThemeTemplate
-  Frontmatter
-  Routes
-  Wikilinks
+  Document
 } derive(Debug, Eq)
 
 ///|
 pub(all) enum CheckSeverity {
-  Error
   Warning
+  Error
 } derive(Debug, Eq)
 
 ///|
@@ -49,103 +55,10 @@ pub(all) struct CheckEntry {
 
 ///|
 pub(all) struct CheckReport {
-  theme_template_errors : Array[CheckEntry]
-  theme_template_warnings : Array[CheckEntry]
-  frontmatter_errors : Array[CheckEntry]
-  frontmatter_warnings : Array[CheckEntry]
-  routes_errors : Array[CheckEntry]
-  routes_warnings : Array[CheckEntry]
-  wikilinks_errors : Array[CheckEntry]
-  wikilinks_warnings : Array[CheckEntry]
+  entries : Array[CheckEntry]
   error_count : Int
   warning_count : Int
 } derive(Debug, Eq)
-
-///|
-pub(all) struct CheckSummary {
-  processed_sources : Int
-  article_count : Int
-  page_count : Int
-  report : CheckReport
-} derive(Debug, Eq)
-
-///|
-fn empty_check_report() -> CheckReport {
-  {
-    theme_template_errors: [],
-    theme_template_warnings: [],
-    frontmatter_errors: [],
-    frontmatter_warnings: [],
-    routes_errors: [],
-    routes_warnings: [],
-    wikilinks_errors: [],
-    wikilinks_warnings: [],
-    error_count: 0,
-    warning_count: 0,
-  }
-}
-
-///|
-fn report_with_entry(report : CheckReport, entry : CheckEntry) -> CheckReport {
-  match (entry.category, entry.severity) {
-    (CheckCategory::ThemeTemplate, CheckSeverity::Error) => {
-      ..report,
-      theme_template_errors: report.theme_template_errors + [entry],
-      error_count: report.error_count + 1,
-    }
-    (CheckCategory::ThemeTemplate, CheckSeverity::Warning) => {
-      ..report,
-      theme_template_warnings: report.theme_template_warnings + [entry],
-      warning_count: report.warning_count + 1,
-    }
-    (CheckCategory::Frontmatter, CheckSeverity::Error) => {
-      ..report,
-      frontmatter_errors: report.frontmatter_errors + [entry],
-      error_count: report.error_count + 1,
-    }
-    (CheckCategory::Frontmatter, CheckSeverity::Warning) => {
-      ..report,
-      frontmatter_warnings: report.frontmatter_warnings + [entry],
-      warning_count: report.warning_count + 1,
-    }
-    (CheckCategory::Routes, CheckSeverity::Error) => {
-      ..report,
-      routes_errors: report.routes_errors + [entry],
-      error_count: report.error_count + 1,
-    }
-    (CheckCategory::Routes, CheckSeverity::Warning) => {
-      ..report,
-      routes_warnings: report.routes_warnings + [entry],
-      warning_count: report.warning_count + 1,
-    }
-    (CheckCategory::Wikilinks, CheckSeverity::Error) => {
-      ..report,
-      wikilinks_errors: report.wikilinks_errors + [entry],
-      error_count: report.error_count + 1,
-    }
-    (CheckCategory::Wikilinks, CheckSeverity::Warning) => {
-      ..report,
-      wikilinks_warnings: report.wikilinks_warnings + [entry],
-      warning_count: report.warning_count + 1,
-    }
-  }
-}
-
-///|
-fn check_entry_from_docflow_diagnostic(
-  source_path : String,
-  entry : @docflow.DocumentDiagnostic,
-) -> CheckEntry {
-  {
-    category: CheckCategory::Wikilinks,
-    severity: CheckSeverity::Warning,
-    source_path: Some(source_path),
-    message: entry.message,
-    hint: entry.hint,
-    line: entry.line,
-  }
-}
-
 
 ///|
 fn format_runtime_config_error(err : @core.ConfigError) -> String {
@@ -1087,20 +1000,22 @@ fn resolve_active_theme_layout(
 ///|
 fn validate_check_active_theme_layout(
   config : @core.MooninkConfig,
-) -> Unit raise CheckCommandError {
+  report : CheckReport,
+) -> CheckReport {
   match @runtime.load_active_theme_layout_result(config) {
-    Ok(_) => ()
+    Ok(_) => report
     Err(err) =>
-      raise CheckCommandError::ThemeLoad(
-        @core.project_io_error(
-          "load_template",
-          match config.template_file {
-            Some(path) => path
-            None => config.config_path
-          },
-          @core.format_config_error(err),
-        ),
-      )
+      report_with_entry(report, {
+        category: CheckCategory::ThemeTemplate,
+        severity: CheckSeverity::Error,
+        source_path: Some(match config.template_file {
+          Some(path) => path
+          None => config.config_path
+        }),
+        message: "Failed to load active theme layout",
+        hint: Some(@core.format_config_error(err)),
+        line: None,
+      })
   }
 }
 
@@ -1199,7 +1114,55 @@ fn summarize_build_success(
 }
 
 ///|
-fn format_check_severity(severity : CheckSeverity) -> String {
+fn empty_check_report() -> CheckReport {
+  { entries: [], error_count: 0, warning_count: 0 }
+}
+
+///|
+fn report_with_entry(report : CheckReport, entry : CheckEntry) -> CheckReport {
+  let entries = report.entries + [entry]
+  match entry.severity {
+    CheckSeverity::Error => {
+      ..report,
+      entries,
+      error_count: report.error_count + 1,
+    }
+    CheckSeverity::Warning => {
+      ..report,
+      entries,
+      warning_count: report.warning_count + 1,
+    }
+  }
+}
+
+///|
+fn check_entry_from_docflow_diagnostic(
+  source_path : String,
+  entry : @docflow.DocumentDiagnostic,
+) -> CheckEntry {
+  {
+    category: CheckCategory::Document,
+    severity: match entry.severity {
+      @docflow.DiagnosticSeverity::Error => CheckSeverity::Error
+      _ => CheckSeverity::Warning
+    },
+    source_path: Some(source_path),
+    message: entry.message,
+    hint: entry.hint,
+    line: entry.line,
+  }
+}
+
+///|
+fn check_category_label(category : CheckCategory) -> String {
+  match category {
+    CheckCategory::ThemeTemplate => "theme/template"
+    CheckCategory::Document => "document"
+  }
+}
+
+///|
+fn check_severity_label(severity : CheckSeverity) -> String {
   match severity {
     CheckSeverity::Error => "error"
     CheckSeverity::Warning => "warning"
@@ -1208,33 +1171,48 @@ fn format_check_severity(severity : CheckSeverity) -> String {
 
 ///|
 fn format_check_entry(entry : CheckEntry) -> String {
-  let source_prefix = match entry.source_path {
-    Some(source_path) => "[\{source_path}] "
+  let lines : Array[String] = []
+  lines.push("[check] " + check_category_label(entry.category))
+  let source_line = match entry.source_path {
+    Some(path) => path
     None => ""
   }
-  let line_suffix = match entry.line {
-    Some(line) => " (line \{line})"
-    None => ""
+  if source_line != "" {
+    lines.push(source_line)
   }
-  let hint_suffix = match entry.hint {
-    Some(hint) => "\nhint: \{hint}"
-    None => ""
+  lines.push(check_severity_label(entry.severity) + ": " + entry.message)
+  match entry.line {
+    Some(line) => lines.push("line: " + line.to_string())
+    None => ()
   }
-  source_prefix +
-  "\{format_check_severity(entry.severity)}: \{entry.message}\{line_suffix}" +
-  hint_suffix
+  match entry.hint {
+    Some(hint) if hint != "" => lines.push(hint)
+    _ => ()
+  }
+  lines.iter().join("\n")
 }
 
 ///|
-fn format_check_group(label : String, entries : Array[CheckEntry]) -> String {
-  if entries.is_empty() {
-    return ""
+fn format_check_report(report : CheckReport) -> String {
+  let sections : Array[String] = []
+  for entry in report.entries {
+    sections.push(format_check_entry(entry))
   }
-  let lines : Array[String] = ["[check] \{label}"]
-  for entry in entries {
-    lines.push(format_check_entry(entry))
-  }
-  lines.iter().join("\n")
+  sections.push(
+    "[check] summary: " +
+    report.error_count.to_string() +
+    " errors, " +
+    report.warning_count.to_string() +
+    " warnings",
+  )
+  sections.push(
+    if report.error_count == 0 {
+      "[check] completed"
+    } else {
+      "[check] failed"
+    },
+  )
+  sections.iter().join("\n---\n")
 }
 
 ///|
@@ -1243,43 +1221,27 @@ fn summarize_check_success(
   inventory : @core.ContentInventory,
   summary : CheckSummary,
 ) -> CliOutcome {
-  let report = summary.report
-  let groups : Array[String] = []
-  let theme_entries =
-    report.theme_template_errors + report.theme_template_warnings
-  let frontmatter_entries = report.frontmatter_errors + report.frontmatter_warnings
-  let route_entries = report.routes_errors + report.routes_warnings
-  let wikilink_entries = report.wikilinks_errors + report.wikilinks_warnings
-  let theme_group = format_check_group("theme/template", theme_entries)
-  if theme_group != "" {
-    groups.push(theme_group)
+  let header = if summary.report.entries.is_empty() {
+    "[check] completed"
+  } else {
+    "[check] completed with diagnostics"
   }
-  let frontmatter_group = format_check_group("frontmatter", frontmatter_entries)
-  if frontmatter_group != "" {
-    groups.push(frontmatter_group)
-  }
-  let routes_group = format_check_group("routes", route_entries)
-  if routes_group != "" {
-    groups.push(routes_group)
-  }
-  let wikilinks_group = format_check_group("wikilinks", wikilink_entries)
-  if wikilinks_group != "" {
-    groups.push(wikilinks_group)
-  }
-  let detail_lines = if groups.is_empty() {
+  let report_details = if summary.report.entries.is_empty() {
     ""
   } else {
-    "\n" + groups.iter().join("\n\n")
+    "\n---\n" + format_check_report(summary.report)
   }
-  let final_status = if report.error_count == 0 { "passed" } else { "failed" }
   {
-    exit_code: if report.error_count == 0 { 0 } else { 1 },
-    message: "[check] completed\nsite: \{config.site_name}\nconfig: \{config.config_path}\ncontent root: \{inventory.root}\nprocessed: \{summary.processed_sources}\narticles: \{summary.article_count}\npages: \{summary.page_count}" +
-    detail_lines +
-    "\n[check] summary: \{report.error_count} errors, \{report.warning_count} warnings\n[check] \{final_status}",
+    exit_code: if summary.report.error_count == 0 {
+      0
+    } else {
+      1
+    },
+    message: header +
+    "\nsite: \{config.site_name}\nconfig: \{config.config_path}\ncontent root: \{inventory.root}\nprocessed: \{summary.processed_sources}\narticles: \{summary.article_count}\npages: \{summary.page_count}\ndiagnostics: \{summary.report.entries.length()}" +
+    report_details,
   }
 }
-
 
 ///|
 fn check_site_result(
@@ -1290,11 +1252,9 @@ fn check_site_result(
     Ok(inputs) => inputs
     Err(err) => return Err(CheckCommandError::ContentDiscovery(err))
   }
-  validate_check_active_theme_layout(config) catch {
-    err => return Err(err)
-  }
-  let wikilinker = build_wikilinker(inputs)
   let mut report = empty_check_report()
+  report = validate_check_active_theme_layout(config, report)
+  let wikilinker = build_wikilinker(inputs)
   let mut article_count = 0
   let mut page_count = 0
   for input in inputs {
@@ -1325,12 +1285,7 @@ fn check_site_result(
       @core.ContentKind::Page => page_count = page_count + 1
     }
   }
-  Ok({
-    processed_sources: inputs.length(),
-    article_count,
-    page_count,
-    report,
-  })
+  Ok({ processed_sources: inputs.length(), article_count, page_count, report })
 }
 
 ///|
@@ -1407,12 +1362,12 @@ pub fn run_check_command_runtime_from_config_with_output(
     Err(err) =>
       return { exit_code: 1, message: format_check_runtime_content_error(err) }
   }
-  let summary = match check_site_result(config, inventory) {
-    Ok(summary) => summary
+  let check_result = match check_site_result(config, inventory) {
+    Ok(result) => result
     Err(err) =>
       return { exit_code: 1, message: format_check_command_error(err) }
   }
-  summarize_check_success(config, inventory, summary)
+  summarize_check_success(config, inventory, check_result)
 }
 
 ///|
