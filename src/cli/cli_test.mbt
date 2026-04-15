@@ -892,6 +892,30 @@ test "runtime cli check reports final route conflicts as blocking" {
 }
 
 ///|
+test "runtime cli check reports mixed blocking and warning diagnostics" {
+  let fixture_root = "fixtures/v2/check_mixed_diagnostics"
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("[check] routes"), content="true")
+  inspect(outcome.message.contains("[check] document"), content="true")
+  inspect(
+    outcome.message.contains("Unresolved wikilink target: missing-page"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("Final output path conflict"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("[check] summary: 1 errors, 1 warnings"),
+    content="true",
+  )
+  inspect(outcome.message.contains("[check] failed"), content="true")
+}
+
+///|
 test "runtime cli check reports missing config" {
   let outcome = @cli.run_check_command_runtime_from_config(
     "fixtures/v2/missing_config/moonink.json",
