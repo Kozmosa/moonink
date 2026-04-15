@@ -24,18 +24,128 @@ pub(all) suberror CheckCommandError {
 } derive(Debug, Eq)
 
 ///|
+pub(all) enum CheckCategory {
+  ThemeTemplate
+  Frontmatter
+  Routes
+  Wikilinks
+} derive(Debug, Eq)
+
+///|
+pub(all) enum CheckSeverity {
+  Error
+  Warning
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CheckEntry {
+  category : CheckCategory
+  severity : CheckSeverity
+  source_path : String?
+  message : String
+  hint : String?
+  line : Int?
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CheckReport {
+  theme_template_errors : Array[CheckEntry]
+  theme_template_warnings : Array[CheckEntry]
+  frontmatter_errors : Array[CheckEntry]
+  frontmatter_warnings : Array[CheckEntry]
+  routes_errors : Array[CheckEntry]
+  routes_warnings : Array[CheckEntry]
+  wikilinks_errors : Array[CheckEntry]
+  wikilinks_warnings : Array[CheckEntry]
+  error_count : Int
+  warning_count : Int
+} derive(Debug, Eq)
+
+///|
 pub(all) struct CheckSummary {
   processed_sources : Int
   article_count : Int
   page_count : Int
-  diagnostic_count : Int
+  report : CheckReport
 } derive(Debug, Eq)
 
 ///|
-pub(all) struct CheckDiagnostic {
-  source_path : String
-  entry : @docflow.DocumentDiagnostic
-} derive(Debug, Eq)
+fn empty_check_report() -> CheckReport {
+  {
+    theme_template_errors: [],
+    theme_template_warnings: [],
+    frontmatter_errors: [],
+    frontmatter_warnings: [],
+    routes_errors: [],
+    routes_warnings: [],
+    wikilinks_errors: [],
+    wikilinks_warnings: [],
+    error_count: 0,
+    warning_count: 0,
+  }
+}
+
+///|
+fn report_with_entry(report : CheckReport, entry : CheckEntry) -> CheckReport {
+  match (entry.category, entry.severity) {
+    (CheckCategory::ThemeTemplate, CheckSeverity::Error) => {
+      ..report,
+      theme_template_errors: report.theme_template_errors + [entry],
+      error_count: report.error_count + 1,
+    }
+    (CheckCategory::ThemeTemplate, CheckSeverity::Warning) => {
+      ..report,
+      theme_template_warnings: report.theme_template_warnings + [entry],
+      warning_count: report.warning_count + 1,
+    }
+    (CheckCategory::Frontmatter, CheckSeverity::Error) => {
+      ..report,
+      frontmatter_errors: report.frontmatter_errors + [entry],
+      error_count: report.error_count + 1,
+    }
+    (CheckCategory::Frontmatter, CheckSeverity::Warning) => {
+      ..report,
+      frontmatter_warnings: report.frontmatter_warnings + [entry],
+      warning_count: report.warning_count + 1,
+    }
+    (CheckCategory::Routes, CheckSeverity::Error) => {
+      ..report,
+      routes_errors: report.routes_errors + [entry],
+      error_count: report.error_count + 1,
+    }
+    (CheckCategory::Routes, CheckSeverity::Warning) => {
+      ..report,
+      routes_warnings: report.routes_warnings + [entry],
+      warning_count: report.warning_count + 1,
+    }
+    (CheckCategory::Wikilinks, CheckSeverity::Error) => {
+      ..report,
+      wikilinks_errors: report.wikilinks_errors + [entry],
+      error_count: report.error_count + 1,
+    }
+    (CheckCategory::Wikilinks, CheckSeverity::Warning) => {
+      ..report,
+      wikilinks_warnings: report.wikilinks_warnings + [entry],
+      warning_count: report.warning_count + 1,
+    }
+  }
+}
+
+///|
+fn check_entry_from_docflow_diagnostic(
+  source_path : String,
+  entry : @docflow.DocumentDiagnostic,
+) -> CheckEntry {
+  {
+    category: CheckCategory::Wikilinks,
+    severity: CheckSeverity::Warning,
+    source_path: Some(source_path),
+    message: entry.message,
+    hint: entry.hint,
+    line: entry.line,
+  }
+}
+
 
 ///|
 fn format_runtime_config_error(err : @core.ConfigError) -> String {
@@ -1089,13 +1199,40 @@ fn summarize_build_success(
 }
 
 ///|
-fn format_check_diagnostic_lines(
-  diagnostics : Array[CheckDiagnostic],
-) -> String {
-  let lines : Array[String] = []
-  for diagnostic in diagnostics {
-    lines.push("[\{diagnostic.source_path}]")
-    lines.push(@docflow.format_document_diagnostic(diagnostic.entry))
+fn format_check_severity(severity : CheckSeverity) -> String {
+  match severity {
+    CheckSeverity::Error => "error"
+    CheckSeverity::Warning => "warning"
+  }
+}
+
+///|
+fn format_check_entry(entry : CheckEntry) -> String {
+  let source_prefix = match entry.source_path {
+    Some(source_path) => "[\{source_path}] "
+    None => ""
+  }
+  let line_suffix = match entry.line {
+    Some(line) => " (line \{line})"
+    None => ""
+  }
+  let hint_suffix = match entry.hint {
+    Some(hint) => "\nhint: \{hint}"
+    None => ""
+  }
+  source_prefix +
+  "\{format_check_severity(entry.severity)}: \{entry.message}\{line_suffix}" +
+  hint_suffix
+}
+
+///|
+fn format_check_group(label : String, entries : Array[CheckEntry]) -> String {
+  if entries.is_empty() {
+    return ""
+  }
+  let lines : Array[String] = ["[check] \{label}"]
+  for entry in entries {
+    lines.push(format_check_entry(entry))
   }
   lines.iter().join("\n")
 }
@@ -1105,35 +1242,50 @@ fn summarize_check_success(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
   summary : CheckSummary,
-  diagnostics : Array[CheckDiagnostic],
 ) -> CliOutcome {
-  let header = if summary.diagnostic_count == 0 {
-    "[check] completed"
-  } else {
-    "[check] completed with diagnostics"
+  let report = summary.report
+  let groups : Array[String] = []
+  let theme_entries =
+    report.theme_template_errors + report.theme_template_warnings
+  let frontmatter_entries = report.frontmatter_errors + report.frontmatter_warnings
+  let route_entries = report.routes_errors + report.routes_warnings
+  let wikilink_entries = report.wikilinks_errors + report.wikilinks_warnings
+  let theme_group = format_check_group("theme/template", theme_entries)
+  if theme_group != "" {
+    groups.push(theme_group)
   }
-  let details = if diagnostics.is_empty() {
+  let frontmatter_group = format_check_group("frontmatter", frontmatter_entries)
+  if frontmatter_group != "" {
+    groups.push(frontmatter_group)
+  }
+  let routes_group = format_check_group("routes", route_entries)
+  if routes_group != "" {
+    groups.push(routes_group)
+  }
+  let wikilinks_group = format_check_group("wikilinks", wikilink_entries)
+  if wikilinks_group != "" {
+    groups.push(wikilinks_group)
+  }
+  let detail_lines = if groups.is_empty() {
     ""
   } else {
-    "\n---\n" + format_check_diagnostic_lines(diagnostics)
+    "\n" + groups.iter().join("\n\n")
   }
+  let final_status = if report.error_count == 0 { "passed" } else { "failed" }
   {
-    exit_code: if summary.diagnostic_count == 0 {
-      0
-    } else {
-      1
-    },
-    message: header +
-    "\nsite: \{config.site_name}\nconfig: \{config.config_path}\ncontent root: \{inventory.root}\nprocessed: \{summary.processed_sources}\narticles: \{summary.article_count}\npages: \{summary.page_count}\ndiagnostics: \{summary.diagnostic_count}" +
-    details,
+    exit_code: if report.error_count == 0 { 0 } else { 1 },
+    message: "[check] completed\nsite: \{config.site_name}\nconfig: \{config.config_path}\ncontent root: \{inventory.root}\nprocessed: \{summary.processed_sources}\narticles: \{summary.article_count}\npages: \{summary.page_count}" +
+    detail_lines +
+    "\n[check] summary: \{report.error_count} errors, \{report.warning_count} warnings\n[check] \{final_status}",
   }
 }
+
 
 ///|
 fn check_site_result(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
-) -> Result[(CheckSummary, Array[CheckDiagnostic]), CheckCommandError] {
+) -> Result[CheckSummary, CheckCommandError] {
   let inputs = match @runtime.load_build_inputs_result(config, inventory) {
     Ok(inputs) => inputs
     Err(err) => return Err(CheckCommandError::ContentDiscovery(err))
@@ -1142,7 +1294,7 @@ fn check_site_result(
     err => return Err(err)
   }
   let wikilinker = build_wikilinker(inputs)
-  let diagnostics : Array[CheckDiagnostic] = []
+  let mut report = empty_check_report()
   let mut article_count = 0
   let mut page_count = 0
   for input in inputs {
@@ -1163,24 +1315,22 @@ fn check_site_result(
     }
     let linked = @docflow.apply_wikilinker(wikilinker, parsed)
     for entry in linked.diagnostics.entries {
-      diagnostics.push({ source_path: input.meta.source_path, entry })
+      report = report_with_entry(
+        report,
+        check_entry_from_docflow_diagnostic(input.meta.source_path, entry),
+      )
     }
     match input.meta.content_kind {
       @core.ContentKind::Article => article_count = article_count + 1
       @core.ContentKind::Page => page_count = page_count + 1
     }
   }
-  Ok(
-    (
-      {
-        processed_sources: inputs.length(),
-        article_count,
-        page_count,
-        diagnostic_count: diagnostics.length(),
-      },
-      diagnostics,
-    ),
-  )
+  Ok({
+    processed_sources: inputs.length(),
+    article_count,
+    page_count,
+    report,
+  })
 }
 
 ///|
@@ -1257,13 +1407,12 @@ pub fn run_check_command_runtime_from_config_with_output(
     Err(err) =>
       return { exit_code: 1, message: format_check_runtime_content_error(err) }
   }
-  let check_result = match check_site_result(config, inventory) {
-    Ok(result) => result
+  let summary = match check_site_result(config, inventory) {
+    Ok(summary) => summary
     Err(err) =>
       return { exit_code: 1, message: format_check_command_error(err) }
   }
-  let (summary, diagnostics) = check_result
-  summarize_check_success(config, inventory, summary, diagnostics)
+  summarize_check_success(config, inventory, summary)
 }
 
 ///|

@@ -772,7 +772,10 @@ test "runtime cli check succeeds for minimal fixture without diagnostics" {
   )
   inspect(outcome.exit_code, content="0")
   inspect(outcome.message.contains("[check] completed"), content="true")
-  inspect(outcome.message.contains("diagnostics: 0"), content="true")
+  inspect(
+    outcome.message.contains("[check] summary: 0 errors, 0 warnings"),
+    content="true",
+  )
   inspect(@runtime.io_path_exists(stale_path), content="true")
 }
 
@@ -783,9 +786,10 @@ test "runtime cli check respects output override without writing output" {
     fixture_root + "/moonink.json",
     Some("check-preview"),
   )
-  inspect(outcome.exit_code, content="1")
+  inspect(outcome.exit_code, content="0")
+  inspect(outcome.message.contains("[check] wikilinks"), content="true")
   inspect(
-    outcome.message.contains("[check] completed with diagnostics"),
+    outcome.message.contains("[check] summary: 0 errors, 1 warnings"),
     content="true",
   )
   inspect(
@@ -800,16 +804,19 @@ test "runtime cli check reports wikilink diagnostics without writing output" {
   let outcome = @cli.run_check_command_runtime_from_config(
     fixture_root + "/moonink.json",
   )
-  inspect(outcome.exit_code, content="1")
+  inspect(outcome.exit_code, content="0")
+  inspect(outcome.message.contains("[check] wikilinks"), content="true")
   inspect(
-    outcome.message.contains("[check] completed with diagnostics"),
+    outcome.message.contains(
+      "warning: Unresolved wikilink target: missing-page",
+    ),
     content="true",
   )
   inspect(
-    outcome.message.contains("Unresolved wikilink target: missing-page"),
+    outcome.message.contains("[check] summary: 0 errors, 1 warnings"),
     content="true",
   )
-  inspect(outcome.message.contains("[hello.md]"), content="true")
+  inspect(outcome.message.contains("[check] passed"), content="true")
   inspect(
     @runtime.io_path_exists(fixture_root + "/dist/index.html"),
     content="false",
