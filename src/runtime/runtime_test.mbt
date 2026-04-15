@@ -182,6 +182,14 @@ test "native runtime adapter executes runtime io tasks" {
 }
 
 ///|
+test "search index generated_at helper returns utc timestamp" {
+  let generated_at = @runtime.current_utc_iso8601_second()
+  inspect(generated_at.contains("T"), content="true")
+  inspect(generated_at.has_suffix("Z"), content="true")
+  inspect(generated_at.length() >= 20, content="true")
+}
+
+///|
 test "preview launch dry run validates built root" {
   let launch = @runtime.prepare_preview_launch(
     "fixtures/v2/minimal", "127.0.0.1", 3000,

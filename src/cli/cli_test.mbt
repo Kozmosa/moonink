@@ -591,7 +591,7 @@ fn expected_serve_runtime_message(
     Some(path) => "\noutput override: \{path}"
     None => ""
   }
-  "[serve] runtime execution required\naddress: http://\{host}:\{port}\npreview root: \{preview_root}\nconfig: \{config_path}" +
+  "[serve] build step will run before preview startup\n[serve] runtime execution required\naddress: http://\{host}:\{port}\npreview root: \{preview_root}\nconfig: \{config_path}" +
   output_status
 }
 
@@ -703,6 +703,7 @@ test "runtime cli serve builds fixture before preview skeleton" {
   inspect(
     outcome.message,
     content=(
+      #|[serve] build completed
       #|[serve] runtime ready
       #|address: http://127.0.0.1:3000
       #|preview root: fixtures/v2/_test_runs/minimal-serve-default/dist
@@ -733,6 +734,7 @@ test "runtime cli serve respects host port and output override" {
   inspect(
     outcome.message,
     content=(
+      #|[serve] build completed
       #|[serve] runtime ready
       #|address: http://0.0.0.0:4173
       #|preview root: fixtures/v2/_test_runs/minimal-serve-preview-dist/preview-dist
@@ -743,6 +745,76 @@ test "runtime cli serve respects host port and output override" {
     @runtime.io_path_exists(fixture_root + "/preview-dist/hello/index.html"),
     content="true",
   )
+}
+
+///|
+test "runtime cli serve continues after build warnings" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/check_wikilink_warning", "check-wikilink-warning-serve",
+  )
+  let outcome = @cli.run_serve_command_runtime_from_config_with_runner(
+    fixture_root + "/moonink.json",
+    None,
+    "127.0.0.1",
+    3000,
+    @runtime.dry_run_preview_runner(),
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(
+    outcome.message,
+    content=(
+      #|[serve] build completed with warnings
+      #|[hello.md] Unresolved wikilink target: missing-page
+      #|[serve] runtime ready
+      #|address: http://127.0.0.1:3000
+      #|preview root: fixtures/v2/_test_runs/check-wikilink-warning-serve/dist
+      #|status: Dry-run preview launch validated the built output without starting a server.
+    ),
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli serve blocks preview startup on fatal build failure" {
+  let outcome = @cli.run_serve_command_runtime_from_config(
+    "fixtures/v2/missing_config/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(
+    outcome.message.contains("[serve] build failed before preview startup"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("[build] failed during config loading"),
+    content="true",
+  )
+  inspect(outcome.message.contains("[serve] runtime ready"), content="false")
+}
+
+///|
+test "runtime cli serve reports preview startup failure separately from build" {
+  let startup = @cli.start_prepared_serve_session_result(
+    @cli.prepare_serve_session(
+      "fixtures/v2/missing_config/moonink.json",
+      host="127.0.0.1",
+      port=3000,
+      note="manually prepared for serve-startup failure",
+    ),
+    @runtime.dry_run_preview_runner(),
+  )
+  match startup {
+    Err(message) => {
+      inspect(
+        message.contains("[serve] failed during preview startup"),
+        content="true",
+      )
+      inspect(message.contains("preview root does not exist"), content="true")
+    }
+    Ok(_) => panic()
+  }
 }
 
 ///|
@@ -796,7 +868,10 @@ test "runtime cli check respects output override without writing output" {
 
 ///|
 test "runtime cli check reports wikilink diagnostics without writing output" {
-  let fixture_root = "fixtures/v2/check_wikilink_warning"
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/check_wikilink_warning", "check-wikilink-warning-check",
+  )
+  let _ = try? @runtime.io_remove_dir_all(fixture_root + "/dist")
   let outcome = @cli.run_check_command_runtime_from_config(
     fixture_root + "/moonink.json",
   )
@@ -1122,6 +1197,30 @@ test "runtime cli build respects output override" {
 }
 
 ///|
+test "runtime cli build surfaces wikilink diagnostics after successful output" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/check_wikilink_warning", "check-wikilink-warning-build",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(
+    outcome.message.contains("[build] completed with diagnostics"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("Unresolved wikilink target: missing-page"),
+    content="true",
+  )
+  inspect(outcome.message.contains("[hello.md]"), content="true")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="true",
+  )
+}
+
+///|
 test "runtime cli build ignores ordinary markdown links in backlink index" {
   let fixture_root = prepare_isolated_fixture_copy(
     "fixtures/v2/minimal", "minimal-build-backlinks-ignore-markdown",
@@ -1180,6 +1279,11 @@ test "runtime cli build writes minimal fixture html files" {
   ) catch {
     _ => panic()
   }
+  let search_index_path = fixture_root + "/dist/search-index.json"
+  inspect(@runtime.io_path_exists(search_index_path), content="true")
+  let search_index = @runtime.io_read_file_to_string(search_index_path) catch {
+    _ => panic()
+  }
   inspect(index_html.contains("data-theme=\"default\""), content="true")
   inspect(
     index_html.contains("href=\"/assets/moonink-default.css\""),
@@ -1231,6 +1335,16 @@ test "runtime cli build writes minimal fixture html files" {
     about_html.contains("href=\"https://example.com/docs\">Fixture Site</a>"),
     content="true",
   )
+  inspect(search_index.contains("\"version\":"), content="true")
+  inspect(search_index.contains("\"generated_at\":"), content="true")
+  inspect(search_index.contains("\"title\":\"Home\""), content="true")
+  inspect(search_index.contains("\"title\":\"Hello\""), content="true")
+  inspect(search_index.contains("\"title\":\"about\""), content="true")
+  inspect(search_index.contains("\"url\":\"/\""), content="true")
+  inspect(search_index.contains("\"url\":\"/hello/\""), content="true")
+  inspect(search_index.contains("\"url\":\"/about/\""), content="true")
+  inspect(search_index.contains("\"tags\":[]"), content="true")
+  inspect(search_index.contains("\"date\":null"), content="true")
 }
 
 ///|
@@ -1319,8 +1433,16 @@ test "runtime cli build respects direct route layout" {
   ) catch {
     _ => panic()
   }
+  let search_index_path = fixture_root + "/dist/search-index.json"
+  inspect(@runtime.io_path_exists(search_index_path), content="true")
+  let search_index = @runtime.io_read_file_to_string(search_index_path) catch {
+    _ => panic()
+  }
   inspect(hello_html.contains("Hello World"), content="true")
   inspect(about_html.contains("This is a static HTML page."), content="true")
+  inspect(search_index.contains("\"url\":\"/index.html\""), content="true")
+  inspect(search_index.contains("\"url\":\"/hello.html\""), content="true")
+  inspect(search_index.contains("\"url\":\"/about.html\""), content="true")
 }
 
 ///|
@@ -1672,6 +1794,46 @@ test "runtime cli build applies configured template file with direct routes" {
   inspect(about_html.contains("href=\"/index.html\">Home</a>"), content="true")
   inspect(about_html.contains("data-section-title=\"\""), content="true")
   inspect(about_html.contains("data-section-url=\"\""), content="true")
+}
+
+///|
+test "runtime cli build emits search index contract fixture" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/search_index_contract", "search-index-contract-build",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let search_index_path = fixture_root + "/dist/search-index.json"
+  inspect(@runtime.io_path_exists(search_index_path), content="true")
+  let search_index = @runtime.io_read_file_to_string(search_index_path) catch {
+    _ => panic()
+  }
+  inspect(search_index.contains("\"title\":\"Home\""), content="true")
+  inspect(search_index.contains("\"title\":\"Guide\""), content="true")
+  inspect(search_index.contains("\"title\":\"about\""), content="true")
+  inspect(
+    search_index.contains("\"excerpt\":\"Explicit home excerpt wins.\""),
+    content="true",
+  )
+  inspect(
+    search_index.contains("\"excerpt\":\"Explicit guide excerpt wins.\""),
+    content="true",
+  )
+  inspect(
+    search_index.contains(
+      "\"excerpt\":\"About Search HTML fallback excerpt from body copy.\"",
+    ),
+    content="true",
+  )
+  inspect(
+    search_index.contains("\"tags\":[\"search\",\"contract\"]"),
+    content="true",
+  )
+  inspect(search_index.contains("\"date\":\"2026-04-15\""), content="true")
+  inspect(search_index.contains("\"url\":\"/guide/\""), content="true")
+  inspect(search_index.contains("\"url\":\"/about/\""), content="true")
 }
 
 ///|

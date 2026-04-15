@@ -16,6 +16,18 @@ pub(all) struct BuildSummary {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct BuildDiagnostic {
+  source_path : String
+  entry : @docflow.DocumentDiagnostic
+} derive(Debug, Eq)
+
+///|
+pub(all) struct BuildWithDiagnostics {
+  summary : BuildSummary
+  diagnostics : Array[BuildDiagnostic]
+} derive(Debug, Eq)
+
+///|
 pub(all) suberror CheckCommandError {
   ContentDiscovery(@core.ContentDiscoveryError)
   AdapterRegistry(@docflow.AdapterRegistryError)
@@ -952,6 +964,45 @@ pub fn build_site_assembly_model(
 }
 
 ///|
+fn build_search_index_item(
+  input : @runtime.BuildInput,
+) -> @core.SearchIndexItem {
+  let frontmatter = input.meta.frontmatter
+  {
+    title: site_page_title(input.meta),
+    url: input.meta.url_path,
+    excerpt: @core.search_index_excerpt(
+      frontmatter.extra.get("excerpt"),
+      input.docflow_content,
+      input.meta.format,
+    ),
+    tags: frontmatter.tags,
+    date: frontmatter.date,
+  }
+}
+
+///|
+fn build_search_index_document(
+  inputs : Array[@runtime.BuildInput],
+) -> @core.SearchIndexDocument {
+  let items : Array[@core.SearchIndexItem] = []
+  for input in inputs {
+    items.push(build_search_index_item(input))
+  }
+  { version: 1, generated_at: @runtime.current_utc_iso8601_second(), items }
+}
+
+///|
+fn write_search_index_output(
+  config : @core.MooninkConfig,
+  inputs : Array[@runtime.BuildInput],
+) -> Unit raise BuildCommandError {
+  let document = build_search_index_document(inputs)
+  let json = @core.search_index_document_to_json(document)
+  write_build_output(config, "search-index.json", json)
+}
+
+///|
 fn build_template_context(
   config : @core.MooninkConfig,
   active_theme : @runtime.ActiveThemeLayout,
@@ -1074,7 +1125,7 @@ fn validate_check_active_theme_layout(
 fn build_site_result(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
-) -> Result[BuildSummary, BuildCommandError] {
+) -> Result[BuildWithDiagnostics, BuildCommandError] {
   let inputs = match @runtime.load_build_inputs_result(config, inventory) {
     Ok(inputs) => inputs
     Err(err) => return Err(BuildCommandError::ContentDiscovery(err))
@@ -1097,6 +1148,7 @@ fn build_site_result(
   let mut emitted_html_files = 0
   let mut article_count = 0
   let mut page_count = 0
+  let diagnostics : Array[BuildDiagnostic] = []
   let wikilinker = build_wikilinker(inputs)
   let backlinks = build_backlink_index(inputs, wikilinker)
   for input in inputs {
@@ -1120,6 +1172,9 @@ fn build_site_result(
       Err(err) => return Err(BuildCommandError::FatalParse(err))
     }
     let linked = @docflow.apply_wikilinker(wikilinker, parsed)
+    for entry in linked.diagnostics.entries {
+      diagnostics.push(build_runtime_diagnostic(input, entry))
+    }
     let rendered = @docflow.render_with_adapter(renderer, linked)
     let templated = apply_build_template(
       config, active_theme, assembly, backlinks, input, rendered, template_source,
@@ -1137,12 +1192,18 @@ fn build_site_result(
       @core.ContentKind::Page => page_count = page_count + 1
     }
   }
+  write_search_index_output(config, inputs) catch {
+    err => return Err(err)
+  }
   Ok({
-    output_dir: config.output_dir,
-    processed_sources: inputs.length(),
-    emitted_html_files,
-    article_count,
-    page_count,
+    summary: {
+      output_dir: config.output_dir,
+      processed_sources: inputs.length(),
+      emitted_html_files,
+      article_count,
+      page_count,
+    },
+    diagnostics,
   })
 }
 
@@ -1151,10 +1212,28 @@ fn summarize_build_success(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
   summary : BuildSummary,
+  diagnostics : Array[BuildDiagnostic],
 ) -> CliOutcome {
+  let header = if diagnostics.is_empty() {
+    "[build] completed"
+  } else {
+    "[build] completed with diagnostics"
+  }
+  let details = if diagnostics.is_empty() {
+    ""
+  } else {
+    let lines : Array[String] = []
+    for diagnostic in diagnostics {
+      lines.push("[\{diagnostic.source_path}]")
+      lines.push(@docflow.format_document_diagnostic(diagnostic.entry))
+    }
+    "\n---\n" + lines.iter().join("\n")
+  }
   {
     exit_code: 0,
-    message: "[build] completed\nsite: \{config.site_name}\nconfig: \{config.config_path}\ncontent root: \{inventory.root}\nprocessed: \{summary.processed_sources}\narticles: \{summary.article_count}\npages: \{summary.page_count}\noutput: \{summary.output_dir}\nemitted html: \{summary.emitted_html_files}",
+    message: header +
+    "\nsite: \{config.site_name}\nconfig: \{config.config_path}\ncontent root: \{inventory.root}\nprocessed: \{summary.processed_sources}\narticles: \{summary.article_count}\npages: \{summary.page_count}\noutput: \{summary.output_dir}\nemitted html: \{summary.emitted_html_files}" +
+    details,
   }
 }
 
@@ -1339,6 +1418,14 @@ fn format_check_report(report : CheckReport) -> String {
 }
 
 ///|
+fn build_runtime_diagnostic(
+  input : @runtime.BuildInput,
+  entry : @docflow.DocumentDiagnostic,
+) -> BuildDiagnostic {
+  { source_path: input.meta.source_path, entry }
+}
+
+///|
 fn summarize_check_success(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
@@ -1455,12 +1542,13 @@ pub fn run_build_command_runtime_from_config_with_output(
     Err(err) =>
       return { exit_code: 1, message: format_runtime_content_error(err) }
   }
-  let summary = match build_site_result(config, inventory) {
-    Ok(summary) => summary
+  let result = match build_site_result(config, inventory) {
+    Ok(result) => result
     Err(err) =>
       return { exit_code: 1, message: format_build_command_error(err) }
   }
-  summarize_build_success(config, inventory, summary)
+  let summary = result.summary
+  summarize_build_success(config, inventory, summary, result.diagnostics)
 }
 
 ///|

@@ -268,6 +268,108 @@ test "parse_frontmatter_from_source handles full document" {
 }
 
 ///|
+test "search index excerpt prefers explicit excerpt" {
+  inspect(
+    @core.search_index_excerpt(
+      Some("Frontmatter summary"),
+      "# Heading\n\nBody text should be ignored.",
+      @core.SourceFormat::Markdown,
+    ),
+    content="Frontmatter summary",
+  )
+}
+
+///|
+test "search index excerpt derives plain text from markdown body" {
+  inspect(
+    @core.search_index_excerpt(
+      None,
+      "# Hello World\n\nThis is body text for search.",
+      @core.SourceFormat::Markdown,
+    ),
+    content="Hello World This is body text for search.",
+  )
+}
+
+///|
+test "search index excerpt preserves literal punctuation inside markdown text" {
+  inspect(
+    @core.search_index_excerpt(
+      None,
+      "Use `search_index` with C# and config.yaml in [docs](guide.md).",
+      @core.SourceFormat::Markdown,
+    ),
+    content="Use search_index with C# and config.yaml in docs.",
+  )
+}
+
+///|
+test "search index excerpt strips html tags for html pages" {
+  inspect(
+    @core.search_index_excerpt(
+      None,
+      "<h1>About</h1><p>This is a static HTML page.</p>",
+      @core.SourceFormat::Html,
+    ),
+    content="About This is a static HTML page.",
+  )
+}
+
+///|
+test "search index excerpt preserves non-tag angle bracket text" {
+  inspect(
+    @core.search_index_excerpt(
+      None,
+      "Compare a < b and Vector<T> while keeping <literal text.",
+      @core.SourceFormat::Html,
+    ),
+    content="Compare a < b and Vector<T> while keeping <literal text.",
+  )
+}
+
+///|
+test "search index excerpt strips actual html tags with attributes" {
+  inspect(
+    @core.search_index_excerpt(
+      None,
+      "<code class=\"lang\">search_index</code> <br/> ready",
+      @core.SourceFormat::Html,
+    ),
+    content="search_index ready",
+  )
+}
+
+///|
+test "search index document serializes stable schema" {
+  let json = @core.search_index_document_to_json({
+    version: 1,
+    generated_at: "2026-04-15T00:00:00Z",
+    items: [
+      {
+        title: "Hello",
+        url: "/hello/",
+        excerpt: "A short intro",
+        tags: ["intro", "demo"],
+        date: Some("2026-04-01"),
+      },
+      {
+        title: "About",
+        url: "/about/",
+        excerpt: "About page",
+        tags: [],
+        date: None,
+      },
+    ],
+  })
+  inspect(
+    json,
+    content=(
+      #|{"version":1,"generated_at":"2026-04-15T00:00:00Z","items":[{"title":"Hello","url":"/hello/","excerpt":"A short intro","tags":["intro","demo"],"date":"2026-04-01"},{"title":"About","url":"/about/","excerpt":"About page","tags":[],"date":null}]}
+    ),
+  )
+}
+
+///|
 test "classify_source_format identifies markdown and html" {
   inspect(@core.classify_source_format("docs/intro.md"), content="Markdown")
   inspect(@core.classify_source_format("pages/about.html"), content="Html")

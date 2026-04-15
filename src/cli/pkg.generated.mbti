@@ -31,11 +31,13 @@ pub fn cli_run(Array[String]) -> CliOutcome
 
 pub fn format_runtime_ready_message(ServeSession) -> String
 
+pub fn format_serve_build_warnings(Array[BuildDiagnostic]) -> String
+
 pub fn parse_cli_command(Array[String]) -> CliCommand
 
 pub fn parse_cli_request(Array[String]) -> ParsedCliRequest
 
-pub fn prepare_serve_runtime_session(String, String?, String, Int) -> Result[ServeSession, String]
+pub fn prepare_serve_runtime_session(String, String?, String, Int) -> Result[PreparedServeRuntime, String]
 
 pub fn prepare_serve_session(String, host? : String, port? : Int, note? : String) -> ServeSession
 
@@ -69,6 +71,8 @@ pub fn site_page_nav_title(@core.PageMeta) -> String
 
 pub fn site_page_title(@core.PageMeta) -> String
 
+pub fn start_prepared_serve_session_result(ServeSession, @runtime.PreviewRunner) -> Result[ServeSession, String]
+
 // Errors
 pub(all) suberror BuildCommandError {
   ContentDiscovery(@core.ContentDiscoveryError)
@@ -91,12 +95,22 @@ pub struct BuildCliOptions {
 } derive(Eq, @debug.Debug)
 pub impl Show for BuildCliOptions
 
+pub(all) struct BuildDiagnostic {
+  source_path : String
+  entry : @docflow.DocumentDiagnostic
+} derive(Eq, @debug.Debug)
+
 pub(all) struct BuildSummary {
   output_dir : String
   processed_sources : Int
   emitted_html_files : Int
   article_count : Int
   page_count : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) struct BuildWithDiagnostics {
+  summary : BuildSummary
+  diagnostics : Array[BuildDiagnostic]
 } derive(Eq, @debug.Debug)
 
 pub(all) enum CheckCategory {
@@ -164,6 +178,16 @@ pub(all) enum ParsedCliRequest {
   Invalid(String)
 } derive(Eq, @debug.Debug)
 pub impl Show for ParsedCliRequest
+
+pub(all) struct PreparedServeRuntime {
+  session : ServeSession
+  build_stage : ServeBuildStage
+} derive(Eq, @debug.Debug)
+
+pub enum ServeBuildStage {
+  Clean(BuildSummary)
+  WithWarnings(BuildSummary, Array[BuildDiagnostic])
+} derive(Eq, @debug.Debug)
 
 pub struct ServeCliOptions {
   config_path : String
