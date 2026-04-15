@@ -63,8 +63,6 @@ pub fn page_site_entry(TemplatedPage) -> SiteEntry
 
 pub fn parse_markdown_backend_contract(String) -> MarkdownBackendContract
 
-pub fn parse_wikilink_targets(String) -> Array[String]
-
 pub fn parse_with_adapter(ParserAdapter, SourceDocumentInput) -> ParsedDocument
 
 pub fn parse_with_adapter_result(ParserAdapter, SourceDocumentInput) -> Result[ParsedDocument, FatalParseError]
@@ -79,15 +77,11 @@ pub fn render_template_string(String, TemplateContext) -> String
 
 pub fn render_with_adapter(RenderAdapter, ParsedDocument) -> RenderedDocument
 
-pub fn resolve_wikilink(WikiLinker, String) -> Result[String, String?]
-
 pub fn route_from_source_path(String) -> String
 
 pub fn run_article_pipeline(ParserAdapter, WikiLinker, RenderAdapter, SourceDocumentInput) -> Result[ArticlePipelineResult, FatalParseError]
 
 pub fn run_docflow_build_pipeline(Array[String], ParserAdapter, WikiLinker, RenderAdapter) -> SiteAssembly
-
-pub fn scan_markdown_wikilinks(String) -> Array[WikiLinkScanEntry]
 
 // Errors
 pub(all) suberror AdapterRegistryError {
@@ -234,12 +228,6 @@ pub(all) struct TemplatedPage {
   source_uuid : String
   html : String
   note : String
-} derive(Eq, @debug.Debug)
-
-pub(all) struct WikiLinkScanEntry {
-  raw : String
-  target : String
-  label : String
 } derive(Eq, @debug.Debug)
 
 pub(all) struct WikiLinker {

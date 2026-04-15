@@ -10,15 +10,6 @@ fn normalize_runtime_argv(raw_argv : Array[String]) -> Array[String] {
 }
 
 ///|
-fn serve_config_path(argv : Array[String]) -> String {
-  if argv.length() >= 2 && argv[0] == "serve" {
-    argv[1]
-  } else {
-    "moonink.json"
-  }
-}
-
-///|
 fn launch_native_preview(session : @cli.ServeSession) -> Unit {
   println(
     @cli.format_runtime_ready_message(
@@ -38,10 +29,15 @@ fn launch_native_preview(session : @cli.ServeSession) -> Unit {
 ///|
 fn main {
   let argv = normalize_runtime_argv(@env.args())
-  let command = @cli.parse_cli_command(argv)
-  match command {
-    @cli.CliCommand::Serve =>
-      match @cli.prepare_serve_runtime_session(serve_config_path(argv)) {
+  let request = @cli.parse_cli_request(argv)
+  match request {
+    @cli.ParsedCliRequest::Serve(options) =>
+      match @cli.prepare_serve_runtime_session(
+        options.config_path,
+        options.output_dir,
+        options.host,
+        options.port,
+      ) {
         Ok(session) => launch_native_preview(session)
         Err(message) => println(message)
       }

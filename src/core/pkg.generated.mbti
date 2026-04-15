@@ -14,6 +14,8 @@ pub fn classify_content_kind(SourceFormat, String?) -> ContentKind
 
 pub fn classify_source_format(String) -> SourceFormat
 
+pub fn config_with_output_dir(MooninkConfig, String) -> MooninkConfig raise ConfigError
+
 pub fn dirname_relative_path(String) -> String raise PathPolicyError
 
 pub fn extract_frontmatter_raw(String) -> (String?, String)
@@ -31,6 +33,8 @@ pub fn generate_route(String, RouteStyle) -> String
 pub fn join_relative_path(String, String) -> String raise PathPolicyError
 
 pub fn normalize_config_path_or_error(String) -> String raise ConfigError
+
+pub fn normalize_output_dir_or_error(String) -> String raise ConfigError
 
 pub fn normalize_relative_path(String) -> String raise PathPolicyError
 

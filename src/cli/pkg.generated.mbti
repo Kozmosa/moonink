@@ -33,7 +33,9 @@ pub fn format_runtime_ready_message(ServeSession) -> String
 
 pub fn parse_cli_command(Array[String]) -> CliCommand
 
-pub fn prepare_serve_runtime_session(String) -> Result[ServeSession, String]
+pub fn parse_cli_request(Array[String]) -> ParsedCliRequest
+
+pub fn prepare_serve_runtime_session(String, String?, String, Int) -> Result[ServeSession, String]
 
 pub fn prepare_serve_session(String, host? : String, port? : Int, note? : String) -> ServeSession
 
@@ -43,15 +45,21 @@ pub fn run_build_command_runtime() -> CliOutcome
 
 pub fn run_build_command_runtime_from_config(String) -> CliOutcome
 
+pub fn run_build_command_runtime_from_config_with_output(String, String?) -> CliOutcome
+
 pub fn run_check_command_runtime() -> CliOutcome
 
 pub fn run_check_command_runtime_from_config(String) -> CliOutcome
 
-pub fn run_runtime_cli_command(CliCommand) -> CliOutcome
+pub fn run_check_command_runtime_from_config_with_output(String, String?) -> CliOutcome
+
+pub fn run_runtime_cli_request(ParsedCliRequest) -> CliOutcome
+
+pub fn run_serve_command_runtime() -> CliOutcome
 
 pub fn run_serve_command_runtime_from_config(String) -> CliOutcome
 
-pub fn run_serve_command_runtime_from_config_with_runner(String, @runtime.PreviewRunner) -> CliOutcome
+pub fn run_serve_command_runtime_from_config_with_runner(String, String?, String, Int, @runtime.PreviewRunner) -> CliOutcome
 
 pub fn site_page_description(@core.PageMeta) -> String
 
@@ -73,9 +81,16 @@ pub(all) suberror CheckCommandError {
   ContentDiscovery(@core.ContentDiscoveryError)
   AdapterRegistry(@docflow.AdapterRegistryError)
   FatalParse(@docflow.FatalParseError)
+  ThemeLoad(@core.ProjectIOError)
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+pub struct BuildCliOptions {
+  config_path : String
+  output_dir : String?
+} derive(Eq, @debug.Debug)
+pub impl Show for BuildCliOptions
+
 pub(all) struct BuildSummary {
   output_dir : String
   processed_sources : Int
@@ -83,6 +98,12 @@ pub(all) struct BuildSummary {
   article_count : Int
   page_count : Int
 } derive(Eq, @debug.Debug)
+
+pub struct CheckCliOptions {
+  config_path : String
+  output_dir : String?
+} derive(Eq, @debug.Debug)
+pub impl Show for CheckCliOptions
 
 pub(all) struct CheckDiagnostic {
   source_path : String
@@ -110,6 +131,25 @@ pub(all) struct CliOutcome {
   exit_code : Int
   message : String
 } derive(Eq, @debug.Debug)
+
+pub(all) enum ParsedCliRequest {
+  Help
+  Onboard
+  Build(BuildCliOptions)
+  Check(CheckCliOptions)
+  Serve(ServeCliOptions)
+  Unknown(String)
+  Invalid(String)
+} derive(Eq, @debug.Debug)
+pub impl Show for ParsedCliRequest
+
+pub struct ServeCliOptions {
+  config_path : String
+  output_dir : String?
+  host : String
+  port : Int
+} derive(Eq, @debug.Debug)
+pub impl Show for ServeCliOptions
 
 pub struct ServeSession {
   host : String

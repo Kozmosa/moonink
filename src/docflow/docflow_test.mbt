@@ -75,31 +75,6 @@ test "docflow wikilinker contract remains explicit no-op" {
 }
 
 ///|
-test "docflow scan_markdown_wikilinks extracts normalized targets and labels" {
-  let entries = @docflow.scan_markdown_wikilinks(
-    "See [[guide/install]] and [[./about|About page]].",
-  )
-  inspect(entries.length(), content="2")
-  inspect(entries[0].raw, content="[[guide/install]]")
-  inspect(entries[0].target, content="guide/install")
-  inspect(entries[0].label, content="guide/install")
-  inspect(entries[1].raw, content="[[./about|About page]]")
-  inspect(entries[1].target, content="about")
-  inspect(entries[1].label, content="About page")
-}
-
-///|
-test "docflow scan_markdown_wikilinks ignores unclosed entries and keeps scanning" {
-  let entries = @docflow.scan_markdown_wikilinks(
-    "Ignore [[broken] but keep [[hello]].",
-  )
-  inspect(entries.length(), content="1")
-  inspect(entries[0].raw, content="[[hello]]")
-  inspect(entries[0].target, content="hello")
-  inspect(entries[0].label, content="hello")
-}
-
-///|
 test "docflow indexed wikilinker stores exact and ambiguous targets" {
   let linker = @docflow.indexed_wikilinker(
     { "hello": "/hello/" },
@@ -192,24 +167,6 @@ test "docflow indexed wikilinker ignores non-markdown payloads" {
   let linked = @docflow.apply_wikilinker(linker, parsed)
   inspect(linked.backend_payload, content="Some(\"<p>Visit [[hello]]</p>\")")
   inspect(linked.diagnostics.entries.length(), content="0")
-}
-
-///|
-test "docflow indexed wikilinker collects resolved markdown urls" {
-  let parsed : @docflow.ParsedDocument = {
-    backend_name: "markdown-parser-adapter",
-    source_format: @core.SourceFormat::Markdown,
-    source_path: "notes/index.md",
-    source_uuid: "doc-7",
-    diagnostics: @docflow.empty_document_diagnostics(),
-    backend_payload: Some("Visit [[about]] [[missing]] [[hello|Read more]] [[intro]]."),
-  }
-  let linker = @docflow.indexed_wikilinker(
-    { "about": "/about/", "hello": "/hello/" },
-    { "intro": ["/guides/intro/", "/reference/intro/"] },
-  )
-  let urls = @docflow.collect_resolved_wikilink_urls(linker, parsed)
-  inspect(urls, content="[\"/about/\", \"/hello/\"]")
 }
 
 ///|
@@ -340,7 +297,11 @@ test "docflow apply_built_in_template renders backlinks slot when present" {
     url_path: "/welcome/",
     source_path: "notes/welcome.md",
     content_kind: "page",
+    theme_name: "",
+    theme_asset_root: "",
+    page_body_class: "moonink-page",
     navigation_html: "<nav></nav>",
+    backlink_urls: [],
     current_section_title: "Guide",
     current_section_url: "/guide/",
     page_header_title: "Welcome",

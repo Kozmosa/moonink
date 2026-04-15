@@ -16,6 +16,28 @@ pub(all) struct BuildSummary {
 } derive(Debug, Eq)
 
 ///|
+pub(all) suberror CheckCommandError {
+  ContentDiscovery(@core.ContentDiscoveryError)
+  AdapterRegistry(@docflow.AdapterRegistryError)
+  FatalParse(@docflow.FatalParseError)
+  ThemeLoad(@core.ProjectIOError)
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CheckSummary {
+  processed_sources : Int
+  article_count : Int
+  page_count : Int
+  diagnostic_count : Int
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CheckDiagnostic {
+  source_path : String
+  entry : @docflow.DocumentDiagnostic
+} derive(Debug, Eq)
+
+///|
 fn format_runtime_config_error(err : @core.ConfigError) -> String {
   "[build] failed during config loading\n\{@core.format_config_error(err)}"
 }
@@ -23,6 +45,18 @@ fn format_runtime_config_error(err : @core.ConfigError) -> String {
 ///|
 fn format_runtime_content_error(err : @core.ContentDiscoveryError) -> String {
   "[build] failed during content discovery\n\{@core.format_content_discovery_error(err)}"
+}
+
+///|
+fn format_check_runtime_config_error(err : @core.ConfigError) -> String {
+  "[check] failed during config loading\n\{@core.format_config_error(err)}"
+}
+
+///|
+fn format_check_runtime_content_error(
+  err : @core.ContentDiscoveryError,
+) -> String {
+  "[check] failed during content discovery\n\{@core.format_content_discovery_error(err)}"
 }
 
 ///|
@@ -36,6 +70,39 @@ fn format_build_command_error(err : BuildCommandError) -> String {
       "[build] failed during document parsing\n\{inner.to_string()}"
     BuildCommandError::ProjectIO(inner) =>
       "[build] failed during file emission\n\{@core.format_project_io_error(inner)}"
+  }
+}
+
+///|
+fn format_check_command_error(err : CheckCommandError) -> String {
+  match err {
+    CheckCommandError::ContentDiscovery(inner) =>
+      "[check] failed during content preparation\n\{@core.format_content_discovery_error(inner)}"
+    CheckCommandError::AdapterRegistry(inner) =>
+      "[check] failed during adapter lookup\n\{inner.to_string()}"
+    CheckCommandError::FatalParse(inner) =>
+      "[check] failed during document parsing\n\{inner.to_string()}"
+    CheckCommandError::ThemeLoad(inner) =>
+      "[check] failed during theme loading\n\{@core.format_project_io_error(inner)}"
+  }
+}
+
+///|
+fn check_parser_for_format(
+  format : @core.SourceFormat,
+) -> Result[@docflow.ParserAdapter, CheckCommandError] {
+  let registry = @docflow.register_parser_adapter(
+    @docflow.register_parser_adapter(
+      @docflow.empty_parser_registry(),
+      @core.SourceFormat::Markdown,
+      @docflow.markdown_parser_adapter(),
+    ),
+    @core.SourceFormat::Html,
+    @docflow.html_passthrough_parser_adapter(),
+  )
+  match @docflow.lookup_parser_adapter(registry, format) {
+    Ok(adapter) => Ok(adapter)
+    Err(err) => Err(CheckCommandError::AdapterRegistry(err))
   }
 }
 
@@ -96,6 +163,75 @@ fn prepare_output_dir(
     err => raise BuildCommandError::ProjectIO(err)
   }
   @runtime.io_ensure_dir(root) catch {
+    err => raise BuildCommandError::ProjectIO(err)
+  }
+}
+
+///|
+fn copy_public_assets(
+  config : @core.MooninkConfig,
+) -> Unit raise BuildCommandError {
+  let public_root = @core.join_relative_path(config.project_root, "public") catch {
+    err =>
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "copy_public",
+          "public",
+          @core.format_path_policy_error(err),
+        ),
+      )
+  }
+  if !@runtime.io_path_exists(public_root) {
+    return
+  }
+  let is_dir = @runtime.io_is_dir(public_root) catch {
+    err => raise BuildCommandError::ProjectIO(err)
+  }
+  if !is_dir {
+    raise BuildCommandError::ProjectIO(
+      @core.project_io_error(
+        "copy_public", public_root, "public path exists and is not a directory",
+      ),
+    )
+  }
+  @runtime.io_copy_dir_recursive(public_root, output_root(config)) catch {
+    err => raise BuildCommandError::ProjectIO(err)
+  }
+}
+
+///|
+fn copy_selected_theme_assets(
+  config : @core.MooninkConfig,
+  active_theme : @runtime.ActiveThemeLayout,
+) -> Unit raise BuildCommandError {
+  let assets_root = match active_theme.asset_source_dir {
+    Some(path) => path
+    None => return
+  }
+  if !@runtime.io_path_exists(assets_root) {
+    return
+  }
+  let is_dir = @runtime.io_is_dir(assets_root) catch {
+    err => raise BuildCommandError::ProjectIO(err)
+  }
+  if !is_dir {
+    raise BuildCommandError::ProjectIO(
+      @core.project_io_error(
+        "copy_theme_assets", assets_root, "theme assets path exists and is not a directory",
+      ),
+    )
+  }
+  let target_root = @core.join_relative_path(output_root(config), "assets") catch {
+    err =>
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "copy_theme_assets",
+          output_root(config),
+          @core.format_path_policy_error(err),
+        ),
+      )
+  }
+  @runtime.io_copy_dir_recursive(assets_root, target_root) catch {
     err => raise BuildCommandError::ProjectIO(err)
   }
 }
@@ -203,7 +339,7 @@ fn register_exact_target(
 }
 
 ///|
-fn build_wikilinker(inputs : Array[@runtime.BuildInput]) -> @docflow.WikiLinker {
+pub fn build_wikilinker(inputs : Array[@runtime.BuildInput]) -> @docflow.WikiLinker {
   let basename_keys : Array[String] = []
   let index_alias_keys : Array[String] = []
   for input in inputs {
@@ -257,42 +393,7 @@ fn build_wikilinker(inputs : Array[@runtime.BuildInput]) -> @docflow.WikiLinker 
 }
 
 ///|
-fn render_backlinks_html(
-  current_url : String,
-  pages : Array[@core.SitePage],
-  backlinks : Map[String, Array[String]],
-) -> String {
-  let backlink_urls = match backlinks.get(current_url) {
-    Some(urls) => urls
-    None => []
-  }
-  if backlink_urls.is_empty() {
-    return ""
-  }
-  let items : Array[String] = []
-  for url in backlink_urls {
-    let mut title = url
-    for page in pages {
-      if page.url_path == url {
-        title = page.title
-        break
-      }
-    }
-    items.push(
-      "<li><a href=\"" +
-      escape_html_text(url) +
-      "\">" +
-      escape_html_text(title) +
-      "</a></li>",
-    )
-  }
-  "<aside class=\"page-backlinks\"><section class=\"backlinks\" aria-label=\"Backlinks\"><h2>Backlinks</h2><ul>" +
-  items.iter().join("") +
-  "</ul></section></aside>"
-}
-
-///|
-fn build_backlink_index(
+pub fn build_backlink_index(
   inputs : Array[@runtime.BuildInput],
   wikilinker : @docflow.WikiLinker,
 ) -> Map[String, Array[String]] {
@@ -331,10 +432,66 @@ fn build_backlink_index(
 }
 
 ///|
+fn render_backlinks_html(
+  current_url : String,
+  pages : Array[@core.SitePage],
+  backlinks : Map[String, Array[String]],
+) -> String {
+  let backlink_urls = match backlinks.get(current_url) {
+    Some(urls) => urls
+    None => []
+  }
+  if backlink_urls.is_empty() {
+    return ""
+  }
+  let items : Array[String] = []
+  for url in backlink_urls {
+    let mut title = url
+    for page in pages {
+      if page.url_path == url {
+        title = page.title
+        break
+      }
+    }
+    items.push(
+      "<li><a href=\"" +
+      escape_html_text(url) +
+      "\">" +
+      escape_html_text(title) +
+      "</a></li>",
+    )
+  }
+  "<aside class=\"page-backlinks\"><section class=\"backlinks\" aria-label=\"Backlinks\"><h2>Backlinks</h2><ul>" +
+  items.iter().join("") +
+  "</ul></section></aside>"
+}
+
+///|
 fn template_content_kind(kind : @core.ContentKind) -> String {
   match kind {
     @core.ContentKind::Article => "article"
     @core.ContentKind::Page => "page"
+  }
+}
+
+///|
+fn theme_name(active_theme : @runtime.ActiveThemeLayout) -> String {
+  active_theme.theme_name
+}
+
+///|
+fn theme_asset_root(active_theme : @runtime.ActiveThemeLayout) -> String {
+  match active_theme.asset_source_dir {
+    Some(_) => "/assets/"
+    None => ""
+  }
+}
+
+///|
+fn page_body_class(kind : @core.ContentKind) -> String {
+  match kind {
+    @core.ContentKind::Article => "moonink-article"
+    @core.ContentKind::Page => "moonink-page"
   }
 }
 
@@ -725,10 +882,11 @@ pub fn build_site_assembly_model(
 ///|
 fn build_template_context(
   config : @core.MooninkConfig,
+  active_theme : @runtime.ActiveThemeLayout,
   assembly : @core.SiteAssemblyModel,
+  backlinks : Map[String, Array[String]],
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
-  backlinks : Map[String, Array[String]],
 ) -> @docflow.TemplateContext {
   let current_section = find_current_section_page(
     assembly.pages,
@@ -753,10 +911,14 @@ fn build_template_context(
     url_path: input.meta.url_path,
     source_path: input.meta.source_path,
     content_kind: template_content_kind(input.meta.content_kind),
+    theme_name: theme_name(active_theme),
+    theme_asset_root: theme_asset_root(active_theme),
+    page_body_class: page_body_class(input.meta.content_kind),
     navigation_html: render_navigation_html(
       assembly.navigation,
       input.meta.url_path,
     ),
+    backlink_urls: [],
     current_section_title,
     current_section_url,
     page_header_title: site_page_title(input.meta),
@@ -777,19 +939,58 @@ fn build_template_context(
 ///|
 fn apply_build_template(
   config : @core.MooninkConfig,
+  active_theme : @runtime.ActiveThemeLayout,
   assembly : @core.SiteAssemblyModel,
+  backlinks : Map[String, Array[String]],
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
-  backlinks : Map[String, Array[String]],
-  template_source : String?,
+  template_source : String,
 ) -> @docflow.TemplatedPage {
   let context = build_template_context(
-    config, assembly, input, rendered, backlinks,
+    config, active_theme, assembly, backlinks, input, rendered,
   )
-  match template_source {
-    Some(template_source) =>
-      @docflow.apply_template(rendered, context, template_source)
-    None => @docflow.apply_built_in_template(rendered, context)
+  @docflow.apply_template(rendered, context, template_source)
+}
+
+///|
+fn resolve_active_theme_layout(
+  config : @core.MooninkConfig,
+) -> Result[@runtime.ActiveThemeLayout, BuildCommandError] {
+  match @runtime.load_active_theme_layout_result(config) {
+    Ok(layout) => Ok(layout)
+    Err(err) =>
+      Err(
+        BuildCommandError::ProjectIO(
+          @core.project_io_error(
+            "load_template",
+            match config.template_file {
+              Some(path) => path
+              None => config.config_path
+            },
+            @core.format_config_error(err),
+          ),
+        ),
+      )
+  }
+}
+
+///|
+fn validate_check_active_theme_layout(
+  config : @core.MooninkConfig,
+) -> Unit raise CheckCommandError {
+  match @runtime.load_active_theme_layout_result(config) {
+    Ok(_) => ()
+    Err(err) =>
+      raise CheckCommandError::ThemeLoad(
+        @core.project_io_error(
+          "load_template",
+          match config.template_file {
+            Some(path) => path
+            None => config.config_path
+          },
+          @core.format_config_error(err),
+        ),
+      )
   }
 }
 
@@ -805,23 +1006,18 @@ fn build_site_result(
   prepare_output_dir(config) catch {
     err => return Err(err)
   }
-  let assembly = build_site_assembly_model(config, inputs, inventory)
-  let template_source = match @runtime.load_template_source_result(config) {
-    Ok(template_source) => template_source
-    Err(err) =>
-      return Err(
-        BuildCommandError::ProjectIO(
-          @core.project_io_error(
-            "load_template",
-            match config.template_file {
-              Some(path) => path
-              None => config.config_path
-            },
-            @core.format_config_error(err),
-          ),
-        ),
-      )
+  copy_public_assets(config) catch {
+    err => return Err(err)
   }
+  let active_theme = match resolve_active_theme_layout(config) {
+    Ok(active_theme) => active_theme
+    Err(err) => return Err(err)
+  }
+  copy_selected_theme_assets(config, active_theme) catch {
+    err => return Err(err)
+  }
+  let assembly = build_site_assembly_model(config, inputs, inventory)
+  let template_source = active_theme.source
   let mut emitted_html_files = 0
   let mut article_count = 0
   let mut page_count = 0
@@ -850,7 +1046,13 @@ fn build_site_result(
     let linked = @docflow.apply_wikilinker(wikilinker, parsed)
     let rendered = @docflow.render_with_adapter(renderer, linked)
     let templated = apply_build_template(
-      config, assembly, input, rendered, backlinks, template_source,
+      config,
+      active_theme,
+      assembly,
+      backlinks,
+      input,
+      rendered,
+      template_source,
     )
     let output_path = @core.output_html_path(
       input.meta.source_path,
@@ -887,11 +1089,128 @@ fn summarize_build_success(
 }
 
 ///|
-pub fn run_build_command_runtime_from_config(
+fn format_check_diagnostic_lines(
+  diagnostics : Array[CheckDiagnostic],
+) -> String {
+  let lines : Array[String] = []
+  for diagnostic in diagnostics {
+    lines.push("[\{diagnostic.source_path}]")
+    lines.push(@docflow.format_document_diagnostic(diagnostic.entry))
+  }
+  lines.iter().join("\n")
+}
+
+///|
+fn summarize_check_success(
+  config : @core.MooninkConfig,
+  inventory : @core.ContentInventory,
+  summary : CheckSummary,
+  diagnostics : Array[CheckDiagnostic],
+) -> CliOutcome {
+  let header = if summary.diagnostic_count == 0 {
+    "[check] completed"
+  } else {
+    "[check] completed with diagnostics"
+  }
+  let details = if diagnostics.is_empty() {
+    ""
+  } else {
+    "\n---\n" + format_check_diagnostic_lines(diagnostics)
+  }
+  {
+    exit_code: if summary.diagnostic_count == 0 {
+      0
+    } else {
+      1
+    },
+    message: header +
+    "\nsite: \{config.site_name}\nconfig: \{config.config_path}\ncontent root: \{inventory.root}\nprocessed: \{summary.processed_sources}\narticles: \{summary.article_count}\npages: \{summary.page_count}\ndiagnostics: \{summary.diagnostic_count}" +
+    details,
+  }
+}
+
+///|
+fn check_site_result(
+  config : @core.MooninkConfig,
+  inventory : @core.ContentInventory,
+) -> Result[(CheckSummary, Array[CheckDiagnostic]), CheckCommandError] {
+  let inputs = match @runtime.load_build_inputs_result(config, inventory) {
+    Ok(inputs) => inputs
+    Err(err) => return Err(CheckCommandError::ContentDiscovery(err))
+  }
+  validate_check_active_theme_layout(config) catch {
+    err => return Err(err)
+  }
+  let wikilinker = build_wikilinker(inputs)
+  let diagnostics : Array[CheckDiagnostic] = []
+  let mut article_count = 0
+  let mut page_count = 0
+  for input in inputs {
+    let parser = match check_parser_for_format(input.meta.format) {
+      Ok(parser) => parser
+      Err(err) => return Err(err)
+    }
+    let source_input : @docflow.SourceDocumentInput = {
+      path: input.meta.source_path,
+      format: input.meta.format,
+      content: input.docflow_content,
+      uuid: input.meta.source_path,
+    }
+    let parsed = match
+      @docflow.parse_with_adapter_result(parser, source_input) {
+      Ok(parsed) => parsed
+      Err(err) => return Err(CheckCommandError::FatalParse(err))
+    }
+    let linked = @docflow.apply_wikilinker(wikilinker, parsed)
+    for entry in linked.diagnostics.entries {
+      diagnostics.push({ source_path: input.meta.source_path, entry })
+    }
+    match input.meta.content_kind {
+      @core.ContentKind::Article => article_count = article_count + 1
+      @core.ContentKind::Page => page_count = page_count + 1
+    }
+  }
+  Ok(
+    (
+      {
+        processed_sources: inputs.length(),
+        article_count,
+        page_count,
+        diagnostic_count: diagnostics.length(),
+      },
+      diagnostics,
+    ),
+  )
+}
+
+///|
+fn apply_output_override_result(
+  config : @core.MooninkConfig,
+  output_dir : String?,
+) -> Result[@core.MooninkConfig, @core.ConfigError] {
+  match output_dir {
+    Some(path) =>
+      try @core.config_with_output_dir(config, path) catch {
+        err => Err(err)
+      } noraise {
+        config => Ok(config)
+      }
+    None => Ok(config)
+  }
+}
+
+///|
+pub fn run_build_command_runtime_from_config_with_output(
   config_path : String,
+  output_dir : String?,
 ) -> CliOutcome {
   let config_result = @runtime.load_config_result(config_path)
   let config = match config_result {
+    Ok(config) => config
+    Err(err) =>
+      return { exit_code: 1, message: format_runtime_config_error(err) }
+  }
+  let config = match apply_output_override_result(config, output_dir) {
     Ok(config) => config
     Err(err) =>
       return { exit_code: 1, message: format_runtime_config_error(err) }
@@ -910,23 +1229,108 @@ pub fn run_build_command_runtime_from_config(
   summarize_build_success(config, inventory, summary)
 }
 
+pub fn run_build_command_runtime_from_config(
+  config_path : String,
+) -> CliOutcome {
+  run_build_command_runtime_from_config_with_output(config_path, None)
+}
+
+///|
+pub fn run_check_command_runtime_from_config_with_output(
+  config_path : String,
+  output_dir : String?,
+) -> CliOutcome {
+  let config_result = @runtime.load_config_result(config_path)
+  let config = match config_result {
+    Ok(config) => config
+    Err(err) =>
+      return { exit_code: 1, message: format_check_runtime_config_error(err) }
+  }
+  let config = match apply_output_override_result(config, output_dir) {
+    Ok(config) => config
+    Err(err) =>
+      return { exit_code: 1, message: format_check_runtime_config_error(err) }
+  }
+  let inventory = match
+    @runtime.run_runtime_io_task(@runtime.discover_content_task(config)) {
+    Ok(inventory) => inventory
+    Err(err) =>
+      return { exit_code: 1, message: format_check_runtime_content_error(err) }
+  }
+  let check_result = match check_site_result(config, inventory) {
+    Ok(result) => result
+    Err(err) =>
+      return { exit_code: 1, message: format_check_command_error(err) }
+  }
+  let (summary, diagnostics) = check_result
+  summarize_check_success(config, inventory, summary, diagnostics)
+}
+
+///|
+pub fn run_check_command_runtime_from_config(
+  config_path : String,
+) -> CliOutcome {
+  run_check_command_runtime_from_config_with_output(config_path, None)
+}
+
+///|
+pub fn run_check_command_runtime() -> CliOutcome {
+  run_check_command_runtime_from_config("moonink.json")
+}
+
 ///|
 pub fn run_build_command_runtime() -> CliOutcome {
   run_build_command_runtime_from_config("moonink.json")
 }
 
 ///|
-fn run_build_command() -> CliOutcome {
+fn run_check_command(options : CheckCliOptions) -> CliOutcome {
+  let output_status = match options.output_dir {
+    Some(path) => "\noutput override: \{path}"
+    None => ""
+  }
   {
     exit_code: 0,
-    message: "[build] runtime execution required\nstatus: use cli_exec or the runtime IO boundary to load config and discover content",
+    message: "[check] runtime execution required\nconfig: \{options.config_path}\nstatus: use cli_exec or the runtime IO boundary to load config, discover content, and collect diagnostics" +
+    output_status,
   }
 }
 
 ///|
-fn run_native_build_command() -> CliOutcome {
+fn run_native_check_command(options : CheckCliOptions) -> CliOutcome {
   @runtime.run_native_runtime_io_task_with_policy(
-    @runtime.RuntimeIOTask::Ready(run_build_command_runtime()),
+    @runtime.RuntimeIOTask::Ready(
+      run_check_command_runtime_from_config_with_output(
+        options.config_path,
+        options.output_dir,
+      ),
+    ),
+    @runtime.native_runtime_adapter().policy,
+  )
+}
+
+///|
+fn run_build_command(options : BuildCliOptions) -> CliOutcome {
+  let output_status = match options.output_dir {
+    Some(path) => "\noutput override: \{path}"
+    None => ""
+  }
+  {
+    exit_code: 0,
+    message: "[build] runtime execution required\nconfig: \{options.config_path}\nstatus: use cli_exec or the runtime IO boundary to load config and discover content" +
+    output_status,
+  }
+}
+
+///|
+fn run_native_build_command(options : BuildCliOptions) -> CliOutcome {
+  @runtime.run_native_runtime_io_task_with_policy(
+    @runtime.RuntimeIOTask::Ready(
+      run_build_command_runtime_from_config_with_output(
+        options.config_path,
+        options.output_dir,
+      ),
+    ),
     @runtime.native_runtime_adapter().policy,
   )
 }

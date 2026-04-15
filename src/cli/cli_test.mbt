@@ -520,12 +520,109 @@ test "parse cli command supports full argv forms" {
 }
 
 ///|
+test "parse cli request keeps structured build and serve flags" {
+  inspect(
+    @cli.parse_cli_request([
+      "moonink", "build", "--config", "fixtures/v2/minimal/moonink.json", "--output",
+      "dist-alt",
+    ]),
+    content="Build({ config_path: \"fixtures/v2/minimal/moonink.json\", output_dir: Some(\"dist-alt\") })",
+  )
+  inspect(
+    @cli.parse_cli_request([
+      "moonink", "serve", "--config", "fixtures/v2/minimal/moonink.json", "--host",
+      "0.0.0.0", "--port", "4173", "--output", "preview-dist",
+    ]),
+    content="Serve({ config_path: \"fixtures/v2/minimal/moonink.json\", output_dir: Some(\"preview-dist\"), host: \"0.0.0.0\", port: 4173 })",
+  )
+}
+
+///|
+test "parse cli request rejects invalid flag combinations" {
+  inspect(
+    @cli.parse_cli_request(["moonink", "build", "--port", "4173"]),
+    content="Invalid(\"[build] invalid arguments\\nreason: --port is only supported for serve\")",
+  )
+  inspect(
+    @cli.parse_cli_request(["moonink", "serve", "--port", "9999"]),
+    content="Invalid(\"[serve] invalid arguments\\nreason: invalid port 9999\")",
+  )
+  inspect(
+    @cli.parse_cli_request(["moonink", "check", "--config"]),
+    content="Invalid(\"[check] invalid arguments\\nreason: missing value for --config\")",
+  )
+}
+
+///|
+fn expected_build_runtime_message(
+  config_path : String,
+  output_dir? : String? = None,
+) -> String {
+  let output_status = match output_dir {
+    Some(path) => "\noutput override: \{path}"
+    None => ""
+  }
+  "[build] runtime execution required\nconfig: \{config_path}\nstatus: use cli_exec or the runtime IO boundary to load config and discover content" +
+  output_status
+}
+
+///|
+fn expected_check_runtime_message(
+  config_path : String,
+  output_dir? : String? = None,
+) -> String {
+  let output_status = match output_dir {
+    Some(path) => "\noutput override: \{path}"
+    None => ""
+  }
+  "[check] runtime execution required\nconfig: \{config_path}\nstatus: use cli_exec or the runtime IO boundary to load config, discover content, and collect diagnostics" +
+  output_status
+}
+
+///|
+fn expected_serve_runtime_message(
+  config_path : String,
+  host : String,
+  port : Int,
+  preview_root : String,
+  output_dir? : String? = None,
+) -> String {
+  let output_status = match output_dir {
+    Some(path) => "\noutput override: \{path}"
+    None => ""
+  }
+  "[serve] runtime execution required\naddress: http://\{host}:\{port}\npreview root: \{preview_root}\nconfig: \{config_path}" +
+  output_status
+}
+
+///|
+fn prepare_isolated_fixture_copy(source_root : String, name : String) -> String {
+  let scratch_parent = "fixtures/v2/_test_runs"
+  let target_root = scratch_parent + "/" + name
+  let _ = try? @runtime.io_remove_dir_all(target_root)
+  @runtime.io_ensure_dir(scratch_parent) catch {
+    _ => panic()
+  }
+  @runtime.io_copy_dir_recursive(source_root, target_root) catch {
+    _ => panic()
+  }
+  target_root
+}
+
+///|
 test "cli run keeps build behind runtime boundary" {
   inspect(
     @cli.cli_run(["moonink", "build"]).message,
-    content=(
-      #|[build] runtime execution required
-      #|status: use cli_exec or the runtime IO boundary to load config and discover content
+    content=expected_build_runtime_message("moonink.json"),
+  )
+  inspect(
+    @cli.cli_run([
+      "moonink", "build", "--config", "fixtures/v2/minimal/moonink.json", "--output",
+      "dist-alt",
+    ]).message,
+    content=expected_build_runtime_message(
+      "fixtures/v2/minimal/moonink.json",
+      output_dir=Some("dist-alt"),
     ),
   )
 }
@@ -534,10 +631,7 @@ test "cli run keeps build behind runtime boundary" {
 test "cli run keeps check behind runtime boundary" {
   inspect(
     @cli.cli_run(["moonink", "check"]).message,
-    content=(
-      #|[check] runtime execution required
-      #|status: use cli_exec or the runtime IO boundary to load config, discover content, and collect diagnostics
-    ),
+    content=expected_check_runtime_message("moonink.json"),
   )
 }
 
@@ -545,10 +639,21 @@ test "cli run keeps check behind runtime boundary" {
 test "cli run keeps serve behind runtime boundary" {
   inspect(
     @cli.cli_run(["moonink", "serve"]).message,
-    content=(
-      #|[serve] runtime execution required
-      #|address: http://127.0.0.1:3000
-      #|preview root: dist
+    content=expected_serve_runtime_message(
+      "moonink.json", "127.0.0.1", 3000, "dist",
+    ),
+  )
+  inspect(
+    @cli.cli_run([
+      "moonink", "serve", "--config", "fixtures/v2/minimal/moonink.json", "--host",
+      "0.0.0.0", "--port", "4173", "--output", "preview-dist",
+    ]).message,
+    content=expected_serve_runtime_message(
+      "fixtures/v2/minimal/moonink.json",
+      "0.0.0.0",
+      4173,
+      "preview-dist",
+      output_dir=Some("preview-dist"),
     ),
   )
 }
@@ -574,8 +679,23 @@ test "cli exec routes check through runtime skeleton" {
 }
 
 ///|
+test "cli exec rejects invalid flag combinations" {
+  let outcome = @cli.cli_exec(["moonink", "build", "--port", "4173"])
+  inspect(outcome.exit_code, content="1")
+  inspect(
+    outcome.message,
+    content=(
+      #|[build] invalid arguments
+      #|reason: --port is only supported for serve
+    ),
+  )
+}
+
+///|
 test "runtime cli serve builds fixture before preview skeleton" {
-  let fixture_root = "fixtures/v2/minimal"
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-serve-default",
+  )
   let outcome = @cli.run_serve_command_runtime_from_config(
     fixture_root + "/moonink.json",
   )
@@ -585,7 +705,7 @@ test "runtime cli serve builds fixture before preview skeleton" {
     content=(
       #|[serve] runtime ready
       #|address: http://127.0.0.1:3000
-      #|preview root: fixtures/v2/minimal/dist
+      #|preview root: fixtures/v2/_test_runs/minimal-serve-default/dist
       #|status: Dry-run preview launch validated the built output without starting a server.
     ),
   )
@@ -595,6 +715,34 @@ test "runtime cli serve builds fixture before preview skeleton" {
     _ => panic()
   }
   inspect(hello_html.contains("<h1>Hello World</h1>"), content="true")
+}
+
+///|
+test "runtime cli serve respects host port and output override" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-serve-preview-dist",
+  )
+  let outcome = @cli.run_serve_command_runtime_from_config_with_runner(
+    fixture_root + "/moonink.json",
+    Some("preview-dist"),
+    "0.0.0.0",
+    4173,
+    @runtime.dry_run_preview_runner(),
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(
+    outcome.message,
+    content=(
+      #|[serve] runtime ready
+      #|address: http://0.0.0.0:4173
+      #|preview root: fixtures/v2/_test_runs/minimal-serve-preview-dist/preview-dist
+      #|status: Dry-run preview launch validated the built output without starting a server.
+    ),
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/preview-dist/hello/index.html"),
+    content="true",
+  )
 }
 
 ///|
@@ -611,7 +759,9 @@ test "runtime cli serve reports missing config before preview skeleton" {
 
 ///|
 test "runtime cli check succeeds for minimal fixture without diagnostics" {
-  let fixture_root = "fixtures/v2/minimal"
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-check-default",
+  )
   let stale_path = fixture_root + "/dist/check-stale.txt"
   let _ = try? @runtime.io_create_dir(fixture_root + "/dist")
   @runtime.io_write_string(stale_path, "stale") catch {
@@ -624,6 +774,24 @@ test "runtime cli check succeeds for minimal fixture without diagnostics" {
   inspect(outcome.message.contains("[check] completed"), content="true")
   inspect(outcome.message.contains("diagnostics: 0"), content="true")
   inspect(@runtime.io_path_exists(stale_path), content="true")
+}
+
+///|
+test "runtime cli check respects output override without writing output" {
+  let fixture_root = "fixtures/v2/check_wikilink_warning"
+  let outcome = @cli.run_check_command_runtime_from_config_with_output(
+    fixture_root + "/moonink.json",
+    Some("check-preview"),
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(
+    outcome.message.contains("[check] completed with diagnostics"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/check-preview/index.html"),
+    content="false",
+  )
 }
 
 ///|
@@ -642,6 +810,25 @@ test "runtime cli check reports wikilink diagnostics without writing output" {
     content="true",
   )
   inspect(outcome.message.contains("[hello.md]"), content="true")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="false",
+  )
+}
+
+///|
+test "runtime cli check reports missing configured template file" {
+  let fixture_root = "fixtures/v2/missing_template_file"
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(
+    outcome.message.contains("[check] failed during theme loading"),
+    content="true",
+  )
+  inspect(outcome.message.contains("load_template"), content="true")
+  inspect(outcome.message.contains("templates/missing.html"), content="true")
   inspect(
     @runtime.io_path_exists(fixture_root + "/dist/index.html"),
     content="false",
@@ -791,9 +978,10 @@ test "runtime cli build renders automatic navigation for pretty routes" {
   )
 }
 
-///|
 test "runtime cli build renders backlinks for minimal fixture" {
-  let fixture_root = "fixtures/v2/minimal"
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-build-backlinks",
+  )
   let outcome = @cli.run_build_command_runtime_from_config(
     fixture_root + "/moonink.json",
   )
@@ -812,8 +1000,26 @@ test "runtime cli build renders backlinks for minimal fixture" {
 }
 
 ///|
+test "runtime cli build respects output override" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-build-dist-alt",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config_with_output(
+    fixture_root + "/moonink.json",
+    Some("dist-alt"),
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist-alt/hello/index.html"),
+    content="true",
+  )
+}
+
+///|
 test "runtime cli build ignores ordinary markdown links in backlink index" {
-  let fixture_root = "fixtures/v2/minimal"
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-build-backlinks-ignore-markdown",
+  )
   let outcome = @cli.run_build_command_runtime_from_config(
     fixture_root + "/moonink.json",
   )
@@ -828,7 +1034,9 @@ test "runtime cli build ignores ordinary markdown links in backlink index" {
 
 ///|
 test "runtime cli build writes minimal fixture html files" {
-  let fixture_root = "fixtures/v2/minimal"
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-build-default",
+  )
   let stale_path = fixture_root + "/dist/stale.txt"
   let _ = try? @runtime.io_create_dir(fixture_root + "/dist")
   @runtime.io_write_string(stale_path, "stale") catch {
@@ -1392,6 +1600,23 @@ test "runtime cli build resolves wikilinks for pretty routes" {
 }
 
 ///|
+test "runtime cli build renders backlinks for pretty routes" {
+  let fixture_root = "fixtures/v2/wikilinks_pretty"
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let about_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/about/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(about_html.contains("aria-label=\"Backlinks\""), content="true")
+  inspect(about_html.contains("href=\"/hello/\""), content="true")
+  inspect(about_html.contains(">Hello<"), content="true")
+}
+
+///|
 test "runtime cli build resolves wikilinks for direct routes" {
   let fixture_root = "fixtures/v2/wikilinks_direct"
   let outcome = @cli.run_build_command_runtime_from_config(
@@ -1407,4 +1632,21 @@ test "runtime cli build resolves wikilinks for direct routes" {
   inspect(hello_html.contains(">about<"), content="true")
   inspect(hello_html.contains("href=\"/index.html\""), content="true")
   inspect(hello_html.contains(">Home<"), content="true")
+}
+
+///|
+test "runtime cli build renders backlinks for direct routes" {
+  let fixture_root = "fixtures/v2/wikilinks_direct"
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let about_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/about.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(about_html.contains("aria-label=\"Backlinks\""), content="true")
+  inspect(about_html.contains("href=\"/hello.html\""), content="true")
+  inspect(about_html.contains(">Hello<"), content="true")
 }
