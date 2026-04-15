@@ -1,5 +1,5 @@
 {
-  "name": "username/moonink",
+  "name": "kozmosa/moonink",
   "version": "0.2.0",
   "deps": {
     "moonbitlang/x": "0.4.41",

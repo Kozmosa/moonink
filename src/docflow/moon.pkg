@@ -1,4 +1,4 @@
 import {
-  "username/moonink/core" @core,
+  "kozmosa/moonink/core" @core,
   "mizchi/markdown" @markdown,
 }
