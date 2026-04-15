@@ -172,10 +172,8 @@ pub fn collect_resolved_wikilink_targets(
   match parsed.source_format {
     @core.SourceFormat::Markdown =>
       match parsed.backend_payload {
-        Some(payload) => collect_resolved_wikilink_targets_from_payload(
-          linker,
-          payload,
-        )
+        Some(payload) =>
+          collect_resolved_wikilink_targets_from_payload(linker, payload)
         None => []
       }
     _ => []

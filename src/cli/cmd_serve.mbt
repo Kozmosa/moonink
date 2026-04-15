@@ -51,7 +51,11 @@ pub fn format_serve_build_warnings(
   let lines = ["[serve] build completed with warnings"]
   let mut output = lines.iter().join("\n")
   for diagnostic in diagnostics {
-    output = output + "\n[" + diagnostic.source_path + "] " + diagnostic.entry.message
+    output = output +
+      "\n[" +
+      diagnostic.source_path +
+      "] " +
+      diagnostic.entry.message
   }
   output
 }
@@ -146,7 +150,7 @@ pub fn prepare_serve_runtime_session(
     ServeBuildStage::WithWarnings(result.summary, result.diagnostics)
   }
   Ok({
-    session: prepare_serve_session(output_root(config), host=host, port=port),
+    session: prepare_serve_session(output_root(config), host~, port~),
     build_stage,
   })
 }
@@ -167,12 +171,11 @@ fn run_serve_command(options : ServeCliOptions) -> CliOutcome {
   )
   {
     exit_code: 0,
-    message: (
-      "[serve] build step will run before preview startup\n" +
-      format_serve_message(session) +
-      "\nconfig: " + options.config_path +
-      output_status
-    ),
+    message: "[serve] build step will run before preview startup\n" +
+    format_serve_message(session) +
+    "\nconfig: " +
+    options.config_path +
+    output_status,
   }
 }
 
@@ -189,7 +192,8 @@ pub fn run_serve_command_runtime_from_config_with_runner(
     Ok(prepared) => prepared
     Err(message) => return { exit_code: 1, message }
   }
-  let startup = match start_prepared_serve_session_result(prepared.session, runner) {
+  let startup = match
+    start_prepared_serve_session_result(prepared.session, runner) {
     Ok(session) => session
     Err(message) => return { exit_code: 1, message }
   }

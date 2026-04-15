@@ -221,10 +221,7 @@ test "docflow indexed wikilinker preserves malformed nested wikilinks during rew
     diagnostics: @docflow.empty_document_diagnostics(),
     backend_payload: Some("Visit [[outer [[inner]] today."),
   }
-  let linker = @docflow.indexed_wikilinker(
-    { "inner": "/inner/" },
-    {},
-  )
+  let linker = @docflow.indexed_wikilinker({ "inner": "/inner/" }, {})
   let linked = @docflow.apply_wikilinker(linker, parsed)
   inspect(
     linked.backend_payload,

@@ -351,7 +351,9 @@ fn register_exact_target(
 }
 
 ///|
-pub fn build_wikilinker(inputs : Array[@runtime.BuildInput]) -> @docflow.WikiLinker {
+pub fn build_wikilinker(
+  inputs : Array[@runtime.BuildInput],
+) -> @docflow.WikiLinker {
   let basename_keys : Array[String] = []
   let index_alias_keys : Array[String] = []
   for input in inputs {
@@ -423,8 +425,7 @@ pub fn build_backlink_index(
       backend_payload: Some(input.docflow_content),
     }
     let resolved_targets = @docflow.collect_resolved_wikilink_targets(
-      wikilinker,
-      parsed,
+      wikilinker, parsed,
     )
     for url in resolved_targets {
       let existing = match backlinks.get(url) {
@@ -1062,13 +1063,7 @@ fn build_site_result(
     }
     let rendered = @docflow.render_with_adapter(renderer, linked)
     let templated = apply_build_template(
-      config,
-      active_theme,
-      assembly,
-      backlinks,
-      input,
-      rendered,
-      template_source,
+      config, active_theme, assembly, backlinks, input, rendered, template_source,
     )
     let output_path = @core.output_html_path(
       input.meta.source_path,
@@ -1257,6 +1252,7 @@ pub fn run_build_command_runtime_from_config_with_output(
   summarize_build_success(config, inventory, summary)
 }
 
+///|
 pub fn run_build_command_runtime_from_config(
   config_path : String,
 ) -> CliOutcome {

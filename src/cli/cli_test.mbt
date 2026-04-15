@@ -787,7 +787,10 @@ test "runtime cli serve blocks preview startup on fatal build failure" {
     outcome.message.contains("[serve] build failed before preview startup"),
     content="true",
   )
-  inspect(outcome.message.contains("[build] failed during config loading"), content="true")
+  inspect(
+    outcome.message.contains("[build] failed during config loading"),
+    content="true",
+  )
   inspect(outcome.message.contains("[serve] runtime ready"), content="false")
 }
 
@@ -804,7 +807,10 @@ test "runtime cli serve reports preview startup failure separately from build" {
   )
   match startup {
     Err(message) => {
-      inspect(message.contains("[serve] failed during preview startup"), content="true")
+      inspect(
+        message.contains("[serve] failed during preview startup"),
+        content="true",
+      )
       inspect(message.contains("preview root does not exist"), content="true")
     }
     Ok(_) => panic()
@@ -1047,6 +1053,7 @@ test "runtime cli build renders automatic navigation for pretty routes" {
   )
 }
 
+///|
 test "runtime cli build renders backlinks for minimal fixture" {
   let fixture_root = prepare_isolated_fixture_copy(
     "fixtures/v2/minimal", "minimal-build-backlinks",
