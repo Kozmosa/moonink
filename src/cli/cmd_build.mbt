@@ -20,6 +20,7 @@ pub(all) suberror CheckCommandError {
   ContentDiscovery(@core.ContentDiscoveryError)
   AdapterRegistry(@docflow.AdapterRegistryError)
   FatalParse(@docflow.FatalParseError)
+  ThemeLoad(@core.ProjectIOError)
 } derive(Debug, Eq)
 
 ///|
@@ -81,6 +82,8 @@ fn format_check_command_error(err : CheckCommandError) -> String {
       "[check] failed during adapter lookup\n\{inner.to_string()}"
     CheckCommandError::FatalParse(inner) =>
       "[check] failed during document parsing\n\{inner.to_string()}"
+    CheckCommandError::ThemeLoad(inner) =>
+      "[check] failed during theme loading\n\{@core.format_project_io_error(inner)}"
   }
 }
 
@@ -1016,6 +1019,26 @@ fn resolve_active_theme_layout(
 }
 
 ///|
+fn validate_check_active_theme_layout(
+  config : @core.MooninkConfig,
+) -> Unit raise CheckCommandError {
+  match @runtime.load_active_theme_layout_result(config) {
+    Ok(_) => ()
+    Err(err) =>
+      raise CheckCommandError::ThemeLoad(
+        @core.project_io_error(
+          "load_template",
+          match config.template_file {
+            Some(path) => path
+            None => config.config_path
+          },
+          @core.format_config_error(err),
+        ),
+      )
+  }
+}
+
+///|
 fn build_site_result(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
@@ -1152,6 +1175,9 @@ fn check_site_result(
   let inputs = match @runtime.load_build_inputs_result(config, inventory) {
     Ok(inputs) => inputs
     Err(err) => return Err(CheckCommandError::ContentDiscovery(err))
+  }
+  validate_check_active_theme_layout(config) catch {
+    err => return Err(err)
   }
   let wikilinker = build_wikilinker(inputs)
   let diagnostics : Array[CheckDiagnostic] = []

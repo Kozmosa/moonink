@@ -697,6 +697,25 @@ test "runtime cli check reports wikilink diagnostics without writing output" {
 }
 
 ///|
+test "runtime cli check reports missing configured template file" {
+  let fixture_root = "fixtures/v2/missing_template_file"
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(
+    outcome.message.contains("[check] failed during theme loading"),
+    content="true",
+  )
+  inspect(outcome.message.contains("load_template"), content="true")
+  inspect(outcome.message.contains("templates/missing.html"), content="true")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="false",
+  )
+}
+
+///|
 test "runtime cli check reports missing config" {
   let outcome = @cli.run_check_command_runtime_from_config(
     "fixtures/v2/missing_config/moonink.json",
