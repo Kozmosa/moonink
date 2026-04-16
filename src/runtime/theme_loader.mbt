@@ -85,18 +85,31 @@ fn load_theme_layout_map(
   theme_root : String,
   manifest : @core.ThemeManifest,
 ) -> Result[Map[String, String], ThemeLoadError] {
-  let layouts : Map[String, String] = {}
-  for entry in manifest.layouts {
-    let (kind, relative_path) = entry
-    let full_path = theme_child_path(theme_root, relative_path) catch {
-      err => return Err(err)
+  // Core parsing treats an omitted `layouts` field as `{}`; reject that here so
+  // Theme V2 bundles fail at load time instead of during later layout lookup.
+  for _ in manifest.layouts {
+    let layouts : Map[String, String] = {}
+    for entry in manifest.layouts {
+      let (kind, relative_path) = entry
+      let full_path = theme_child_path(theme_root, relative_path) catch {
+        err => return Err(err)
+      }
+      let source = io_read_file_to_string(full_path) catch {
+        _ => return Err(ThemeLoadError::MissingLayout(kind~))
+      }
+      layouts[kind] = source
     }
-    let source = io_read_file_to_string(full_path) catch {
-      _ => return Err(ThemeLoadError::MissingLayout(kind~))
-    }
-    layouts[kind] = source
+    return Ok(layouts)
   }
-  Ok(layouts)
+
+  Err(
+    ThemeLoadError::Manifest(
+      @core.ThemeManifestError::InvalidField(
+        key="layouts",
+        detail="must contain at least one layout",
+      ),
+    ),
+  )
 }
 
 ///|

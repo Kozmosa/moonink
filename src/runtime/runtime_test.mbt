@@ -126,6 +126,30 @@ test "load_active_theme_bundle_result reports missing partial referenced by layo
 }
 
 ///|
+test "load_active_theme_bundle_result rejects empty theme layout maps" {
+  let config = match
+    @runtime.load_config_result(
+      "fixtures/v2/theme_v2_invalid_empty_layouts/moonink.json",
+    ) {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let result = @runtime.load_active_theme_bundle_result(config)
+  inspect(
+    result
+    is Err(
+      @runtime.ThemeLoadError::Manifest(
+        @core.ThemeManifestError::InvalidField(
+          key="layouts",
+          detail="must contain at least one layout"
+        )
+      )
+    ),
+    content="true",
+  )
+}
+
+///|
 test "load_template_source_result returns none without configured template" {
   let config = match
     @runtime.load_config_result("fixtures/v2/minimal/moonink.json") {
