@@ -1,8 +1,8 @@
 {
-  "name": "username/moonink-native-serve",
+  "name": "kozmosa/moonink-native-serve",
   "version": "0.2.0",
   "deps": {
-    "username/moonink": {
+    "kozmosa/moonink": {
       "path": ".."
     },
     "oboard/mocket": "0.6.5"

@@ -1,4 +1,4 @@
-# username/moonink
+# kozmosa/moonink
 
 ## MoonInk CLI Scaffold
 

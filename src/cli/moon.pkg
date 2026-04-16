@@ -1,5 +1,5 @@
 import {
-  "username/moonink/core" @core,
-  "username/moonink/runtime" @runtime,
-  "username/moonink/docflow" @docflow,
+  "kozmosa/moonink/core" @core,
+  "kozmosa/moonink/runtime" @runtime,
+  "kozmosa/moonink/docflow" @docflow,
 }

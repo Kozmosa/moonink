@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/moonink/runtime"
+package "kozmosa/moonink/runtime"
 
 import {
+  "kozmosa/moonink/core",
   "moonbitlang/core/debug",
-  "username/moonink/core",
 }
 
 // Values

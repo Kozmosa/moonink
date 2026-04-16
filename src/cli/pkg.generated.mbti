@@ -1,11 +1,11 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/moonink/cli"
+package "kozmosa/moonink/cli"
 
 import {
+  "kozmosa/moonink/core",
+  "kozmosa/moonink/docflow",
+  "kozmosa/moonink/runtime",
   "moonbitlang/core/debug",
-  "username/moonink/core",
-  "username/moonink/docflow",
-  "username/moonink/runtime",
 }
 
 // Values

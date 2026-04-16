@@ -1,5 +1,5 @@
 import {
-  "username/moonink/core" @core,
+  "kozmosa/moonink/core" @core,
   "moonbitlang/x/fs" @fs,
   "moonbitlang/core/env" @env,
   "moonbitlang/x/time" @time,
