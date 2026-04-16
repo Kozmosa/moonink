@@ -75,9 +75,17 @@ CLI (cli/moonink.mbt) → Runtime boundary (runtime/)
 ## Test Fixtures
 
 Located in `fixtures/v2/`:
-- `minimal/` — working project with moonink.json, index.md (type:page), hello.md, about.html
-- `missing_config/` — directory without moonink.json (error case)
-- `with_frontmatter/` — article.md and page.md with full frontmatter fields
+- Core baseline fixtures: `minimal/`, `missing_config/`, `with_frontmatter/`
+- Route / wikilink fixtures: `direct_route/`, `wikilinks_direct/`, `wikilinks_pretty/`, `check_wikilink_warning/`
+- Template / theme fixtures: `with_template_file/`, `missing_template_file/`, `template_direct_route/`, `theme_layout_basic/`
+- Navigation / asset fixtures: `nav_direct_basic/`, `nav_pretty_basic/`, `public_assets_basic/`
+- `fixtures/v2/_test_runs/` contains disposable scratch copies used by mutating CLI/runtime tests; do not treat it as source fixture content
+- Generated `dist*` / `preview-dist/` directories may exist under fixtures and are test/build output, not canonical inputs
+
+## Package Wiring
+
+- Cross-package imports are declared in per-package `moon.pkg` files under `src/*/moon.pkg`
+- When tracing dependencies, check `moon.pkg` before assuming a package is standalone
 
 ## Dependencies
 
