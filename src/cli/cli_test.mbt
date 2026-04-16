@@ -37,6 +37,7 @@ test "build site assembly model combines pages and navigation" {
           title: Some("Home"),
           content_type: Some("page"),
         },
+        layout_override: None,
         sort_key: "index.md",
       },
     },
@@ -51,6 +52,7 @@ test "build site assembly model combines pages and navigation" {
         content_kind: @core.ContentKind::Page,
         format: @core.SourceFormat::Html,
         frontmatter: @core.Frontmatter::default(),
+        layout_override: None,
         sort_key: "about.html",
       },
     },
@@ -65,6 +67,7 @@ test "build site assembly model combines pages and navigation" {
         content_kind: @core.ContentKind::Article,
         format: @core.SourceFormat::Markdown,
         frontmatter: @core.Frontmatter::default(),
+        layout_override: None,
         sort_key: "hello.md",
       },
     },
@@ -94,6 +97,7 @@ test "build backlink index records markdown source urls once per page" {
           ..@core.Frontmatter::default(),
           content_type: Some("page"),
         },
+        layout_override: None,
         sort_key: "index.md",
       },
     },
@@ -108,6 +112,7 @@ test "build backlink index records markdown source urls once per page" {
         content_kind: @core.ContentKind::Article,
         format: @core.SourceFormat::Markdown,
         frontmatter: @core.Frontmatter::default(),
+        layout_override: None,
         sort_key: "hello.md",
       },
     },
@@ -136,6 +141,7 @@ test "build backlink index ignores unresolved and ambiguous wikilinks" {
           ..@core.Frontmatter::default(),
           content_type: Some("page"),
         },
+        layout_override: None,
         sort_key: "index.md",
       },
     },
@@ -150,6 +156,7 @@ test "build backlink index ignores unresolved and ambiguous wikilinks" {
         content_kind: @core.ContentKind::Article,
         format: @core.SourceFormat::Markdown,
         frontmatter: @core.Frontmatter::default(),
+        layout_override: None,
         sort_key: "guide/intro.md",
       },
     },
@@ -164,6 +171,7 @@ test "build backlink index ignores unresolved and ambiguous wikilinks" {
         content_kind: @core.ContentKind::Article,
         format: @core.SourceFormat::Markdown,
         frontmatter: @core.Frontmatter::default(),
+        layout_override: None,
         sort_key: "reference/intro.md",
       },
     },
@@ -367,6 +375,7 @@ test "site page title derives from frontmatter basename and root index" {
       ..@core.Frontmatter::default(),
       title: Some("Install Guide"),
     },
+    layout_override: None,
     sort_key: "guide/install.md",
   }
   let untitled_meta : @core.PageMeta = {
@@ -375,6 +384,7 @@ test "site page title derives from frontmatter basename and root index" {
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: @core.Frontmatter::default(),
+    layout_override: None,
     sort_key: "guide/config.md",
   }
   let index_meta : @core.PageMeta = {
@@ -383,6 +393,7 @@ test "site page title derives from frontmatter basename and root index" {
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: @core.Frontmatter::default(),
+    layout_override: None,
     sort_key: "index.md",
   }
   inspect(@cli.site_page_title(titled_meta), content="Install Guide")
@@ -402,6 +413,7 @@ test "site page navigation metadata derives from frontmatter extra" {
       title: Some("Install Guide"),
       extra: { "nav_title": "Quick Start", "nav_hidden": "true" },
     },
+    layout_override: None,
     sort_key: "guide/install.md",
   }
   let default_meta : @core.PageMeta = {
@@ -410,6 +422,7 @@ test "site page navigation metadata derives from frontmatter extra" {
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: @core.Frontmatter::default(),
+    layout_override: None,
     sort_key: "guide/config.md",
   }
   inspect(@cli.site_page_nav_title(nav_meta), content="Quick Start")
@@ -430,6 +443,7 @@ test "site page navigation metadata falls back on empty title and strict hidden 
       title: Some("Advanced Guide"),
       extra: { "nav_title": "" },
     },
+    layout_override: None,
     sort_key: "guide/advanced.md",
   }
   let loose_hidden_meta : @core.PageMeta = {
@@ -441,6 +455,7 @@ test "site page navigation metadata falls back on empty title and strict hidden 
       ..@core.Frontmatter::default(),
       extra: { "nav_hidden": "TRUE" },
     },
+    layout_override: None,
     sort_key: "guide/draft.md",
   }
   inspect(@cli.site_page_nav_title(empty_title_meta), content="Advanced Guide")
@@ -465,6 +480,7 @@ test "build site pages derives description index flag and nav metadata" {
         description: Some("Landing page"),
         content_type: Some("page"),
       },
+      layout_override: None,
       sort_key: "index.md",
     },
   }
@@ -482,6 +498,7 @@ test "build site pages derives description index flag and nav metadata" {
         ..@core.Frontmatter::default(),
         extra: { "nav_title": "Read Me", "nav_hidden": "true" },
       },
+      layout_override: None,
       sort_key: "hello.md",
     },
   }

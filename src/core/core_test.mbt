@@ -367,6 +367,43 @@ test "parse_frontmatter keeps navigation fields in extra" {
 }
 
 ///|
+test "parse_frontmatter records theme page override fields" {
+  let yaml = "title: Landing\nlayout: landing\ntheme_tone: sunset\ntheme_sections: [hero, cta]\ntype: page"
+  let fm = @core.parse_frontmatter(yaml)
+  inspect(fm.layout, content="Some(\"landing\")")
+  inspect(fm.theme_meta.get("tone"), content="Some(StringValue(\"sunset\"))")
+  inspect(
+    fm.theme_meta.get("sections"),
+    content="Some(ArrayValue([StringValue(\"hero\"), StringValue(\"cta\")]))",
+  )
+}
+
+///|
+test "page_view_model_from_meta exposes layout override and theme meta" {
+  let frontmatter = @core.parse_frontmatter(
+    "title: Landing\nlayout: hero\ntheme_variant: feature\ntheme_sections: [hero, faq]\ntype: page",
+  )
+  let meta = @core.PageMeta::new(
+    "index.md",
+    @core.ContentKind::Page,
+    @core.SourceFormat::Markdown,
+    frontmatter,
+    @core.RouteStyle::Pretty,
+  )
+  let page = @core.page_view_model_from_meta(meta)
+  inspect(meta.layout_override, content="Some(\"hero\")")
+  inspect(page.layout, content="Some(\"hero\")")
+  inspect(
+    page.theme_meta.get("variant"),
+    content="Some(StringValue(\"feature\"))",
+  )
+  inspect(
+    page.theme_meta.get("sections"),
+    content="Some(ArrayValue([StringValue(\"hero\"), StringValue(\"faq\")]))",
+  )
+}
+
+///|
 test "parse_frontmatter_from_source handles full document" {
   let source = "---\ntitle: Hello\ntype: page\n---\n\n# Body content"
   let (fm, body) = @core.parse_frontmatter_from_source(source)

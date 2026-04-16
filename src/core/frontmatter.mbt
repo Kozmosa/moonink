@@ -21,6 +21,8 @@ pub(all) struct Frontmatter {
   date : String?
   tags : Array[String]
   draft : Bool
+  layout : String?
+  theme_meta : Map[String, ThemeConfigValue]
   extra : Map[String, String]
   field_shapes : Map[String, FrontmatterFieldShape]
   invalid_scalar_fields : Map[String, Bool]
@@ -35,6 +37,8 @@ pub fn Frontmatter::default() -> Frontmatter {
     date: None,
     tags: [],
     draft: false,
+    layout: None,
+    theme_meta: {},
     extra: {},
     field_shapes: {},
     invalid_scalar_fields: {},
@@ -76,6 +80,33 @@ pub fn extract_frontmatter_raw(source : String) -> (String?, String) {
     }
     None => (None, source)
   }
+}
+
+///|
+fn theme_meta_key(key : String) -> String? {
+  if !key.has_prefix("theme_") {
+    return None
+  }
+  let normalized = key[6:key.length()].to_string()
+  if normalized.is_empty() {
+    None
+  } else {
+    Some(normalized)
+  }
+}
+
+///|
+fn theme_meta_scalar_value(value : String) -> ThemeConfigValue {
+  ThemeConfigValue::StringValue(value)
+}
+
+///|
+fn theme_meta_list_value(values : Array[String]) -> ThemeConfigValue {
+  let items : Array[ThemeConfigValue] = []
+  for value in values {
+    items.push(ThemeConfigValue::StringValue(value))
+  }
+  ThemeConfigValue::ArrayValue(items)
 }
 
 ///|
@@ -149,14 +180,32 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
     Some("true") => true
     _ => false
   }
+  let layout = fields.get("layout")
+  let theme_meta : Map[String, ThemeConfigValue] = {}
+  for entry in fields {
+    let (key, value) = entry
+    match theme_meta_key(key) {
+      Some(theme_key) => theme_meta[theme_key] = theme_meta_scalar_value(value)
+      None => ()
+    }
+  }
+  for entry in list_fields {
+    let (key, values) = entry
+    match theme_meta_key(key) {
+      Some(theme_key) => theme_meta[theme_key] = theme_meta_list_value(values)
+      None => ()
+    }
+  }
   // Collect remaining fields into extra
   let core_keys : Array[String] = [
-    "title", "description", "type", "date", "draft",
+    "title", "description", "type", "date", "draft", "layout",
   ]
   let extra : Map[String, String] = {}
   for entry in fields {
     let (key, value) = entry
-    if core_keys.search_by(k => k == key) is None && key != "tags" {
+    if core_keys.search_by(k => k == key) is None &&
+      key != "tags" &&
+      theme_meta_key(key) is None {
       extra[key] = value
     }
   }
@@ -167,6 +216,8 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
     date,
     tags,
     draft,
+    layout,
+    theme_meta,
     extra,
     field_shapes,
     invalid_scalar_fields,

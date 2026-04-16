@@ -42,6 +42,8 @@ pub fn normalize_relative_path(String) -> String raise PathPolicyError
 
 pub fn output_html_path(String, RouteStyle) -> String
 
+pub fn page_view_model_from_meta(PageMeta) -> ThemePageViewModel
+
 pub fn parse_config_json(String, String) -> MooninkConfig raise ConfigError
 
 pub fn parse_frontmatter(String) -> Frontmatter
@@ -127,6 +129,8 @@ pub(all) struct Frontmatter {
   date : String?
   tags : Array[String]
   draft : Bool
+  layout : String?
+  theme_meta : Map[String, ThemeConfigValue]
   extra : Map[String, String]
   field_shapes : Map[String, FrontmatterFieldShape]
   invalid_scalar_fields : Map[String, Bool]
@@ -176,6 +180,7 @@ pub(all) struct PageMeta {
   content_kind : ContentKind
   format : SourceFormat
   frontmatter : Frontmatter
+  layout_override : String?
   sort_key : String
 } derive(Eq, @debug.Debug)
 pub fn PageMeta::new(String, ContentKind, SourceFormat, Frontmatter, RouteStyle) -> Self
@@ -248,6 +253,7 @@ pub impl Show for ThemeManifest
 
 pub(all) struct ThemePageViewModel {
   layout : String?
+  theme_meta : Map[String, ThemeConfigValue]
   slots : Map[String, String]
 } derive(Eq, @debug.Debug)
 
