@@ -63,6 +63,8 @@ pub(all) struct MooninkConfig {
   exclude : Array[String]
   route_style : RouteStyle
   text_encoding : String
+  theme : String?
+  theme_config : Map[String, String]
 } derive(Debug, Eq)
 
 ///|
@@ -145,6 +147,38 @@ fn extract_json_string_array(
 }
 
 ///|
+fn extract_json_string_map(
+  obj : Map[String, Json],
+  key : String,
+) -> Map[String, String] {
+  match extract_json_object(obj, key) {
+    Some(value) => {
+      let result : Map[String, String] = {}
+      for entry in value {
+        let (entry_key, entry_value) = entry
+        match entry_value {
+          String(text) => result[entry_key] = text
+          _ => ()
+        }
+      }
+      result
+    }
+    None => {}
+  }
+}
+
+///|
+pub fn extract_json_object(
+  obj : Map[String, Json],
+  key : String,
+) -> Map[String, Json]? {
+  match obj.get(key) {
+    Some(Object(value)) => Some(value)
+    _ => None
+  }
+}
+
+///|
 /// Parse configuration from JSON string content.
 pub fn parse_config_json(
   config_path : String,
@@ -187,6 +221,8 @@ pub fn parse_config_json(
     Some("direct") => RouteStyle::Direct
     _ => RouteStyle::Pretty
   }
+  let theme = extract_json_string(obj, "theme")
+  let theme_config = extract_json_string_map(obj, "theme_config")
   {
     config_path,
     project_root,
@@ -198,6 +234,8 @@ pub fn parse_config_json(
     exclude,
     route_style,
     text_encoding: TEXT_ENCODING_NAME,
+    theme,
+    theme_config,
   }
 }
 

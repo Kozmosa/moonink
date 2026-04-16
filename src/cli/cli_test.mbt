@@ -11,6 +11,8 @@ test "build site assembly model combines pages and navigation" {
     exclude: ["dist"],
     route_style: @core.RouteStyle::Pretty,
     text_encoding: "utf-8",
+    theme: None,
+    theme_config: {},
   }
   let inventory : @core.ContentInventory = {
     root: "fixtures/v2/minimal",

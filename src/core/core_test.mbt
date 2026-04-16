@@ -65,6 +65,8 @@ test "build_site_model_dummy preserves inventory counts" {
     exclude: ["dist"],
     route_style: @core.RouteStyle::Pretty,
     text_encoding: "utf-8",
+    theme: None,
+    theme_config: {},
   }
   let model = @core.build_site_model_dummy(config, inventory)
   inspect(model.page_count, content="3")
@@ -179,6 +181,38 @@ test "parse_config_json supports direct route style" {
     _ => panic()
   }
   inspect(config.route_style, content="Direct")
+}
+
+///|
+test "parse_config_json records theme and theme_config" {
+  let json =
+    #|{"site_name": "Themed", "theme": "paper", "theme_config": {"accent": "sunset", "font": "serif"}}
+  let config = @core.parse_config_json("moonink.json", json) catch {
+    _ => panic()
+  }
+  inspect(config.theme, content="Some(\"paper\")")
+  inspect(config.theme_config.get("accent"), content="Some(\"sunset\")")
+  inspect(config.theme_config.get("font"), content="Some(\"serif\")")
+}
+
+///|
+test "parse_theme_manifest_result reads layout map and token declarations" {
+  let json =
+    #|{"name": "paper", "layouts": {"article": "layouts/article.html", "page": "layouts/page.html"}, "tokens": [{"name": "accent", "default": "sunset"}, {"name": "font", "default": "serif"}], "page_overrides": ["landing", "docs/index"], "slots": ["head", "footer"]}
+  let manifest = match @core.parse_theme_manifest_result(json) {
+    Ok(manifest) => manifest
+    Err(_) => panic()
+  }
+  inspect(manifest.name, content="paper")
+  inspect(
+    manifest.layouts.get("article"),
+    content="Some(\"layouts/article.html\")",
+  )
+  inspect(manifest.tokens.length(), content="2")
+  inspect(manifest.tokens[0].name, content="accent")
+  inspect(manifest.tokens[0].default_value, content="Some(\"sunset\")")
+  inspect(manifest.page_overrides[1], content="docs/index")
+  inspect(manifest.slots[0], content="head")
 }
 
 ///|
