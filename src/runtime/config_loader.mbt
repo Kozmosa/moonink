@@ -106,57 +106,10 @@ fn project_theme_layout_path(
 }
 
 ///|
-fn active_theme_layout_from_bundle(
-  bundle : ActiveThemeBundle,
-) -> Result[ActiveThemeLayout, @core.ConfigError] {
-  match bundle.layouts.get("page") {
-    Some(source) =>
-      Ok({
-        source,
-        source_kind: bundle.source_kind,
-        theme_name: bundle.manifest.name,
-        asset_source_dir: bundle.assets_root,
-      })
-    None =>
-      Err(
-        @core.ConfigError::InvalidField(
-          key="theme",
-          detail="missing layout: page",
-        ),
-      )
-  }
-}
-
-///|
 pub fn load_active_theme_layout_result(
   config : @core.MooninkConfig,
 ) -> Result[ActiveThemeLayout, @core.ConfigError] {
   let theme_root = project_theme_root(config) catch { err => return Err(err) }
-  if io_path_exists(theme_root + "/theme.json") {
-    let bundle = match load_active_theme_bundle_result(config) {
-      Ok(bundle) => bundle
-      Err(ThemeLoadError::Config(err)) => return Err(err)
-      Err(ThemeLoadError::Manifest(err)) =>
-        return Err(
-          @core.ConfigError::InvalidField(key="theme", detail=err.to_string()),
-        )
-      Err(ThemeLoadError::MissingLayout(kind~)) =>
-        return Err(
-          @core.ConfigError::InvalidField(
-            key="theme",
-            detail="missing layout: " + kind,
-          ),
-        )
-      Err(ThemeLoadError::MissingPartial(name~)) =>
-        return Err(
-          @core.ConfigError::InvalidField(
-            key="theme",
-            detail="missing partial: " + name,
-          ),
-        )
-    }
-    return active_theme_layout_from_bundle(bundle)
-  }
   let theme_layout_path = project_theme_layout_path(config) catch {
     err => return Err(err)
   }

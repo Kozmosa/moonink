@@ -35,6 +35,25 @@ test "load_active_theme_layout_result falls back to built-in default theme" {
 }
 
 ///|
+test "load_active_theme_layout_result reads legacy project theme layout before template file" {
+  let config = match
+    @runtime.load_config_result("fixtures/v2/theme_layout_basic/moonink.json") {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let layout = match @runtime.load_active_theme_layout_result(config) {
+    Ok(layout) => layout
+    Err(_) => panic()
+  }
+  inspect(
+    layout.source_kind is @runtime.ActiveThemeSource::ProjectTheme,
+    content="true",
+  )
+  inspect(layout.theme_name, content="theme")
+  inspect(layout.source.contains("data-theme-layout=\"true\""), content="true")
+}
+
+///|
 test "load_active_theme_layout_result reads configured template contents" {
   let config = match
     @runtime.load_config_result("fixtures/v2/with_template_file/moonink.json") {
@@ -53,6 +72,25 @@ test "load_active_theme_layout_result reads configured template contents" {
   inspect(layout.asset_source_dir, content="None")
   inspect(layout.source.contains("data-template=\"custom\""), content="true")
   inspect(layout.source.contains("{{ body_html }}"), content="true")
+}
+
+///|
+test "load_active_theme_layout_result keeps theme v2 bundles out of legacy layout flow" {
+  let config = match
+    @runtime.load_config_result("fixtures/v2/theme_v2_basic/moonink.json") {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let layout = match @runtime.load_active_theme_layout_result(config) {
+    Ok(layout) => layout
+    Err(_) => panic()
+  }
+  inspect(
+    layout.source_kind is @runtime.ActiveThemeSource::BuiltInDefault,
+    content="true",
+  )
+  inspect(layout.theme_name, content="default")
+  inspect(layout.source.contains("data-theme=\"default\""), content="true")
 }
 
 ///|
@@ -80,8 +118,9 @@ test "load_active_theme_bundle_result reports missing partial referenced by layo
     Ok(config) => config
     Err(_) => panic()
   }
+  let result = @runtime.load_active_theme_bundle_result(config)
   inspect(
-    @runtime.load_active_theme_bundle_result(config) is Err(_),
+    result is Err(@runtime.ThemeLoadError::MissingPartial(name="header")),
     content="true",
   )
 }
