@@ -354,10 +354,38 @@ fn parse_include_name(tag : String) -> String? {
 }
 
 ///|
+fn copy_string_array(source : Array[String]) -> Array[String] {
+  let copied : Array[String] = []
+  for entry in source {
+    copied.push(entry)
+  }
+  copied
+}
+
+///|
+fn string_array_contains(source : Array[String], target : String) -> Bool {
+  for entry in source {
+    if entry == target {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn include_cycle_comment(stack : Array[String], name : String) -> String {
+  let cycle = copy_string_array(stack)
+  cycle.push(name)
+  let cycle_path = cycle.iter().join(" -> ")
+  "<!-- moonink include cycle: \{cycle_path} -->"
+}
+
+///|
 fn render_template_includes(
   template : String,
   context : ThemeRenderContext,
   partials : Map[String, String],
+  include_stack : Array[String],
 ) -> String {
   let mut cursor = 0
   let mut output = ""
@@ -375,8 +403,19 @@ fn render_template_includes(
                 Some(source) => source
                 None => ""
               }
-              output = output +
-                render_theme_template(partial, context, partials)
+              let rendered = if string_array_contains(include_stack, name) {
+                include_cycle_comment(include_stack, name)
+              } else {
+                let next_stack = copy_string_array(include_stack)
+                next_stack.push(name)
+                render_theme_template_with_stack(
+                  partial,
+                  context,
+                  partials,
+                  next_stack,
+                )
+              }
+              output = output + rendered
               cursor = close + 2
             }
             None => {
@@ -403,6 +442,7 @@ fn render_template_conditionals(
   template : String,
   context : ThemeRenderContext,
   partials : Map[String, String],
+  include_stack : Array[String],
 ) -> String {
   let mut cursor = 0
   let mut output = ""
@@ -421,7 +461,12 @@ fn render_template_conditionals(
                 let body = template[close + 2:block_start].to_string()
                 let rendered = match lookup_theme_value(context, condition) {
                   Some(value) if theme_value_is_truthy(value) =>
-                    render_theme_template(body, context, partials)
+                    render_theme_template_with_stack(
+                      body,
+                      context,
+                      partials,
+                      include_stack,
+                    )
                   _ => ""
                 }
                 output = output + rendered
@@ -498,6 +543,7 @@ fn render_template_loops(
   template : String,
   context : ThemeRenderContext,
   partials : Map[String, String],
+  include_stack : Array[String],
 ) -> String {
   let mut cursor = 0
   let mut output = ""
@@ -524,7 +570,12 @@ fn render_template_loops(
                           context, local_name, value,
                         )
                         parts.push(
-                          render_theme_template(body, local_context, partials),
+                          render_theme_template_with_stack(
+                            body,
+                            local_context,
+                            partials,
+                            include_stack,
+                          ),
                         )
                       }
                       parts.iter().join("")
@@ -559,17 +610,62 @@ fn render_template_loops(
 }
 
 ///|
+fn render_theme_template_with_stack(
+  template : String,
+  context : ThemeRenderContext,
+  partials : Map[String, String],
+  include_stack : Array[String],
+) -> String {
+  let with_loops = render_template_loops(template, context, partials, include_stack)
+  let with_conditionals = render_template_conditionals(
+    with_loops,
+    context,
+    partials,
+    include_stack,
+  )
+  let with_includes = render_template_includes(
+    with_conditionals,
+    context,
+    partials,
+    include_stack,
+  )
+  render_template_paths(with_includes, context)
+}
+
+///|
 pub fn render_theme_template(
   template : String,
   context : ThemeRenderContext,
   partials : Map[String, String],
 ) -> String {
-  let with_conditionals = render_template_conditionals(
-    template, context, partials,
-  )
-  let with_loops = render_template_loops(with_conditionals, context, partials)
-  let with_includes = render_template_includes(with_loops, context, partials)
-  render_template_paths(with_includes, context)
+  render_theme_template_with_stack(template, context, partials, [])
+}
+
+///|
+fn legacy_template_locals(
+  context : TemplateContext,
+) -> Map[String, @core.ThemeConfigValue] {
+  let locals = theme_object_string({
+    "site_name": context.site_name,
+    "site_url": context.site_url,
+    "page_title": context.page_title,
+    "page_description": context.page_description,
+    "url_path": context.url_path,
+    "source_path": context.source_path,
+    "content_kind": context.content_kind,
+    "theme_name": context.theme_name,
+    "theme_asset_root": context.theme_asset_root,
+    "page_body_class": context.page_body_class,
+    "navigation_html": context.navigation_html,
+    "current_section_title": context.current_section_title,
+    "current_section_url": context.current_section_url,
+    "page_header_title": context.page_header_title,
+    "page_header_html": context.page_header_html,
+    "backlinks_html": context.backlinks_html,
+    "body_html": context.body_html,
+  })
+  locals["backlink_urls"] = theme_array_value(context.backlink_urls)
+  locals
 }
 
 ///|
@@ -606,25 +702,7 @@ fn template_context_to_theme_render_context(
       "body_html": theme_string_value(context.body_html),
       "backlink_urls": theme_array_value(context.backlink_urls),
     },
-    locals: theme_object_string({
-      "site_name": context.site_name,
-      "site_url": context.site_url,
-      "page_title": context.page_title,
-      "page_description": context.page_description,
-      "url_path": context.url_path,
-      "source_path": context.source_path,
-      "content_kind": context.content_kind,
-      "theme_name": context.theme_name,
-      "theme_asset_root": context.theme_asset_root,
-      "page_body_class": context.page_body_class,
-      "navigation_html": context.navigation_html,
-      "current_section_title": context.current_section_title,
-      "current_section_url": context.current_section_url,
-      "page_header_title": context.page_header_title,
-      "page_header_html": context.page_header_html,
-      "backlinks_html": context.backlinks_html,
-      "body_html": context.body_html,
-    }),
+    locals: legacy_template_locals(context),
   }
 }
 
