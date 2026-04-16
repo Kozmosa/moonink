@@ -191,8 +191,42 @@ test "parse_config_json records theme and theme_config" {
     _ => panic()
   }
   inspect(config.theme, content="Some(\"paper\")")
-  inspect(config.theme_config.get("accent"), content="Some(\"sunset\")")
-  inspect(config.theme_config.get("font"), content="Some(\"serif\")")
+  inspect(
+    config.theme_config.get("accent"),
+    content="Some(StringValue(\"sunset\"))",
+  )
+  inspect(
+    config.theme_config.get("font"),
+    content="Some(StringValue(\"serif\"))",
+  )
+}
+
+///|
+test "parse_config_json preserves nested theme_config values" {
+  let json =
+    #|{"site_name": "Themed", "theme_config": {"colors": {"accent": "sunset"}, "spacing": ["sm", "md"], "enabled": true}}
+  let config = @core.parse_config_json("moonink.json", json) catch {
+    _ => panic()
+  }
+  inspect(
+    config.theme_config.get("colors"),
+    content="Some(ObjectValue({\"accent\": StringValue(\"sunset\")}))",
+  )
+  inspect(
+    config.theme_config.get("spacing"),
+    content="Some(ArrayValue([StringValue(\"sm\"), StringValue(\"md\")]))",
+  )
+  inspect(config.theme_config.get("enabled"), content="Some(BoolValue(true))")
+}
+
+///|
+test "parse_config_json rejects non-object theme_config" {
+  let json =
+    #|{"site_name": "Themed", "theme_config": ["accent"]}
+  inspect(
+    try? @core.parse_config_json("moonink.json", json),
+    content="Err(InvalidField(key=\"theme_config\", detail=\"must be a JSON object\"))",
+  )
 }
 
 ///|
@@ -213,6 +247,46 @@ test "parse_theme_manifest_result reads layout map and token declarations" {
   inspect(manifest.tokens[0].default_value, content="Some(\"sunset\")")
   inspect(manifest.page_overrides[1], content="docs/index")
   inspect(manifest.slots[0], content="head")
+}
+
+///|
+test "parse_theme_manifest_result rejects malformed layouts values" {
+  let json =
+    #|{"name": "paper", "layouts": {"article": 1}}
+  inspect(
+    @core.parse_theme_manifest_result(json),
+    content="Err(InvalidField(key=\"layouts\", detail=\"must contain only string values\"))",
+  )
+}
+
+///|
+test "parse_theme_manifest_result rejects malformed token entries" {
+  let json =
+    #|{"name": "paper", "tokens": [{"default": "sunset"}]}
+  inspect(
+    @core.parse_theme_manifest_result(json),
+    content="Err(InvalidField(key=\"tokens\", detail=\"each token must include a string `name`\"))",
+  )
+}
+
+///|
+test "parse_theme_manifest_result rejects malformed page_overrides entries" {
+  let json =
+    #|{"name": "paper", "page_overrides": ["landing", false]}
+  inspect(
+    @core.parse_theme_manifest_result(json),
+    content="Err(InvalidField(key=\"page_overrides\", detail=\"must contain only strings\"))",
+  )
+}
+
+///|
+test "parse_theme_manifest_result rejects malformed slots entries" {
+  let json =
+    #|{"name": "paper", "slots": ["head", {"name": "footer"}]}
+  inspect(
+    @core.parse_theme_manifest_result(json),
+    content="Err(InvalidField(key=\"slots\", detail=\"must contain only strings\"))",
+  )
 }
 
 ///|

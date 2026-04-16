@@ -64,6 +64,7 @@ pub(all) suberror ConfigError {
   InvalidPath(path~ : String, reason~ : String)
   InvalidJson(detail~ : String)
   MissingField(key~ : String)
+  InvalidField(key~ : String, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub impl Show for ConfigError
 
@@ -88,6 +89,7 @@ pub(all) suberror ProjectIOError {
 pub(all) suberror ThemeManifestError {
   InvalidJson(detail~ : String)
   MissingField(key~ : String)
+  InvalidField(key~ : String, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub impl Show for ThemeManifestError
 
@@ -149,7 +151,7 @@ pub(all) struct MooninkConfig {
   route_style : RouteStyle
   text_encoding : String
   theme : String?
-  theme_config : Map[String, String]
+  theme_config : Map[String, ThemeConfigValue]
 } derive(Eq, @debug.Debug)
 pub impl Show for MooninkConfig
 
@@ -225,6 +227,16 @@ pub(all) enum SourceFormat {
 } derive(Eq, @debug.Debug)
 pub impl Show for SourceFormat
 
+pub(all) enum ThemeConfigValue {
+  NullValue
+  BoolValue(Bool)
+  NumberValue(String)
+  StringValue(String)
+  ArrayValue(Array[ThemeConfigValue])
+  ObjectValue(Map[String, ThemeConfigValue])
+} derive(Eq, @debug.Debug)
+pub impl Show for ThemeConfigValue
+
 pub(all) struct ThemeManifest {
   name : String
   layouts : Map[String, String]
@@ -232,6 +244,7 @@ pub(all) struct ThemeManifest {
   page_overrides : Array[String]
   slots : Array[String]
 } derive(Eq, @debug.Debug)
+pub impl Show for ThemeManifest
 
 pub(all) struct ThemePageViewModel {
   layout : String?
@@ -242,6 +255,7 @@ pub(all) struct ThemeTokenDeclaration {
   name : String
   default_value : String?
 } derive(Eq, @debug.Debug)
+pub impl Show for ThemeTokenDeclaration
 
 // Type aliases
 

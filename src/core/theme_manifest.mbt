@@ -14,9 +14,34 @@ pub(all) struct ThemeManifest {
 } derive(Debug, Eq)
 
 ///|
+pub impl Show for ThemeTokenDeclaration with output(self, logger) {
+  logger.write_string("ThemeTokenDeclaration(name=")
+  logger.write_object(self.name)
+  logger.write_string(", default_value=")
+  logger.write_object(self.default_value)
+  logger.write_string(")")
+}
+
+///|
+pub impl Show for ThemeManifest with output(self, logger) {
+  logger.write_string("ThemeManifest(name=")
+  logger.write_object(self.name)
+  logger.write_string(", layouts=")
+  logger.write_object(self.layouts)
+  logger.write_string(", tokens=")
+  logger.write_object(self.tokens)
+  logger.write_string(", page_overrides=")
+  logger.write_object(self.page_overrides)
+  logger.write_string(", slots=")
+  logger.write_object(self.slots)
+  logger.write_string(")")
+}
+
+///|
 pub(all) suberror ThemeManifestError {
   InvalidJson(detail~ : String)
   MissingField(key~ : String)
+  InvalidField(key~ : String, detail~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -32,53 +57,113 @@ pub impl Show for ThemeManifestError with output(self, logger) {
       logger.write_string(key)
       logger.write_string("\")")
     }
+    ThemeManifestError::InvalidField(key~, detail~) => {
+      logger.write_string("InvalidField(key=\"")
+      logger.write_string(key)
+      logger.write_string("\", detail=\"")
+      logger.write_string(detail)
+      logger.write_string("\")")
+    }
   }
 }
 
 ///|
-fn extract_json_object_string_map(
+fn require_json_object_string_map(
   obj : Map[String, Json],
   key : String,
-) -> Map[String, String] {
-  match extract_json_object(obj, key) {
-    Some(value) => {
+) -> Map[String, String] raise ThemeManifestError {
+  match obj.get(key) {
+    None => {}
+    Some(Object(value)) => {
       let result : Map[String, String] = {}
       for entry in value {
         let (entry_key, entry_value) = entry
         match entry_value {
           String(text) => result[entry_key] = text
-          _ => ()
+          _ =>
+            raise ThemeManifestError::InvalidField(
+              key~,
+              detail="must contain only string values",
+            )
         }
       }
       result
     }
-    None => {}
+    Some(_) =>
+      raise ThemeManifestError::InvalidField(
+        key~,
+        detail="must be a JSON object",
+      )
   }
 }
 
 ///|
 fn parse_theme_token_declarations(
   obj : Map[String, Json],
-) -> Array[ThemeTokenDeclaration] {
+) -> Array[ThemeTokenDeclaration] raise ThemeManifestError {
   match obj.get("tokens") {
+    None => []
     Some(Array(items)) => {
       let result : Array[ThemeTokenDeclaration] = []
       for item in items {
-        guard item is Object(token_obj) else { continue }
-        match token_obj.get("name") {
-          Some(String(name)) => {
-            let default_value = match token_obj.get("default") {
-              Some(String(value)) => Some(value)
-              _ => None
-            }
-            result.push({ name, default_value })
-          }
-          _ => ()
+        guard item is Object(token_obj) else {
+          raise ThemeManifestError::InvalidField(
+            key="tokens",
+            detail="must contain only objects",
+          )
+        }
+        let name = match token_obj.get("name") {
+          Some(String(name)) => name
+          _ =>
+            raise ThemeManifestError::InvalidField(
+              key="tokens",
+              detail="each token must include a string `name`",
+            )
+        }
+        let default_value = match token_obj.get("default") {
+          None => None
+          Some(String(value)) => Some(value)
+          Some(_) =>
+            raise ThemeManifestError::InvalidField(
+              key="tokens",
+              detail="token `default` values must be strings",
+            )
+        }
+        result.push({ name, default_value })
+      }
+      result
+    }
+    Some(_) =>
+      raise ThemeManifestError::InvalidField(
+        key="tokens",
+        detail="must be an array",
+      )
+  }
+}
+
+///|
+fn require_json_string_array(
+  obj : Map[String, Json],
+  key : String,
+) -> Array[String] raise ThemeManifestError {
+  match obj.get(key) {
+    None => []
+    Some(Array(items)) => {
+      let result : Array[String] = []
+      for item in items {
+        match item {
+          String(value) => result.push(value)
+          _ =>
+            raise ThemeManifestError::InvalidField(
+              key~,
+              detail="must contain only strings",
+            )
         }
       }
       result
     }
-    _ => []
+    Some(_) =>
+      raise ThemeManifestError::InvalidField(key~, detail="must be an array")
   }
 }
 
@@ -100,11 +185,17 @@ pub fn parse_theme_manifest_result(
     Some(String(name)) => name
     _ => return Err(ThemeManifestError::MissingField(key="name"))
   }
-  Ok({
-    name,
-    layouts: extract_json_object_string_map(obj, "layouts"),
-    tokens: parse_theme_token_declarations(obj),
-    page_overrides: extract_json_string_array(obj, "page_overrides"),
-    slots: extract_json_string_array(obj, "slots"),
-  })
+  let layouts = require_json_object_string_map(obj, "layouts") catch {
+    err => return Err(err)
+  }
+  let tokens = parse_theme_token_declarations(obj) catch {
+    err => return Err(err)
+  }
+  let page_overrides = require_json_string_array(obj, "page_overrides") catch {
+    err => return Err(err)
+  }
+  let slots = require_json_string_array(obj, "slots") catch {
+    err => return Err(err)
+  }
+  Ok({ name, layouts, tokens, page_overrides, slots })
 }
