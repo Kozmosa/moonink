@@ -96,15 +96,68 @@ fn theme_meta_key(key : String) -> String? {
 }
 
 ///|
-fn theme_meta_scalar_value(value : String) -> ThemeConfigValue {
-  ThemeConfigValue::StringValue(value)
+fn theme_meta_from_json(value : Json) -> ThemeConfigValue {
+  match value {
+    Null => ThemeConfigValue::NullValue
+    True => ThemeConfigValue::BoolValue(true)
+    False => ThemeConfigValue::BoolValue(false)
+    Number(_, repr~) =>
+      ThemeConfigValue::NumberValue(
+        match repr {
+          Some(repr) => repr
+          None => value.stringify()
+        },
+      )
+    String(text) => ThemeConfigValue::StringValue(text)
+    Array(values) => {
+      let items : Array[ThemeConfigValue] = []
+      for entry in values {
+        items.push(theme_meta_from_json(entry))
+      }
+      ThemeConfigValue::ArrayValue(items)
+    }
+    Object(entries) => {
+      let items : Map[String, ThemeConfigValue] = {}
+      for entry in entries {
+        let (key, item) = entry
+        items[key] = theme_meta_from_json(item)
+      }
+      ThemeConfigValue::ObjectValue(items)
+    }
+  }
 }
 
 ///|
-fn theme_meta_list_value(values : Array[String]) -> ThemeConfigValue {
+fn theme_meta_value(
+  raw_value : String,
+  fallback_value : String,
+) -> ThemeConfigValue {
+  let normalized = raw_value.trim().to_string()
+  if normalized.is_empty() {
+    return ThemeConfigValue::StringValue(fallback_value)
+  }
+  let value = @json.parse(normalized.view()) catch {
+    _ => return ThemeConfigValue::StringValue(fallback_value)
+  }
+  theme_meta_from_json(value)
+}
+
+///|
+fn theme_meta_scalar_value(
+  raw_value : String,
+  value : String,
+) -> ThemeConfigValue {
+  theme_meta_value(raw_value, value)
+}
+
+///|
+fn theme_meta_list_value(
+  raw_values : Array[String],
+  values : Array[String],
+) -> ThemeConfigValue {
   let items : Array[ThemeConfigValue] = []
-  for value in values {
-    items.push(ThemeConfigValue::StringValue(value))
+  for index in 0..<values.length() {
+    items.push(theme_meta_value(raw_values[index], values[index]))
   }
   ThemeConfigValue::ArrayValue(items)
 }
@@ -114,7 +167,9 @@ fn theme_meta_list_value(values : Array[String]) -> ThemeConfigValue {
 /// Supports: `key: value`, `key: "quoted value"`, `key: [a, b, c]`, `key: true/false`.
 pub fn parse_frontmatter(yaml : String) -> Frontmatter {
   let fields : Map[String, String] = {}
+  let raw_fields : Map[String, String] = {}
   let list_fields : Map[String, Array[String]] = {}
+  let raw_list_fields : Map[String, Array[String]] = {}
   let field_shapes : Map[String, FrontmatterFieldShape] = {}
   let invalid_scalar_fields : Map[String, Bool] = {}
   for line_view in yaml.split("\n") {
@@ -133,6 +188,7 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
         if value.has_prefix("[") && value.has_suffix("]") {
           let inner = value[1:value.length() - 1].to_string()
           let items : Array[String] = []
+          let raw_items : Array[String] = []
           for item_view in inner.split(",") {
             let item = item_view.trim().to_string()
             // Strip quotes
@@ -145,9 +201,11 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
             }
             if !clean.is_empty() {
               items.push(clean)
+              raw_items.push(item)
             }
           }
           list_fields[key] = items
+          raw_list_fields[key] = raw_items
           field_shapes[key] = FrontmatterFieldShape::List
         } else {
           // Strip optional surrounding quotes
@@ -159,6 +217,7 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
             value
           }
           fields[key] = clean
+          raw_fields[key] = value
           field_shapes[key] = FrontmatterFieldShape::Scalar
           if key == "draft" && clean != "true" && clean != "false" {
             invalid_scalar_fields[key] = true
@@ -182,17 +241,27 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
   }
   let layout = fields.get("layout")
   let theme_meta : Map[String, ThemeConfigValue] = {}
-  for entry in fields {
-    let (key, value) = entry
+  for entry in raw_fields {
+    let (key, raw_value) = entry
     match theme_meta_key(key) {
-      Some(theme_key) => theme_meta[theme_key] = theme_meta_scalar_value(value)
+      Some(theme_key) =>
+        match fields.get(key) {
+          Some(value) =>
+            theme_meta[theme_key] = theme_meta_scalar_value(raw_value, value)
+          None => ()
+        }
       None => ()
     }
   }
-  for entry in list_fields {
-    let (key, values) = entry
+  for entry in raw_list_fields {
+    let (key, raw_values) = entry
     match theme_meta_key(key) {
-      Some(theme_key) => theme_meta[theme_key] = theme_meta_list_value(values)
+      Some(theme_key) =>
+        match list_fields.get(key) {
+          Some(values) =>
+            theme_meta[theme_key] = theme_meta_list_value(raw_values, values)
+          None => ()
+        }
       None => ()
     }
   }

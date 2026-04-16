@@ -328,6 +328,13 @@ test "parse_frontmatter records list title shape mismatch" {
 }
 
 ///|
+test "parse_frontmatter records list layout shape mismatch" {
+  let fm = @core.parse_frontmatter("layout: [landing]\ntype: page")
+  inspect(fm.layout, content="None")
+  inspect(fm.field_shapes.get("layout"), content="Some(List)")
+}
+
+///|
 test "parse_frontmatter parses core fields" {
   let yaml = "title: My Article\ndescription: A test\ntype: article\ndate: 2026-04-01\ndraft: true"
   let fm = @core.parse_frontmatter(yaml)
@@ -367,14 +374,18 @@ test "parse_frontmatter keeps navigation fields in extra" {
 }
 
 ///|
-test "parse_frontmatter records theme page override fields" {
-  let yaml = "title: Landing\nlayout: landing\ntheme_tone: sunset\ntheme_sections: [hero, cta]\ntype: page"
+test "parse_frontmatter preserves typed theme page override values" {
+  let yaml = "title: Landing\nlayout: landing\ntheme_tone: sunset\ntheme_featured: true\ntheme_order: 2\ntheme_empty: null\ntheme_literal: \"true\"\ntheme_sections: [hero, false, 3, null, \"cta\"]\ntype: page"
   let fm = @core.parse_frontmatter(yaml)
   inspect(fm.layout, content="Some(\"landing\")")
   inspect(fm.theme_meta.get("tone"), content="Some(StringValue(\"sunset\"))")
+  inspect(fm.theme_meta.get("featured"), content="Some(BoolValue(true))")
+  inspect(fm.theme_meta.get("order"), content="Some(NumberValue(\"2\"))")
+  inspect(fm.theme_meta.get("empty"), content="Some(NullValue)")
+  inspect(fm.theme_meta.get("literal"), content="Some(StringValue(\"true\"))")
   inspect(
     fm.theme_meta.get("sections"),
-    content="Some(ArrayValue([StringValue(\"hero\"), StringValue(\"cta\")]))",
+    content="Some(ArrayValue([StringValue(\"hero\"), BoolValue(false), NumberValue(\"3\"), NullValue, StringValue(\"cta\")]))",
   )
 }
 

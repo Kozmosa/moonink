@@ -962,6 +962,31 @@ test "runtime cli check reports frontmatter type mismatch as blocking" {
 }
 
 ///|
+test "runtime cli check reports frontmatter layout mismatch as blocking" {
+  let fixture_root = "fixtures/v2/check_frontmatter_layout_mismatch"
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("[check] frontmatter"), content="true")
+  inspect(
+    outcome.message.contains(
+      "error: Frontmatter field `layout` must be a string",
+    ),
+    content="true",
+  )
+  inspect(outcome.message.contains("[index.md]"), content="true")
+  inspect(
+    outcome.message.contains("[check] summary: 1 errors, 0 warnings"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="false",
+  )
+}
+
+///|
 test "runtime cli check reports final route conflicts as blocking" {
   let fixture_root = "fixtures/v2/check_route_conflict"
   let outcome = @cli.run_check_command_runtime_from_config(

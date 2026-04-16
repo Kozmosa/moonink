@@ -1326,6 +1326,18 @@ fn validate_frontmatter_for_check(
       })
     _ => ()
   }
+  match frontmatter.field_shapes.get("layout") {
+    Some(@core.FrontmatterFieldShape::List) =>
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Frontmatter,
+        severity: CheckSeverity::Error,
+        source_path: Some(source_path),
+        message: "Frontmatter field `layout` must be a string",
+        hint: None,
+        line: None,
+      })
+    _ => ()
+  }
   match frontmatter.field_shapes.get("tags") {
     Some(@core.FrontmatterFieldShape::Scalar) =>
       next_report = report_with_entry(next_report, {
