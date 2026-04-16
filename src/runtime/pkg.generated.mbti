@@ -45,6 +45,8 @@ pub fn io_write_string(String, String) -> Unit raise @core.ProjectIOError
 
 pub fn launch_preview_result(PreviewRunner, PreviewLaunch) -> Result[PreviewLaunch, @core.ProjectIOError]
 
+pub fn load_active_theme_bundle_result(@core.MooninkConfig) -> Result[ActiveThemeBundle, ThemeLoadError]
+
 pub fn load_active_theme_layout_result(@core.MooninkConfig) -> Result[ActiveThemeLayout, @core.ConfigError]
 
 pub fn load_build_inputs_result(@core.MooninkConfig, @core.ContentInventory) -> Result[Array[BuildInput], @core.ContentDiscoveryError]
@@ -74,8 +76,23 @@ pub fn[T] run_runtime_io_task(RuntimeIOTask[T]) -> T
 pub fn runtime_task_policy() -> RuntimeTaskPolicy
 
 // Errors
+pub(all) suberror ThemeLoadError {
+  Config(@core.ConfigError)
+  Manifest(@core.ThemeManifestError)
+  MissingLayout(kind~ : String)
+  MissingPartial(name~ : String)
+} derive(Eq, @debug.Debug)
+pub impl Show for ThemeLoadError
 
 // Types and methods
+pub(all) struct ActiveThemeBundle {
+  manifest : @core.ThemeManifest
+  layouts : Map[String, String]
+  partials : Map[String, String]
+  assets_root : String?
+  source_kind : ActiveThemeSource
+} derive(Eq, @debug.Debug)
+
 pub(all) struct ActiveThemeLayout {
   source : String
   source_kind : ActiveThemeSource

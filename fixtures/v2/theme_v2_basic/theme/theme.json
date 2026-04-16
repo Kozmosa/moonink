@@ -1,0 +1,6 @@
+{
+  "name": "fixture-v2",
+  "layouts": {
+    "page": "layouts/page.html"
+  }
+}

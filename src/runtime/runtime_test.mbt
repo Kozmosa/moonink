@@ -56,6 +56,37 @@ test "load_active_theme_layout_result reads configured template contents" {
 }
 
 ///|
+test "load_active_theme_bundle_result reads theme v2 manifest layouts and partials" {
+  let config = match
+    @runtime.load_config_result("fixtures/v2/theme_v2_basic/moonink.json") {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let bundle = match @runtime.load_active_theme_bundle_result(config) {
+    Ok(bundle) => bundle
+    Err(_) => panic()
+  }
+  inspect(bundle.manifest.name, content="fixture-v2")
+  inspect(bundle.layouts.get("page") is Some(_), content="true")
+  inspect(bundle.partials.get("header") is Some(_), content="true")
+}
+
+///|
+test "load_active_theme_bundle_result reports missing partial referenced by layout" {
+  let config = match
+    @runtime.load_config_result(
+      "fixtures/v2/theme_v2_invalid_missing_partial/moonink.json",
+    ) {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  inspect(
+    @runtime.load_active_theme_bundle_result(config) is Err(_),
+    content="true",
+  )
+}
+
+///|
 test "load_template_source_result returns none without configured template" {
   let config = match
     @runtime.load_config_result("fixtures/v2/minimal/moonink.json") {
