@@ -425,6 +425,53 @@ test "docflow native template renderer leaves plain text unchanged" {
 }
 
 ///|
+test "docflow theme template resolves nested variable paths" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "index.md",
+    source_uuid: "page-001",
+    html: "<p>Hello</p>",
+    note: "nested variable path lookup test",
+  }
+  let context = @docflow.default_theme_render_context(rendered)
+  inspect(
+    @docflow.render_theme_template("<title>{{ page.title }}</title>", context, {}),
+    content="<title>index.md</title>",
+  )
+}
+
+///|
+test "docflow theme template supports include if and for" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "index.md",
+    source_uuid: "page-001",
+    html: "<p>Hello</p>",
+    note: "control flow template test",
+  }
+  let context : @docflow.ThemeRenderContext = {
+    ..@docflow.default_theme_render_context(rendered),
+    collections: {
+      "nav": @core.ThemeConfigValue::ObjectValue({
+        "items": @core.ThemeConfigValue::ArrayValue([
+          @core.ThemeConfigValue::ObjectValue({
+            "title": @core.ThemeConfigValue::StringValue("Home"),
+          }),
+        ]),
+      }),
+    },
+  }
+  inspect(
+    @docflow.render_theme_template(
+      "{% if page.body_html %}<ul>{% for item in collections.nav.items %}{% include \"nav\" %}{% endfor %}</ul>{% endif %}",
+      context,
+      { "nav": "<li>{{ item.title }}</li>" },
+    ),
+    content="<ul><li>Home</li></ul>",
+  )
+}
+
+///|
 test "docflow apply_template uses provided page metadata context" {
   let rendered : @docflow.RenderedDocument = {
     backend_name: "fake-html-renderer",

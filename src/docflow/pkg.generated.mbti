@@ -29,6 +29,8 @@ pub fn default_parser_capabilities() -> ParserCapabilities
 
 pub fn default_template_context(RenderedDocument) -> TemplateContext
 
+pub fn default_theme_render_context(RenderedDocument) -> ThemeRenderContext
+
 pub fn empty_document_diagnostics() -> DocumentDiagnostics
 
 pub fn empty_parser_registry() -> ParserRegistry
@@ -74,6 +76,8 @@ pub fn register_render_adapter(RenderRegistry, @core.SourceFormat, RenderAdapter
 pub fn render_markdown_backend_payload(String) -> String
 
 pub fn render_template_string(String, TemplateContext) -> String
+
+pub fn render_theme_template(String, ThemeRenderContext, Map[String, String]) -> String
 
 pub fn render_with_adapter(RenderAdapter, ParsedDocument) -> RenderedDocument
 
@@ -228,6 +232,14 @@ pub(all) struct TemplatedPage {
   source_uuid : String
   html : String
   note : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ThemeRenderContext {
+  site : Map[String, @core.ThemeConfigValue]
+  page : Map[String, @core.ThemeConfigValue]
+  collections : Map[String, @core.ThemeConfigValue]
+  slots : Map[String, @core.ThemeConfigValue]
+  locals : Map[String, @core.ThemeConfigValue]
 } derive(Eq, @debug.Debug)
 
 pub(all) struct WikiLinker {

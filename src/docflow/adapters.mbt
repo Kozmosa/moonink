@@ -127,6 +127,16 @@ pub(all) struct TemplateContext {
 } derive(Debug, Eq)
 
 ///|
+/// Structured Theme V2 render context for nested lookup and control flow.
+pub(all) struct ThemeRenderContext {
+  site : Map[String, @core.ThemeConfigValue]
+  page : Map[String, @core.ThemeConfigValue]
+  collections : Map[String, @core.ThemeConfigValue]
+  slots : Map[String, @core.ThemeConfigValue]
+  locals : Map[String, @core.ThemeConfigValue]
+} derive(Debug, Eq)
+
+///|
 /// Explicit article-flow summary that keeps parser, WikiLinker, and render stages visible.
 pub(all) struct ArticlePipelineResult {
   parsed : ParsedDocument
