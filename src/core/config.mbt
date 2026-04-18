@@ -14,12 +14,55 @@ pub impl Show for RouteStyle with output(self, logger) {
 }
 
 ///|
+pub(all) enum ThemeConfigValue {
+  NullValue
+  BoolValue(Bool)
+  NumberValue(String)
+  StringValue(String)
+  ArrayValue(Array[ThemeConfigValue])
+  ObjectValue(Map[String, ThemeConfigValue])
+} derive(Debug, Eq)
+
+///|
+pub impl Show for ThemeConfigValue with output(self, logger) {
+  match self {
+    NullValue => logger.write_string("NullValue")
+    BoolValue(value) => {
+      logger.write_string("BoolValue(")
+      logger.write_object(value)
+      logger.write_string(")")
+    }
+    NumberValue(value) => {
+      logger.write_string("NumberValue(")
+      logger.write_object(value)
+      logger.write_string(")")
+    }
+    StringValue(value) => {
+      logger.write_string("StringValue(")
+      logger.write_object(value)
+      logger.write_string(")")
+    }
+    ArrayValue(values) => {
+      logger.write_string("ArrayValue(")
+      logger.write_object(values)
+      logger.write_string(")")
+    }
+    ObjectValue(values) => {
+      logger.write_string("ObjectValue(")
+      logger.write_object(values)
+      logger.write_string(")")
+    }
+  }
+}
+
+///|
 /// Configuration loading failures.
 pub(all) suberror ConfigError {
   IOError(ProjectIOError)
   InvalidPath(path~ : String, reason~ : String)
   InvalidJson(detail~ : String)
   MissingField(key~ : String)
+  InvalidField(key~ : String, detail~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -47,6 +90,13 @@ pub impl Show for ConfigError with output(self, logger) {
       logger.write_string(key)
       logger.write_string("\")")
     }
+    ConfigError::InvalidField(key~, detail~) => {
+      logger.write_string("InvalidField(key=\"")
+      logger.write_string(key)
+      logger.write_string("\", detail=\"")
+      logger.write_string(detail)
+      logger.write_string("\")")
+    }
   }
 }
 
@@ -63,6 +113,8 @@ pub(all) struct MooninkConfig {
   exclude : Array[String]
   route_style : RouteStyle
   text_encoding : String
+  theme : String?
+  theme_config : Map[String, ThemeConfigValue]
 } derive(Debug, Eq)
 
 ///|
@@ -145,6 +197,76 @@ fn extract_json_string_array(
 }
 
 ///|
+pub fn extract_json_object(
+  obj : Map[String, Json],
+  key : String,
+) -> Map[String, Json]? {
+  match obj.get(key) {
+    Some(Object(value)) => Some(value)
+    _ => None
+  }
+}
+
+///|
+fn extract_theme_config(
+  obj : Map[String, Json],
+) -> Map[String, ThemeConfigValue] raise ConfigError {
+  match extract_json_object(obj, "theme_config") {
+    Some(value) => parse_theme_config_object(value)
+    None =>
+      match obj.get("theme_config") {
+        None => {}
+        Some(_) =>
+          raise ConfigError::InvalidField(
+            key="theme_config",
+            detail="must be a JSON object",
+          )
+      }
+  }
+}
+
+///|
+fn parse_theme_config_object(
+  obj : Map[String, Json],
+) -> Map[String, ThemeConfigValue] {
+  let result : Map[String, ThemeConfigValue] = {}
+  for entry in obj {
+    let (key, value) = entry
+    result[key] = theme_config_value_from_json(value)
+  }
+  result
+}
+
+///|
+fn parse_theme_config_array(values : Array[Json]) -> Array[ThemeConfigValue] {
+  let result : Array[ThemeConfigValue] = []
+  for value in values {
+    result.push(theme_config_value_from_json(value))
+  }
+  result
+}
+
+///|
+pub fn theme_config_value_from_json(value : Json) -> ThemeConfigValue {
+  match value {
+    Null => ThemeConfigValue::NullValue
+    True => ThemeConfigValue::BoolValue(true)
+    False => ThemeConfigValue::BoolValue(false)
+    Number(_, repr~) =>
+      ThemeConfigValue::NumberValue(
+        match repr {
+          Some(repr) => repr
+          None => value.stringify()
+        },
+      )
+    String(text) => ThemeConfigValue::StringValue(text)
+    Array(values) =>
+      ThemeConfigValue::ArrayValue(parse_theme_config_array(values))
+    Object(obj) => ThemeConfigValue::ObjectValue(parse_theme_config_object(obj))
+  }
+}
+
+///|
 /// Parse configuration from JSON string content.
 pub fn parse_config_json(
   config_path : String,
@@ -187,6 +309,8 @@ pub fn parse_config_json(
     Some("direct") => RouteStyle::Direct
     _ => RouteStyle::Pretty
   }
+  let theme = extract_json_string(obj, "theme")
+  let theme_config = extract_theme_config(obj) catch { err => raise err }
   {
     config_path,
     project_root,
@@ -198,6 +322,8 @@ pub fn parse_config_json(
     exclude,
     route_style,
     text_encoding: TEXT_ENCODING_NAME,
+    theme,
+    theme_config,
   }
 }
 
@@ -210,5 +336,7 @@ pub fn format_config_error(err : ConfigError) -> String {
       "[config] invalid path: \{path}\nreason: \{reason}"
     ConfigError::InvalidJson(detail~) => "[config] invalid JSON: \{detail}"
     ConfigError::MissingField(key~) => "[config] missing required field: \{key}"
+    ConfigError::InvalidField(key~, detail~) =>
+      "[config] invalid field `\{key}`: \{detail}"
   }
 }

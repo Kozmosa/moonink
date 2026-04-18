@@ -1,0 +1,17 @@
+{
+  "name": "default",
+  "layouts": {
+    "index": "layouts/index.html",
+    "page": "layouts/page.html",
+    "article": "layouts/article.html"
+  },
+  "tokens": [
+    { "name": "color.bg", "default": "#f8f5ef" },
+    { "name": "color.fg", "default": "#2d241d" },
+    { "name": "sidebar.width", "default": "16rem" },
+    { "name": "article.width", "default": "44rem" },
+    { "name": "border.muted", "default": "#d9d0c4" },
+    { "name": "text.muted", "default": "#5c5146" }
+  ],
+  "slots": ["head", "scripts"]
+}

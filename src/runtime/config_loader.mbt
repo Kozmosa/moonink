@@ -14,6 +14,14 @@ pub(all) struct ActiveThemeLayout {
 } derive(Debug, Eq)
 
 ///|
+fn selected_project_theme_dir(config : @core.MooninkConfig) -> String {
+  match config.theme {
+    Some(path) => path
+    None => "theme"
+  }
+}
+
+///|
 fn built_in_theme_marker_path(root : String) -> String {
   if root == "/" {
     "/src/runtime/builtin_theme/layout.html"
@@ -54,7 +62,7 @@ fn find_workspace_root_from(path : String) -> String? {
 }
 
 ///|
-fn built_in_default_theme_root() -> String {
+pub fn built_in_default_theme_root() -> String {
   match @env.current_dir() {
     Some(cwd) =>
       match find_workspace_root_from(cwd) {
@@ -82,10 +90,11 @@ fn built_in_default_theme_layout() -> String raise @core.ConfigError {
 fn project_theme_root(
   config : @core.MooninkConfig,
 ) -> String raise @core.ConfigError {
-  @core.join_relative_path(config.project_root, "theme") catch {
+  let theme_dir = selected_project_theme_dir(config)
+  @core.join_relative_path(config.project_root, theme_dir) catch {
     err =>
       raise @core.ConfigError::InvalidPath(
-        path="theme",
+        path=theme_dir,
         reason=@core.format_path_policy_error(err),
       )
   }
@@ -95,11 +104,18 @@ fn project_theme_root(
 fn project_theme_layout_path(
   config : @core.MooninkConfig,
 ) -> String raise @core.ConfigError {
-  let root = project_theme_root(config)
-  @core.join_relative_path(root, "layout.html") catch {
+  let theme_dir = selected_project_theme_dir(config)
+  let layout_path = @core.join_relative_path(theme_dir, "layout.html") catch {
     err =>
       raise @core.ConfigError::InvalidPath(
-        path="theme/layout.html",
+        path=theme_dir,
+        reason=@core.format_path_policy_error(err),
+      )
+  }
+  @core.join_relative_path(config.project_root, layout_path) catch {
+    err =>
+      raise @core.ConfigError::InvalidPath(
+        path=layout_path,
         reason=@core.format_path_policy_error(err),
       )
   }
@@ -120,7 +136,7 @@ pub fn load_active_theme_layout_result(
     return Ok({
       source,
       source_kind: ActiveThemeSource::ProjectTheme,
-      theme_name: "theme",
+      theme_name: selected_project_theme_dir(config),
       asset_source_dir: Some(theme_root + "/assets"),
     })
   }

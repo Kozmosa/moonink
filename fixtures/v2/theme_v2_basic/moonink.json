@@ -1,0 +1,12 @@
+{
+  "site_name": "Theme V2 Basic",
+  "theme_config": {
+    "color": {
+      "bg": "#fff8e1"
+    },
+    "slots": {
+      "head": "<meta data-analytics=\"plausible\">",
+      "scripts": "<script src=\"/assets/site-init.js\"></script>"
+    }
+  }
+}

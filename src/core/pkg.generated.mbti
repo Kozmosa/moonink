@@ -20,6 +20,8 @@ pub fn dirname_relative_path(String) -> String raise PathPolicyError
 
 pub fn extract_frontmatter_raw(String) -> (String?, String)
 
+pub fn extract_json_object(Map[String, Json], String) -> Map[String, Json]?
+
 pub fn format_config_error(ConfigError) -> String
 
 pub fn format_content_discovery_error(ContentDiscoveryError) -> String
@@ -40,11 +42,15 @@ pub fn normalize_relative_path(String) -> String raise PathPolicyError
 
 pub fn output_html_path(String, RouteStyle) -> String
 
+pub fn page_view_model_from_meta(PageMeta) -> ThemePageViewModel
+
 pub fn parse_config_json(String, String) -> MooninkConfig raise ConfigError
 
 pub fn parse_frontmatter(String) -> Frontmatter
 
 pub fn parse_frontmatter_from_source(String) -> (Frontmatter, String)
+
+pub fn parse_theme_manifest_result(String) -> Result[ThemeManifest, ThemeManifestError]
 
 pub fn project_io_error(String, String, String) -> ProjectIOError
 
@@ -54,12 +60,19 @@ pub fn search_index_excerpt(String?, String, SourceFormat) -> String
 
 pub fn should_exclude(String, Array[String]) -> Bool
 
+pub fn theme_config_value_from_json(Json) -> ThemeConfigValue
+
+pub fn theme_page_kind(PageMeta) -> String
+
+pub fn theme_page_layout_key(PageMeta) -> String
+
 // Errors
 pub(all) suberror ConfigError {
   IOError(ProjectIOError)
   InvalidPath(path~ : String, reason~ : String)
   InvalidJson(detail~ : String)
   MissingField(key~ : String)
+  InvalidField(key~ : String, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub impl Show for ConfigError
 
@@ -80,6 +93,13 @@ pub impl Show for PathPolicyError
 pub(all) suberror ProjectIOError {
   Failure(operation~ : String, path~ : String, detail~ : String)
 } derive(Eq, @debug.Debug)
+
+pub(all) suberror ThemeManifestError {
+  InvalidJson(detail~ : String)
+  MissingField(key~ : String)
+  InvalidField(key~ : String, detail~ : String)
+} derive(Eq, @debug.Debug)
+pub impl Show for ThemeManifestError
 
 // Types and methods
 pub(all) struct BuildContext {
@@ -115,6 +135,8 @@ pub(all) struct Frontmatter {
   date : String?
   tags : Array[String]
   draft : Bool
+  layout : String?
+  theme_meta : Map[String, ThemeConfigValue]
   extra : Map[String, String]
   field_shapes : Map[String, FrontmatterFieldShape]
   invalid_scalar_fields : Map[String, Bool]
@@ -138,6 +160,8 @@ pub(all) struct MooninkConfig {
   exclude : Array[String]
   route_style : RouteStyle
   text_encoding : String
+  theme : String?
+  theme_config : Map[String, ThemeConfigValue]
 } derive(Eq, @debug.Debug)
 pub impl Show for MooninkConfig
 
@@ -162,6 +186,7 @@ pub(all) struct PageMeta {
   content_kind : ContentKind
   format : SourceFormat
   frontmatter : Frontmatter
+  layout_override : String?
   sort_key : String
 } derive(Eq, @debug.Debug)
 pub fn PageMeta::new(String, ContentKind, SourceFormat, Frontmatter, RouteStyle) -> Self
@@ -212,6 +237,37 @@ pub(all) enum SourceFormat {
   Unknown
 } derive(Eq, @debug.Debug)
 pub impl Show for SourceFormat
+
+pub(all) enum ThemeConfigValue {
+  NullValue
+  BoolValue(Bool)
+  NumberValue(String)
+  StringValue(String)
+  ArrayValue(Array[ThemeConfigValue])
+  ObjectValue(Map[String, ThemeConfigValue])
+} derive(Eq, @debug.Debug)
+pub impl Show for ThemeConfigValue
+
+pub(all) struct ThemeManifest {
+  name : String
+  layouts : Map[String, String]
+  tokens : Array[ThemeTokenDeclaration]
+  page_overrides : Array[String]
+  slots : Array[String]
+} derive(Eq, @debug.Debug)
+pub impl Show for ThemeManifest
+
+pub(all) struct ThemePageViewModel {
+  kind : String
+  layout : String
+  theme_meta : Map[String, ThemeConfigValue]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ThemeTokenDeclaration {
+  name : String
+  default_value : String?
+} derive(Eq, @debug.Debug)
+pub impl Show for ThemeTokenDeclaration
 
 // Type aliases
 

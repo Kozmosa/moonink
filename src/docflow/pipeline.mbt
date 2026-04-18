@@ -129,27 +129,116 @@ pub fn route_from_source_path(source_path : String) -> String {
 }
 
 ///|
-fn lookup_template_variable(context : TemplateContext, name : String) -> String {
-  match name {
-    "site_name" => context.site_name
-    "site_url" => context.site_url
-    "page_title" => context.page_title
-    "page_description" => context.page_description
-    "url_path" => context.url_path
-    "source_path" => context.source_path
-    "content_kind" => context.content_kind
-    "theme_name" => context.theme_name
-    "theme_asset_root" => context.theme_asset_root
-    "page_body_class" => context.page_body_class
-    "navigation_html" => context.navigation_html
-    "backlink_urls" => context.backlink_urls.iter().join(",")
-    "current_section_title" => context.current_section_title
-    "current_section_url" => context.current_section_url
-    "page_header_title" => context.page_header_title
-    "page_header_html" => context.page_header_html
-    "backlinks_html" => context.backlinks_html
-    "body_html" => context.body_html
-    _ => ""
+fn theme_string_value(value : String) -> @core.ThemeConfigValue {
+  @core.ThemeConfigValue::StringValue(value)
+}
+
+///|
+fn theme_array_value(values : Array[String]) -> @core.ThemeConfigValue {
+  @core.ThemeConfigValue::ArrayValue(
+    values.map(fn(value) { theme_string_value(value) }),
+  )
+}
+
+///|
+fn theme_object_string(
+  entries : Map[String, String],
+) -> Map[String, @core.ThemeConfigValue] {
+  let result : Map[String, @core.ThemeConfigValue] = {}
+  for entry in entries {
+    let (key, value) = entry
+    result[key] = theme_string_value(value)
+  }
+  result
+}
+
+///|
+fn theme_value_to_string(value : @core.ThemeConfigValue) -> String {
+  match value {
+    @core.ThemeConfigValue::NullValue => ""
+    @core.ThemeConfigValue::BoolValue(flag) =>
+      if flag {
+        "true"
+      } else {
+        "false"
+      }
+    @core.ThemeConfigValue::NumberValue(number) => number
+    @core.ThemeConfigValue::StringValue(text) => text
+    @core.ThemeConfigValue::ArrayValue(values) =>
+      values.map(fn(value) { theme_value_to_string(value) }).iter().join(",")
+    @core.ThemeConfigValue::ObjectValue(_) => ""
+  }
+}
+
+///|
+fn theme_value_is_truthy(value : @core.ThemeConfigValue) -> Bool {
+  match value {
+    @core.ThemeConfigValue::NullValue => false
+    @core.ThemeConfigValue::BoolValue(flag) => flag
+    @core.ThemeConfigValue::NumberValue(number) => !number.is_empty()
+    @core.ThemeConfigValue::StringValue(text) => !text.is_empty()
+    @core.ThemeConfigValue::ArrayValue(values) => !values.is_empty()
+    @core.ThemeConfigValue::ObjectValue(values) => !values.is_empty()
+  }
+}
+
+///|
+fn theme_root_value(
+  context : ThemeRenderContext,
+  root : String,
+) -> @core.ThemeConfigValue? {
+  match context.locals.get(root) {
+    Some(value) => Some(value)
+    None =>
+      match root {
+        "site" => Some(@core.ThemeConfigValue::ObjectValue(context.site))
+        "page" => Some(@core.ThemeConfigValue::ObjectValue(context.page))
+        "collections" =>
+          Some(@core.ThemeConfigValue::ObjectValue(context.collections))
+        "slots" => Some(@core.ThemeConfigValue::ObjectValue(context.slots))
+        _ => None
+      }
+  }
+}
+
+///|
+fn lookup_theme_value_in_object(
+  value : @core.ThemeConfigValue,
+  key : String,
+) -> @core.ThemeConfigValue? {
+  match value {
+    @core.ThemeConfigValue::ObjectValue(entries) => entries.get(key)
+    _ => None
+  }
+}
+
+///|
+fn lookup_theme_value(
+  context : ThemeRenderContext,
+  path : String,
+) -> @core.ThemeConfigValue? {
+  let parts = path
+    .split(".")
+    .map(fn(part) { part.to_string().trim().to_string() })
+    .collect()
+  if parts.is_empty() {
+    return None
+  }
+  let mut resolved = theme_root_value(context, parts[0])
+  for index in 1..<parts.length() {
+    resolved = match resolved {
+      Some(value) => lookup_theme_value_in_object(value, parts[index])
+      None => None
+    }
+  }
+  resolved
+}
+
+///|
+fn lookup_theme_string(context : ThemeRenderContext, path : String) -> String {
+  match lookup_theme_value(context, path) {
+    Some(value) => theme_value_to_string(value)
+    None => ""
   }
 }
 
@@ -173,9 +262,9 @@ fn find_template_close(template : String, start : Int) -> Int? {
 }
 
 ///|
-pub fn render_template_string(
+fn render_template_paths(
   template : String,
-  context : TemplateContext,
+  context : ThemeRenderContext,
 ) -> String {
   let mut cursor = 0
   let mut output = ""
@@ -187,7 +276,7 @@ pub fn render_template_string(
           let variable = trim_template_variable_name(
             template[cursor + 2:close].to_string(),
           )
-          output = output + lookup_template_variable(context, variable)
+          output = output + lookup_theme_string(context, variable)
           cursor = close + 2
         }
         None => {
@@ -201,6 +290,430 @@ pub fn render_template_string(
     }
   }
   output
+}
+
+///|
+fn find_template_tag_close(template : String, start : Int) -> Int? {
+  if start < 0 || start + 1 >= template.length() {
+    return None
+  }
+  for i in start..<(template.length() - 1) {
+    let pair = template[i:i + 2].to_string()
+    if pair == "%}" {
+      return Some(i)
+    }
+  }
+  None
+}
+
+///|
+fn find_template_block_end(
+  template : String,
+  start : Int,
+  open_tag : String,
+  close_tag : String,
+) -> (Int, Int)? {
+  let mut cursor = start
+  let mut depth = 1
+  while cursor < template.length() {
+    if cursor + 1 < template.length() &&
+      template[cursor:cursor + 2].to_string() == "{%" {
+      match find_template_tag_close(template, cursor + 2) {
+        Some(close) => {
+          let tag = trim_template_variable_name(
+            template[cursor + 2:close].to_string(),
+          )
+          if tag.has_prefix(open_tag) {
+            depth = depth + 1
+          } else if tag == close_tag {
+            depth = depth - 1
+            if depth == 0 {
+              return Some((cursor, close + 2))
+            }
+          }
+          cursor = close + 2
+        }
+        None => return None
+      }
+    } else {
+      cursor = cursor + 1
+    }
+  }
+  None
+}
+
+///|
+fn parse_include_name(tag : String) -> String? {
+  if !tag.has_prefix("include ") {
+    return None
+  }
+  let name = tag[8:].to_string().trim().to_string()
+  if name.length() >= 2 &&
+    name[0:1].to_string() == "\"" &&
+    name[name.length() - 1:name.length()].to_string() == "\"" {
+    Some(name[1:name.length() - 1].to_string())
+  } else {
+    None
+  }
+}
+
+///|
+fn copy_string_array(source : Array[String]) -> Array[String] {
+  let copied : Array[String] = []
+  for entry in source {
+    copied.push(entry)
+  }
+  copied
+}
+
+///|
+fn string_array_contains(source : Array[String], target : String) -> Bool {
+  for entry in source {
+    if entry == target {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn include_cycle_comment(stack : Array[String], name : String) -> String {
+  let cycle = copy_string_array(stack)
+  cycle.push(name)
+  let cycle_path = cycle.iter().join(" -> ")
+  "<!-- moonink include cycle: \{cycle_path} -->"
+}
+
+///|
+fn render_template_includes(
+  template : String,
+  context : ThemeRenderContext,
+  partials : Map[String, String],
+  include_stack : Array[String],
+) -> String {
+  let mut cursor = 0
+  let mut output = ""
+  while cursor < template.length() {
+    if cursor + 1 < template.length() &&
+      template[cursor:cursor + 2].to_string() == "{%" {
+      match find_template_tag_close(template, cursor + 2) {
+        Some(close) => {
+          let tag = trim_template_variable_name(
+            template[cursor + 2:close].to_string(),
+          )
+          match parse_include_name(tag) {
+            Some(name) => {
+              let partial = match partials.get(name) {
+                Some(source) => source
+                None => ""
+              }
+              let rendered = if string_array_contains(include_stack, name) {
+                include_cycle_comment(include_stack, name)
+              } else {
+                let next_stack = copy_string_array(include_stack)
+                next_stack.push(name)
+                render_theme_template_with_stack(
+                  partial, context, partials, next_stack,
+                )
+              }
+              output = output + rendered
+              cursor = close + 2
+            }
+            None => {
+              output = output + template[cursor:close + 2].to_string()
+              cursor = close + 2
+            }
+          }
+        }
+        None => {
+          output = output + template[cursor:].to_string()
+          cursor = template.length()
+        }
+      }
+    } else {
+      output = output + template[cursor:cursor + 1].to_string()
+      cursor = cursor + 1
+    }
+  }
+  output
+}
+
+///|
+fn render_template_conditionals(
+  template : String,
+  context : ThemeRenderContext,
+  partials : Map[String, String],
+  include_stack : Array[String],
+) -> String {
+  let mut cursor = 0
+  let mut output = ""
+  while cursor < template.length() {
+    if cursor + 1 < template.length() &&
+      template[cursor:cursor + 2].to_string() == "{%" {
+      match find_template_tag_close(template, cursor + 2) {
+        Some(close) => {
+          let tag = trim_template_variable_name(
+            template[cursor + 2:close].to_string(),
+          )
+          if tag.has_prefix("if ") {
+            let condition = tag[3:].to_string().trim().to_string()
+            match find_template_block_end(template, close + 2, "if ", "endif") {
+              Some((block_start, block_end)) => {
+                let body = template[close + 2:block_start].to_string()
+                let rendered = match lookup_theme_value(context, condition) {
+                  Some(value) if theme_value_is_truthy(value) =>
+                    render_theme_template_with_stack(
+                      body, context, partials, include_stack,
+                    )
+                  _ => ""
+                }
+                output = output + rendered
+                cursor = block_end
+              }
+              None => {
+                output = output + template[cursor:].to_string()
+                cursor = template.length()
+              }
+            }
+          } else {
+            output = output + template[cursor:close + 2].to_string()
+            cursor = close + 2
+          }
+        }
+        None => {
+          output = output + template[cursor:].to_string()
+          cursor = template.length()
+        }
+      }
+    } else {
+      output = output + template[cursor:cursor + 1].to_string()
+      cursor = cursor + 1
+    }
+  }
+  output
+}
+
+///|
+fn parse_for_tag(tag : String) -> (String, String)? {
+  if !tag.has_prefix("for ") {
+    return None
+  }
+  let body = tag[4:].to_string().trim().to_string()
+  match body.split_once(" in ") {
+    Some((name, path)) => {
+      let local_name = name.trim().to_string()
+      let collection_path = path.trim().to_string()
+      if local_name.is_empty() || collection_path.is_empty() {
+        None
+      } else {
+        Some((local_name, collection_path))
+      }
+    }
+    None => None
+  }
+}
+
+///|
+fn copy_theme_value_map(
+  source : Map[String, @core.ThemeConfigValue],
+) -> Map[String, @core.ThemeConfigValue] {
+  let copied : Map[String, @core.ThemeConfigValue] = {}
+  for entry in source {
+    let (key, value) = entry
+    copied[key] = value
+  }
+  copied
+}
+
+///|
+fn context_with_local(
+  context : ThemeRenderContext,
+  name : String,
+  value : @core.ThemeConfigValue,
+) -> ThemeRenderContext {
+  let locals = copy_theme_value_map(context.locals)
+  locals[name] = value
+  { ..context, locals, }
+}
+
+///|
+fn render_template_loops(
+  template : String,
+  context : ThemeRenderContext,
+  partials : Map[String, String],
+  include_stack : Array[String],
+) -> String {
+  let mut cursor = 0
+  let mut output = ""
+  while cursor < template.length() {
+    if cursor + 1 < template.length() &&
+      template[cursor:cursor + 2].to_string() == "{%" {
+      match find_template_tag_close(template, cursor + 2) {
+        Some(close) => {
+          let tag = trim_template_variable_name(
+            template[cursor + 2:close].to_string(),
+          )
+          match parse_for_tag(tag) {
+            Some((local_name, collection_path)) =>
+              match
+                find_template_block_end(template, close + 2, "for ", "endfor") {
+                Some((block_start, block_end)) => {
+                  let body = template[close + 2:block_start].to_string()
+                  let rendered = match
+                    lookup_theme_value(context, collection_path) {
+                    Some(@core.ThemeConfigValue::ArrayValue(values)) => {
+                      let parts : Array[String] = []
+                      for value in values {
+                        let local_context = context_with_local(
+                          context, local_name, value,
+                        )
+                        parts.push(
+                          render_theme_template_with_stack(
+                            body, local_context, partials, include_stack,
+                          ),
+                        )
+                      }
+                      parts.iter().join("")
+                    }
+                    _ => ""
+                  }
+                  output = output + rendered
+                  cursor = block_end
+                }
+                None => {
+                  output = output + template[cursor:].to_string()
+                  cursor = template.length()
+                }
+              }
+            None => {
+              output = output + template[cursor:close + 2].to_string()
+              cursor = close + 2
+            }
+          }
+        }
+        None => {
+          output = output + template[cursor:].to_string()
+          cursor = template.length()
+        }
+      }
+    } else {
+      output = output + template[cursor:cursor + 1].to_string()
+      cursor = cursor + 1
+    }
+  }
+  output
+}
+
+///|
+fn render_theme_template_with_stack(
+  template : String,
+  context : ThemeRenderContext,
+  partials : Map[String, String],
+  include_stack : Array[String],
+) -> String {
+  let with_loops = render_template_loops(
+    template, context, partials, include_stack,
+  )
+  let with_conditionals = render_template_conditionals(
+    with_loops, context, partials, include_stack,
+  )
+  let with_includes = render_template_includes(
+    with_conditionals, context, partials, include_stack,
+  )
+  render_template_paths(with_includes, context)
+}
+
+///|
+pub fn render_theme_template(
+  template : String,
+  context : ThemeRenderContext,
+  partials : Map[String, String],
+) -> String {
+  render_theme_template_with_stack(template, context, partials, [])
+}
+
+///|
+fn legacy_template_locals(
+  context : TemplateContext,
+) -> Map[String, @core.ThemeConfigValue] {
+  let locals = theme_object_string({
+    "site_name": context.site_name,
+    "site_url": context.site_url,
+    "page_title": context.page_title,
+    "page_description": context.page_description,
+    "url_path": context.url_path,
+    "source_path": context.source_path,
+    "content_kind": context.content_kind,
+    "theme_name": context.theme_name,
+    "theme_asset_root": context.theme_asset_root,
+    "page_body_class": context.page_body_class,
+    "navigation_html": context.navigation_html,
+    "current_section_title": context.current_section_title,
+    "current_section_url": context.current_section_url,
+    "page_header_title": context.page_header_title,
+    "page_header_html": context.page_header_html,
+    "backlinks_html": context.backlinks_html,
+    "body_html": context.body_html,
+  })
+  locals["backlink_urls"] = theme_array_value(context.backlink_urls)
+  locals
+}
+
+///|
+fn template_context_to_theme_render_context(
+  context : TemplateContext,
+) -> ThemeRenderContext {
+  {
+    site: theme_object_string({
+      "name": context.site_name,
+      "url": context.site_url,
+    }),
+    page: theme_object_string({
+      "title": context.page_title,
+      "description": context.page_description,
+      "url_path": context.url_path,
+      "source_path": context.source_path,
+      "content_kind": context.content_kind,
+      "theme_name": context.theme_name,
+      "theme_asset_root": context.theme_asset_root,
+      "body_class": context.page_body_class,
+      "navigation_html": context.navigation_html,
+      "current_section_title": context.current_section_title,
+      "current_section_url": context.current_section_url,
+      "page_header_title": context.page_header_title,
+      "page_header_html": context.page_header_html,
+      "backlinks_html": context.backlinks_html,
+      "body_html": context.body_html,
+    }),
+    collections: {},
+    slots: {
+      "navigation_html": theme_string_value(context.navigation_html),
+      "page_header_html": theme_string_value(context.page_header_html),
+      "backlinks_html": theme_string_value(context.backlinks_html),
+      "body_html": theme_string_value(context.body_html),
+      "backlink_urls": theme_array_value(context.backlink_urls),
+    },
+    locals: legacy_template_locals(context),
+  }
+}
+
+///|
+pub fn default_theme_render_context(
+  rendered : RenderedDocument,
+) -> ThemeRenderContext {
+  template_context_to_theme_render_context(default_template_context(rendered))
+}
+
+///|
+pub fn render_template_string(
+  template : String,
+  context : TemplateContext,
+) -> String {
+  render_theme_template(
+    template,
+    template_context_to_theme_render_context(context),
+    {},
+  )
 }
 
 ///|

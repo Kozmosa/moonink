@@ -237,14 +237,10 @@ fn copy_public_assets(
 }
 
 ///|
-fn copy_selected_theme_assets(
+fn copy_assets_dir(
   config : @core.MooninkConfig,
-  active_theme : @runtime.ActiveThemeLayout,
+  assets_root : String,
 ) -> Unit raise BuildCommandError {
-  let assets_root = match active_theme.asset_source_dir {
-    Some(path) => path
-    None => return
-  }
   if !@runtime.io_path_exists(assets_root) {
     return
   }
@@ -270,6 +266,17 @@ fn copy_selected_theme_assets(
   }
   @runtime.io_copy_dir_recursive(assets_root, target_root) catch {
     err => raise BuildCommandError::ProjectIO(err)
+  }
+}
+
+///|
+fn copy_selected_theme_assets(
+  config : @core.MooninkConfig,
+  active_theme : @runtime.ActiveThemeLayout,
+) -> Unit raise BuildCommandError {
+  match active_theme.asset_source_dir {
+    Some(path) => copy_assets_dir(config, path)
+    None => ()
   }
 }
 
@@ -568,6 +575,315 @@ fn theme_asset_root(active_theme : @runtime.ActiveThemeLayout) -> String {
   match active_theme.asset_source_dir {
     Some(_) => "/assets/"
     None => ""
+  }
+}
+
+///|
+fn theme_bundle_asset_root(bundle : @runtime.ActiveThemeBundle) -> String {
+  match bundle.assets_root {
+    Some(_) => "/assets/"
+    None => ""
+  }
+}
+
+///|
+fn theme_token_css_name(token_name : String) -> String {
+  let parts : Array[String] = []
+  for part_view in token_name.split(".") {
+    let part = part_view.to_string()
+    if !part.is_empty() {
+      parts.push(part)
+    }
+  }
+  if parts.is_empty() {
+    "--moonink"
+  } else {
+    "--moonink-" + parts.iter().join("-")
+  }
+}
+
+///|
+fn write_theme_vars_output(
+  config : @core.MooninkConfig,
+  bundle : @runtime.ActiveThemeBundle,
+) -> Unit raise BuildCommandError {
+  let merged = @runtime.merge_theme_tokens(
+    bundle.manifest.tokens,
+    config.theme_config,
+  )
+  let token_names : Array[String] = []
+  for entry in merged {
+    let (name, _) = entry
+    token_names.push(name)
+  }
+  token_names.sort_by(fn(a, b) { a.compare(b) })
+  let lines : Array[String] = [":root {"]
+  for name in token_names {
+    match merged.get(name) {
+      Some(value) =>
+        lines.push("  " + theme_token_css_name(name) + ": " + value + ";")
+      None => ()
+    }
+  }
+  lines.push("}")
+  write_build_output(config, "assets/theme-vars.css", lines.iter().join("\n")) catch {
+    err => raise err
+  }
+}
+
+///|
+fn theme_string_value(value : String) -> @core.ThemeConfigValue {
+  @core.ThemeConfigValue::StringValue(value)
+}
+
+///|
+fn theme_bool_value(value : Bool) -> @core.ThemeConfigValue {
+  @core.ThemeConfigValue::BoolValue(value)
+}
+
+///|
+fn theme_number_value(value : Int) -> @core.ThemeConfigValue {
+  @core.ThemeConfigValue::NumberValue(value.to_string())
+}
+
+///|
+fn theme_array_value(
+  values : Array[@core.ThemeConfigValue],
+) -> @core.ThemeConfigValue {
+  @core.ThemeConfigValue::ArrayValue(values)
+}
+
+///|
+fn theme_object_value(
+  values : Map[String, @core.ThemeConfigValue],
+) -> @core.ThemeConfigValue {
+  @core.ThemeConfigValue::ObjectValue(values)
+}
+
+///|
+fn theme_navigation_kind(item : @core.NavigationItem) -> String {
+  match item.content_kind {
+    @core.ContentKind::Article => "article"
+    @core.ContentKind::Page => if item.is_index { "index" } else { "page" }
+  }
+}
+
+///|
+fn theme_site_page_value(page : @core.SitePage) -> @core.ThemeConfigValue {
+  let value : Map[String, @core.ThemeConfigValue] = {}
+  value["kind"] = theme_string_value(
+    match page.content_kind {
+      @core.ContentKind::Article => "article"
+      @core.ContentKind::Page => if page.is_index { "index" } else { "page" }
+    },
+  )
+  value["title"] = theme_string_value(page.title)
+  value["nav_title"] = theme_string_value(page.nav_title)
+  value["description"] = theme_string_value(page.description)
+  value["url"] = theme_string_value(page.url_path)
+  value["url_path"] = theme_string_value(page.url_path)
+  value["source_path"] = theme_string_value(page.source_path)
+  value["nav_hidden"] = theme_bool_value(page.nav_hidden)
+  value["is_index"] = theme_bool_value(page.is_index)
+  theme_object_value(value)
+}
+
+///|
+fn theme_navigation_item_value(
+  item : @core.NavigationItem,
+  current_url : String,
+) -> @core.ThemeConfigValue {
+  let children : Array[@core.ThemeConfigValue] = []
+  for child in item.children {
+    children.push(theme_navigation_item_value(child, current_url))
+  }
+  let is_active = item.url_path == current_url
+  let is_ancestor = !is_active && navigation_contains_url(item, current_url)
+  let value : Map[String, @core.ThemeConfigValue] = {}
+  value["kind"] = theme_string_value(theme_navigation_kind(item))
+  value["title"] = theme_string_value(item.title)
+  value["url"] = theme_string_value(item.url_path)
+  value["url_path"] = theme_string_value(item.url_path)
+  value["source_path"] = theme_string_value(item.source_path)
+  value["is_index"] = theme_bool_value(item.is_index)
+  value["active"] = theme_bool_value(is_active)
+  value["ancestor"] = theme_bool_value(is_ancestor)
+  value["expanded"] = theme_bool_value(is_active || is_ancestor)
+  value["children"] = theme_array_value(children)
+  theme_object_value(value)
+}
+
+///|
+fn theme_collection_items_value(
+  items : Array[@core.ThemeConfigValue],
+) -> @core.ThemeConfigValue {
+  let collection : Map[String, @core.ThemeConfigValue] = {}
+  collection["count"] = theme_number_value(items.length())
+  collection["items"] = theme_array_value(items)
+  theme_object_value(collection)
+}
+
+///|
+fn theme_section_item_value(section : @core.SitePage) -> @core.ThemeConfigValue {
+  let value : Map[String, @core.ThemeConfigValue] = {}
+  value["kind"] = theme_string_value("section")
+  value["title"] = theme_string_value(section.nav_title)
+  value["page_title"] = theme_string_value(section.title)
+  value["url"] = theme_string_value(section.url_path)
+  value["url_path"] = theme_string_value(section.url_path)
+  value["source_path"] = theme_string_value(section.source_path)
+  value["description"] = theme_string_value(section.description)
+  theme_object_value(value)
+}
+
+///|
+fn collect_theme_section_items(
+  current_section : @core.SitePage?,
+) -> Array[@core.ThemeConfigValue] {
+  let sections : Array[@core.ThemeConfigValue] = []
+  match current_section {
+    Some(section) => sections.push(theme_section_item_value(section))
+    None => ()
+  }
+  sections
+}
+
+///|
+fn page_titles_by_url(pages : Array[@core.SitePage]) -> Map[String, String] {
+  let titles : Map[String, String] = {}
+  for page in pages {
+    titles[page.url_path] = page.title
+  }
+  titles
+}
+
+///|
+fn theme_override_keys(meta : @core.PageMeta) -> Array[String] {
+  let keys : Array[String] = []
+  match meta.layout_override {
+    Some(_) => keys.push("layout")
+    None => ()
+  }
+  for entry in meta.frontmatter.theme_meta {
+    let (key, _) = entry
+    keys.push(key)
+  }
+  keys.sort_by(fn(a, b) { a.compare(b) })
+  keys
+}
+
+///|
+fn invalid_theme_override_keys(
+  meta : @core.PageMeta,
+  allowed : Array[String],
+) -> Array[String] {
+  let invalid : Array[String] = []
+  for key in theme_override_keys(meta) {
+    if allowed.search_by(fn(allowed_key) { allowed_key == key }) is None {
+      invalid.push(key)
+    }
+  }
+  invalid
+}
+
+///|
+fn format_theme_override_allowlist(allowed : Array[String]) -> String {
+  if allowed.is_empty() {
+    "(none)"
+  } else {
+    allowed.iter().join(", ")
+  }
+}
+
+///|
+fn missing_theme_layout_message(layout_key : String) -> String {
+  "missing theme layout `" + layout_key + "`"
+}
+
+///|
+fn resolve_theme_layout_source(
+  bundle : @runtime.ActiveThemeBundle,
+  input : @runtime.BuildInput,
+) -> Result[String, String] {
+  let layout_key = @core.theme_page_layout_key(input.meta)
+  match bundle.layouts.get(layout_key) {
+    Some(layout) => Ok(layout)
+    None => Err(layout_key)
+  }
+}
+
+///|
+fn validate_check_theme_layouts(
+  inputs : Array[@runtime.BuildInput],
+  bundle : @runtime.ActiveThemeBundle,
+  report : CheckReport,
+) -> CheckReport {
+  let allowed = bundle.manifest.page_overrides
+  let mut next_report = report
+  for input in inputs {
+    if !invalid_theme_override_keys(input.meta, allowed).is_empty() {
+      continue
+    }
+    match resolve_theme_layout_source(bundle, input) {
+      Ok(_) => ()
+      Err(layout_key) =>
+        next_report = report_with_entry(next_report, {
+          category: CheckCategory::ThemeTemplate,
+          severity: CheckSeverity::Error,
+          source_path: Some(input.meta.source_path),
+          message: missing_theme_layout_message(layout_key),
+          hint: Some("Declare `" + layout_key + "` in the theme layout map."),
+          line: None,
+        })
+    }
+  }
+  next_report
+}
+
+///|
+fn validate_check_theme_overrides(
+  inputs : Array[@runtime.BuildInput],
+  bundle : @runtime.ActiveThemeBundle,
+  report : CheckReport,
+) -> CheckReport {
+  let allowed = bundle.manifest.page_overrides
+  let mut next_report = report
+  for input in inputs {
+    for key in invalid_theme_override_keys(input.meta, allowed) {
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::ThemeTemplate,
+        severity: CheckSeverity::Error,
+        source_path: Some(input.meta.source_path),
+        message: "unsupported page override `" + key + "`",
+        hint: Some(
+          "Allowed page overrides: " + format_theme_override_allowlist(allowed),
+        ),
+        line: None,
+      })
+    }
+  }
+  next_report
+}
+
+///|
+fn validate_build_theme_overrides(
+  inputs : Array[@runtime.BuildInput],
+  bundle : @runtime.ActiveThemeBundle,
+) -> Unit raise BuildCommandError {
+  let allowed = bundle.manifest.page_overrides
+  for input in inputs {
+    for key in invalid_theme_override_keys(input.meta, allowed) {
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "validate_theme_overrides",
+          input.meta.source_path,
+          "unsupported page override `" +
+          key +
+          "`; allowed page overrides: " +
+          format_theme_override_allowlist(allowed),
+        ),
+      )
+    }
   }
 }
 
@@ -1076,6 +1392,301 @@ fn apply_build_template(
 }
 
 ///|
+fn theme_bundle_manifest_path(
+  config : @core.MooninkConfig,
+) -> String raise BuildCommandError {
+  let theme_dir = match config.theme {
+    Some(path) => path
+    None => "theme"
+  }
+  let manifest_path = @core.join_relative_path(theme_dir, "theme.json") catch {
+    err =>
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "load_theme_bundle",
+          config.config_path,
+          @core.format_path_policy_error(err),
+        ),
+      )
+  }
+  @core.join_relative_path(config.project_root, manifest_path) catch {
+    err =>
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "load_theme_bundle",
+          config.config_path,
+          @core.format_path_policy_error(err),
+        ),
+      )
+  }
+}
+
+///|
+fn has_project_theme_bundle(
+  config : @core.MooninkConfig,
+) -> Bool raise BuildCommandError {
+  let manifest_path = theme_bundle_manifest_path(config) catch {
+    err => raise err
+  }
+  @runtime.io_path_exists(manifest_path)
+}
+
+///|
+fn project_legacy_theme_layout_path(
+  config : @core.MooninkConfig,
+) -> String raise BuildCommandError {
+  let theme_dir = match config.theme {
+    Some(path) => path
+    None => "theme"
+  }
+  let layout_path = @core.join_relative_path(theme_dir, "layout.html") catch {
+    err =>
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "load_template",
+          config.config_path,
+          @core.format_path_policy_error(err),
+        ),
+      )
+  }
+  @core.join_relative_path(config.project_root, layout_path) catch {
+    err =>
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "load_template",
+          config.config_path,
+          @core.format_path_policy_error(err),
+        ),
+      )
+  }
+}
+
+///|
+fn should_use_legacy_active_theme(
+  config : @core.MooninkConfig,
+) -> Bool raise BuildCommandError {
+  let legacy_layout_path = project_legacy_theme_layout_path(config) catch {
+    err => raise err
+  }
+  if @runtime.io_path_exists(legacy_layout_path) {
+    return true
+  }
+  match config.template_file {
+    Some(_) => true
+    None => false
+  }
+}
+
+///|
+fn resolve_active_theme_bundle(
+  config : @core.MooninkConfig,
+) -> Result[@runtime.ActiveThemeBundle?, BuildCommandError] {
+  let has_bundle = has_project_theme_bundle(config) catch {
+    err => return Err(err)
+  }
+  if !has_bundle {
+    let use_legacy = should_use_legacy_active_theme(config) catch {
+      err => return Err(err)
+    }
+    if use_legacy {
+      return Ok(None)
+    }
+  }
+  match @runtime.load_active_theme_bundle_result(config) {
+    Ok(bundle) => Ok(Some(bundle))
+    Err(err) =>
+      Err(
+        BuildCommandError::ProjectIO(
+          @core.project_io_error(
+            "load_theme_bundle",
+            config.config_path,
+            err.to_string(),
+          ),
+        ),
+      )
+  }
+}
+
+///|
+fn copy_theme_bundle_assets(
+  config : @core.MooninkConfig,
+  bundle : @runtime.ActiveThemeBundle,
+) -> Unit raise BuildCommandError {
+  match bundle.assets_root {
+    Some(path) => copy_assets_dir(config, path)
+    None => ()
+  }
+}
+
+///|
+fn select_theme_layout(
+  bundle : @runtime.ActiveThemeBundle,
+  input : @runtime.BuildInput,
+) -> String raise BuildCommandError {
+  match resolve_theme_layout_source(bundle, input) {
+    Ok(layout) => layout
+    Err(layout_key) =>
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "load_layout",
+          layout_key,
+          missing_theme_layout_message(layout_key),
+        ),
+      )
+  }
+}
+
+///|
+fn build_theme_render_context(
+  config : @core.MooninkConfig,
+  bundle : @runtime.ActiveThemeBundle,
+  assembly : @core.SiteAssemblyModel,
+  backlinks : Map[String, Array[String]],
+  input : @runtime.BuildInput,
+  rendered : @docflow.RenderedDocument,
+) -> @docflow.ThemeRenderContext {
+  let page_model = @core.page_view_model_from_meta(input.meta)
+  let current_section = find_current_section_page(
+    assembly.pages,
+    input.meta.source_path,
+  )
+  let current_section_title = match current_section {
+    Some(section) => section.nav_title
+    None => ""
+  }
+  let current_section_url = match current_section {
+    Some(section) => section.url_path
+    None => ""
+  }
+  let section_items = collect_theme_section_items(current_section)
+  let navigation_html = render_navigation_html(
+    assembly.navigation,
+    input.meta.url_path,
+  )
+  let page_header_html = build_page_header_html(
+    assembly.navigation,
+    assembly.pages,
+    input,
+  )
+  let backlinks_html = render_backlinks_html(
+    input.meta.url_path,
+    assembly.pages,
+    backlinks,
+  )
+
+  let nav_items : Array[@core.ThemeConfigValue] = []
+  for item in assembly.navigation.items {
+    nav_items.push(theme_navigation_item_value(item, input.meta.url_path))
+  }
+  let page_items : Array[@core.ThemeConfigValue] = []
+  for page in assembly.pages {
+    page_items.push(theme_site_page_value(page))
+  }
+  let page_titles = page_titles_by_url(assembly.pages)
+  let backlink_items : Array[@core.ThemeConfigValue] = []
+  let backlink_urls = match backlinks.get(input.meta.url_path) {
+    Some(urls) => urls
+    None => []
+  }
+  for url in backlink_urls {
+    let backlink : Map[String, @core.ThemeConfigValue] = {}
+    backlink["title"] = theme_string_value(
+      match page_titles.get(url) {
+        Some(title) => title
+        None => url
+      },
+    )
+    backlink["url"] = theme_string_value(url)
+    backlink["url_path"] = theme_string_value(url)
+    backlink_items.push(theme_object_value(backlink))
+  }
+
+  let site : Map[String, @core.ThemeConfigValue] = {}
+  site["name"] = theme_string_value(config.site_name)
+  site["url"] = theme_string_value(
+    match config.site_url {
+      Some(site_url) => site_url
+      None => ""
+    },
+  )
+  site["theme_name"] = theme_string_value(bundle.manifest.name)
+  site["theme_asset_root"] = theme_string_value(theme_bundle_asset_root(bundle))
+  site["theme_config"] = theme_object_value(config.theme_config)
+
+  let page : Map[String, @core.ThemeConfigValue] = {}
+  page["kind"] = theme_string_value(page_model.kind)
+  page["layout"] = theme_string_value(page_model.layout)
+  page["title"] = theme_string_value(site_page_title(input.meta))
+  page["nav_title"] = theme_string_value(site_page_nav_title(input.meta))
+  page["description"] = theme_string_value(site_page_description(input.meta))
+  page["url"] = theme_string_value(input.meta.url_path)
+  page["url_path"] = theme_string_value(input.meta.url_path)
+  page["source_path"] = theme_string_value(input.meta.source_path)
+  page["body_class"] = theme_string_value(
+    page_body_class(input.meta.content_kind),
+  )
+  page["body_html"] = theme_string_value(rendered.html)
+  page["theme_meta"] = theme_object_value(page_model.theme_meta)
+  page["navigation_html"] = theme_string_value(navigation_html)
+  page["current_section_title"] = theme_string_value(current_section_title)
+  page["current_section_url"] = theme_string_value(current_section_url)
+  page["page_header_html"] = theme_string_value(page_header_html)
+  page["backlinks_html"] = theme_string_value(backlinks_html)
+
+  let collections : Map[String, @core.ThemeConfigValue] = {}
+  collections["nav"] = theme_collection_items_value(nav_items)
+  collections["pages"] = theme_collection_items_value(page_items)
+  collections["backlinks"] = theme_collection_items_value(backlink_items)
+  collections["sections"] = theme_collection_items_value(section_items)
+
+  let slots : Map[String, @core.ThemeConfigValue] = {}
+  slots["body_html"] = theme_string_value(rendered.html)
+  slots["navigation_html"] = theme_string_value(navigation_html)
+  slots["page_header_html"] = theme_string_value(page_header_html)
+  slots["backlinks_html"] = theme_string_value(backlinks_html)
+  for
+    entry in @runtime.declared_slot_values(
+      bundle.manifest.slots,
+      config.theme_config,
+    ) {
+    let (slot_name, slot_value) = entry
+    if slots.get(slot_name) is None {
+      slots[slot_name] = theme_string_value(slot_value)
+    }
+  }
+
+  { site, page, collections, slots, locals: {} }
+}
+
+///|
+fn apply_build_theme_template(
+  config : @core.MooninkConfig,
+  bundle : @runtime.ActiveThemeBundle,
+  assembly : @core.SiteAssemblyModel,
+  backlinks : Map[String, Array[String]],
+  input : @runtime.BuildInput,
+  rendered : @docflow.RenderedDocument,
+) -> @docflow.TemplatedPage raise BuildCommandError {
+  let layout_source = select_theme_layout(bundle, input) catch {
+    err => raise err
+  }
+  let context = build_theme_render_context(
+    config, bundle, assembly, backlinks, input, rendered,
+  )
+  {
+    route: input.meta.url_path,
+    source_path: rendered.source_path,
+    source_uuid: rendered.source_uuid,
+    html: @docflow.render_theme_template(
+      layout_source,
+      context,
+      bundle.partials,
+    ),
+    note: "theme v2 templater renders the selected layout with structured site and page context",
+  }
+}
+
+///|
 fn resolve_active_theme_layout(
   config : @core.MooninkConfig,
 ) -> Result[@runtime.ActiveThemeLayout, BuildCommandError] {
@@ -1098,10 +1709,76 @@ fn resolve_active_theme_layout(
 }
 
 ///|
-fn validate_check_active_theme_layout(
+fn validate_check_active_theme_bundle(
   config : @core.MooninkConfig,
+  inputs : Array[@runtime.BuildInput],
   report : CheckReport,
 ) -> CheckReport {
+  match @runtime.load_active_theme_bundle_result(config) {
+    Ok(bundle) => {
+      let report = validate_check_theme_layouts(inputs, bundle, report)
+      validate_check_theme_overrides(inputs, bundle, report)
+    }
+    Err(err) => {
+      let source_path = theme_bundle_manifest_path(config) catch {
+        _ => config.config_path
+      }
+      report_with_entry(report, {
+        category: CheckCategory::ThemeTemplate,
+        severity: CheckSeverity::Error,
+        source_path: Some(source_path),
+        message: "Failed to load active theme bundle",
+        hint: Some(err.to_string()),
+        line: None,
+      })
+    }
+  }
+}
+
+///|
+fn validate_check_active_theme_path(
+  config : @core.MooninkConfig,
+  report : CheckReport,
+) -> Result[(Bool, Bool, CheckReport), BuildCommandError] {
+  let has_bundle = has_project_theme_bundle(config) catch {
+    err => return Err(err)
+  }
+  let use_legacy = if has_bundle {
+    false
+  } else {
+    should_use_legacy_active_theme(config) catch {
+      err => return Err(err)
+    }
+  }
+  Ok((has_bundle, use_legacy, report))
+}
+
+///|
+fn validate_check_active_theme_layout(
+  config : @core.MooninkConfig,
+  inputs : Array[@runtime.BuildInput],
+  report : CheckReport,
+) -> CheckReport {
+  let (has_bundle, use_legacy, report) = match
+    validate_check_active_theme_path(config, report) {
+    Ok(state) => state
+    Err(BuildCommandError::ProjectIO(err)) =>
+      return report_with_entry(report, {
+        category: CheckCategory::ThemeTemplate,
+        severity: CheckSeverity::Error,
+        source_path: Some(config.config_path),
+        message: "Failed to resolve active theme path",
+        hint: Some(@core.format_project_io_error(err)),
+        line: None,
+      })
+    Err(_) => return report
+  }
+  if has_bundle {
+    return validate_check_active_theme_bundle(config, inputs, report)
+  }
+  if !use_legacy {
+    return validate_check_active_theme_bundle(config, inputs, report)
+  }
   match @runtime.load_active_theme_layout_result(config) {
     Ok(_) => report
     Err(err) =>
@@ -1130,21 +1807,56 @@ fn build_site_result(
     Ok(inputs) => inputs
     Err(err) => return Err(BuildCommandError::ContentDiscovery(err))
   }
+  let theme_bundle = match resolve_active_theme_bundle(config) {
+    Ok(theme_bundle) => theme_bundle
+    Err(err) => return Err(err)
+  }
+  let active_theme = match theme_bundle {
+    Some(_) => None
+    None =>
+      match resolve_active_theme_layout(config) {
+        Ok(active_theme) => Some(active_theme)
+        Err(err) => return Err(err)
+      }
+  }
+  match theme_bundle {
+    Some(bundle) => {
+      validate_build_theme_overrides(inputs, bundle) catch {
+        err => return Err(err)
+      }
+      for input in inputs {
+        let _ = select_theme_layout(bundle, input) catch {
+          err => return Err(err)
+        }
+      }
+    }
+    None => ()
+  }
   prepare_output_dir(config) catch {
     err => return Err(err)
   }
   copy_public_assets(config) catch {
     err => return Err(err)
   }
-  let active_theme = match resolve_active_theme_layout(config) {
-    Ok(active_theme) => active_theme
-    Err(err) => return Err(err)
-  }
-  copy_selected_theme_assets(config, active_theme) catch {
-    err => return Err(err)
+  match theme_bundle {
+    Some(bundle) => {
+      copy_theme_bundle_assets(config, bundle) catch {
+        err => return Err(err)
+      }
+      write_theme_vars_output(config, bundle) catch {
+        err => return Err(err)
+      }
+    }
+    None =>
+      match active_theme {
+        Some(active_theme) =>
+          copy_selected_theme_assets(config, active_theme) catch {
+            err => return Err(err)
+          }
+        None => ()
+      }
   }
   let assembly = build_site_assembly_model(config, inputs, inventory)
-  let template_source = active_theme.source
   let mut emitted_html_files = 0
   let mut article_count = 0
   let mut page_count = 0
@@ -1176,9 +1888,29 @@ fn build_site_result(
       diagnostics.push(build_runtime_diagnostic(input, entry))
     }
     let rendered = @docflow.render_with_adapter(renderer, linked)
-    let templated = apply_build_template(
-      config, active_theme, assembly, backlinks, input, rendered, template_source,
-    )
+    let templated = match theme_bundle {
+      Some(bundle) =>
+        apply_build_theme_template(
+          config, bundle, assembly, backlinks, input, rendered,
+        ) catch {
+          err => return Err(err)
+        }
+      None => {
+        let active_theme = match active_theme {
+          Some(active_theme) => active_theme
+          None => panic()
+        }
+        apply_build_template(
+          config,
+          active_theme,
+          assembly,
+          backlinks,
+          input,
+          rendered,
+          active_theme.source,
+        )
+      }
+    }
     let output_path = @core.output_html_path(
       input.meta.source_path,
       config.route_style,
@@ -1326,6 +2058,18 @@ fn validate_frontmatter_for_check(
       })
     _ => ()
   }
+  match frontmatter.field_shapes.get("layout") {
+    Some(@core.FrontmatterFieldShape::List) =>
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Frontmatter,
+        severity: CheckSeverity::Error,
+        source_path: Some(source_path),
+        message: "Frontmatter field `layout` must be a string",
+        hint: None,
+        line: None,
+      })
+    _ => ()
+  }
   match frontmatter.field_shapes.get("tags") {
     Some(@core.FrontmatterFieldShape::Scalar) =>
       next_report = report_with_entry(next_report, {
@@ -1463,7 +2207,7 @@ fn check_site_result(
     Err(err) => return Err(CheckCommandError::ContentDiscovery(err))
   }
   let mut report = empty_check_report()
-  report = validate_check_active_theme_layout(config, report)
+  report = validate_check_active_theme_layout(config, inputs, report)
   report = append_route_conflicts(inputs, config.route_style, report)
   let wikilinker = build_wikilinker(inputs)
   let mut article_count = 0

@@ -1,0 +1,13 @@
+{
+  "name": "fixture-v2",
+  "layouts": {
+    "index": "layouts/index.html",
+    "page": "layouts/page.html",
+    "article": "layouts/article.html"
+  },
+  "tokens": [
+    { "name": "color.bg", "default": "#f8f5ef" },
+    { "name": "spacing.gap", "default": "1.5rem" }
+  ],
+  "slots": ["head", "scripts"]
+}

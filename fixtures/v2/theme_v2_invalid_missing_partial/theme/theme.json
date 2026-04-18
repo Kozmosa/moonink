@@ -1,0 +1,6 @@
+{
+  "name": "fixture-v2-missing-partial",
+  "layouts": {
+    "page": "layouts/page.html"
+  }
+}

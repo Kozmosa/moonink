@@ -1,0 +1,9 @@
+{
+  "name": "fixture-v2-overrides",
+  "layouts": {
+    "index": "layouts/index.html",
+    "page": "layouts/index.html",
+    "article": "layouts/index.html"
+  },
+  "page_overrides": ["layout", "summary"]
+}

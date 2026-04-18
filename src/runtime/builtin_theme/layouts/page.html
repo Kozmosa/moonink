@@ -1,0 +1,26 @@
+<!doctype html>
+<html data-theme-v2="default" data-layout-kind="{{ page.kind }}">
+  <head>
+    <meta charset="utf-8">
+    <title>{{ page.title }}</title>
+    <link rel="stylesheet" href="{{ site.theme_asset_root }}moonink-default.css">
+    <link rel="stylesheet" href="{{ site.theme_asset_root }}theme-vars.css">
+    {{ slots.head }}
+  </head>
+  <body class="{{ page.body_class }}" data-kind="{{ page.kind }}" data-url="{{ page.url_path }}" data-theme="{{ site.theme_name }}">
+    {% include "header" %}
+    <div class="site-shell" data-content-layout="{{ page.kind }}">
+      {% include "sidebar" %}
+      <div class="content-shell">
+        <header class="content-header" data-content-layout="{{ page.kind }}">
+          <p class="content-kind-label">{{ page.kind }}</p>
+          <h1 class="content-title">{{ page.title }}</h1>
+          <div class="content-context" data-section-title="{{ page.current_section_title }}" data-section-url="{{ page.current_section_url }}">{{ page.page_header_html }}</div>
+        </header>
+        <main data-source="{{ page.source_path }}">{{ page.body_html }}</main>
+        {{ slots.backlinks_html }}
+      </div>
+    </div>
+    {{ slots.scripts }}
+  </body>
+</html>

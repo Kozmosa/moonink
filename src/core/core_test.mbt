@@ -65,6 +65,8 @@ test "build_site_model_dummy preserves inventory counts" {
     exclude: ["dist"],
     route_style: @core.RouteStyle::Pretty,
     text_encoding: "utf-8",
+    theme: None,
+    theme_config: {},
   }
   let model = @core.build_site_model_dummy(config, inventory)
   inspect(model.page_count, content="3")
@@ -182,6 +184,142 @@ test "parse_config_json supports direct route style" {
 }
 
 ///|
+test "parse_config_json records theme and theme_config" {
+  let json =
+    #|{"site_name": "Themed", "theme": "paper", "theme_config": {"accent": "sunset", "font": "serif"}}
+  let config = @core.parse_config_json("moonink.json", json) catch {
+    _ => panic()
+  }
+  inspect(config.theme, content="Some(\"paper\")")
+  inspect(
+    config.theme_config.get("accent"),
+    content="Some(StringValue(\"sunset\"))",
+  )
+  inspect(
+    config.theme_config.get("font"),
+    content="Some(StringValue(\"serif\"))",
+  )
+}
+
+///|
+test "parse_config_json preserves nested theme_config values" {
+  let json =
+    #|{"site_name": "Themed", "theme_config": {"colors": {"accent": "sunset"}, "spacing": ["sm", "md"], "enabled": true}}
+  let config = @core.parse_config_json("moonink.json", json) catch {
+    _ => panic()
+  }
+  inspect(
+    config.theme_config.get("colors"),
+    content="Some(ObjectValue({\"accent\": StringValue(\"sunset\")}))",
+  )
+  inspect(
+    config.theme_config.get("spacing"),
+    content="Some(ArrayValue([StringValue(\"sm\"), StringValue(\"md\")]))",
+  )
+  inspect(config.theme_config.get("enabled"), content="Some(BoolValue(true))")
+}
+
+///|
+test "parse_config_json rejects non-object theme_config" {
+  let json =
+    #|{"site_name": "Themed", "theme_config": ["accent"]}
+  inspect(
+    try? @core.parse_config_json("moonink.json", json),
+    content="Err(InvalidField(key=\"theme_config\", detail=\"must be a JSON object\"))",
+  )
+}
+
+///|
+test "parse_theme_manifest_result reads layout map and token declarations" {
+  let json =
+    #|{"name": "paper", "layouts": {"article": "layouts/article.html", "page": "layouts/page.html"}, "tokens": [{"name": "accent", "default": "sunset"}, {"name": "font", "default": "serif"}], "page_overrides": ["landing", "docs/index"], "slots": ["head", "footer"]}
+  let manifest = match @core.parse_theme_manifest_result(json) {
+    Ok(manifest) => manifest
+    Err(_) => panic()
+  }
+  inspect(manifest.name, content="paper")
+  inspect(
+    manifest.layouts.get("article"),
+    content="Some(\"layouts/article.html\")",
+  )
+  inspect(manifest.tokens.length(), content="2")
+  inspect(manifest.tokens[0].name, content="accent")
+  inspect(manifest.tokens[0].default_value, content="Some(\"sunset\")")
+  inspect(manifest.page_overrides[1], content="docs/index")
+  inspect(manifest.slots[0], content="head")
+}
+
+///|
+test "parse_theme_manifest_result rejects malformed layouts values" {
+  let json =
+    #|{"name": "paper", "layouts": {"article": 1}}
+  inspect(
+    @core.parse_theme_manifest_result(json),
+    content="Err(InvalidField(key=\"layouts\", detail=\"must contain only string values\"))",
+  )
+}
+
+///|
+test "parse_theme_manifest_result rejects malformed token entries" {
+  let json =
+    #|{"name": "paper", "tokens": [{"default": "sunset"}]}
+  inspect(
+    @core.parse_theme_manifest_result(json),
+    content="Err(InvalidField(key=\"tokens\", detail=\"each token must include a string `name`\"))",
+  )
+}
+
+///|
+test "parse_theme_manifest_result rejects invalid token names" {
+  let json =
+    #|{"name": "paper", "tokens": [{"name": "color-bg", "default": "#fff"}]}
+  inspect(
+    @core.parse_theme_manifest_result(json),
+    content="Err(InvalidField(key=\"tokens\", detail=\"token `name` values must be dot-separated lowercase ASCII letters and digits\"))",
+  )
+}
+
+///|
+test "parse_theme_manifest_result rejects token names with empty segments" {
+  let json =
+    #|{"name": "paper", "tokens": [{"name": "color..bg", "default": "#fff"}]}
+  inspect(
+    @core.parse_theme_manifest_result(json),
+    content="Err(InvalidField(key=\"tokens\", detail=\"token `name` values must be dot-separated lowercase ASCII letters and digits\"))",
+  )
+}
+
+///|
+test "parse_theme_manifest_result rejects duplicate token names" {
+  let json =
+    #|{"name": "paper", "tokens": [{"name": "color.bg", "default": "#fff"}, {"name": "color.bg", "default": "#eee"}]}
+  inspect(
+    @core.parse_theme_manifest_result(json),
+    content="Err(InvalidField(key=\"tokens\", detail=\"token `name` values must be unique\"))",
+  )
+}
+
+///|
+test "parse_theme_manifest_result rejects malformed page_overrides entries" {
+  let json =
+    #|{"name": "paper", "page_overrides": ["landing", false]}
+  inspect(
+    @core.parse_theme_manifest_result(json),
+    content="Err(InvalidField(key=\"page_overrides\", detail=\"must contain only strings\"))",
+  )
+}
+
+///|
+test "parse_theme_manifest_result rejects malformed slots entries" {
+  let json =
+    #|{"name": "paper", "slots": ["head", {"name": "footer"}]}
+  inspect(
+    @core.parse_theme_manifest_result(json),
+    content="Err(InvalidField(key=\"slots\", detail=\"must contain only strings\"))",
+  )
+}
+
+///|
 test "extract_frontmatter_raw extracts yaml block" {
   let source = "---\ntitle: Hello\n---\n\n# Body"
   let (yaml, body) = @core.extract_frontmatter_raw(source)
@@ -217,6 +355,13 @@ test "parse_frontmatter records list title shape mismatch" {
   let fm = @core.parse_frontmatter("title: [Demo]\n")
   inspect(fm.title, content="None")
   inspect(fm.field_shapes.get("title"), content="Some(List)")
+}
+
+///|
+test "parse_frontmatter records list layout shape mismatch" {
+  let fm = @core.parse_frontmatter("layout: [landing]\ntype: page")
+  inspect(fm.layout, content="None")
+  inspect(fm.field_shapes.get("layout"), content="Some(List)")
 }
 
 ///|
@@ -256,6 +401,62 @@ test "parse_frontmatter keeps navigation fields in extra" {
   inspect(fm.content_type, content="Some(\"page\")")
   inspect(fm.extra.get("nav_title"), content="Some(\"Documentation\")")
   inspect(fm.extra.get("nav_hidden"), content="Some(\"true\")")
+}
+
+///|
+test "parse_frontmatter preserves typed theme page override values" {
+  let yaml = "title: Landing\nlayout: landing\ntheme_tone: sunset\ntheme_featured: true\ntheme_order: 2\ntheme_empty: null\ntheme_literal: \"true\"\ntheme_sections: [hero, false, 3, null, \"cta\"]\ntype: page"
+  let fm = @core.parse_frontmatter(yaml)
+  inspect(fm.layout, content="Some(\"landing\")")
+  inspect(fm.theme_meta.get("tone"), content="Some(StringValue(\"sunset\"))")
+  inspect(fm.theme_meta.get("featured"), content="Some(BoolValue(true))")
+  inspect(fm.theme_meta.get("order"), content="Some(NumberValue(\"2\"))")
+  inspect(fm.theme_meta.get("empty"), content="Some(NullValue)")
+  inspect(fm.theme_meta.get("literal"), content="Some(StringValue(\"true\"))")
+  inspect(
+    fm.theme_meta.get("sections"),
+    content="Some(ArrayValue([StringValue(\"hero\"), BoolValue(false), NumberValue(\"3\"), NullValue, StringValue(\"cta\")]))",
+  )
+}
+
+///|
+test "page_view_model_from_meta exposes resolved layout and theme meta" {
+  let frontmatter = @core.parse_frontmatter(
+    "title: Landing\nlayout: hero\ntheme_variant: feature\ntheme_sections: [hero, faq]\ntype: page",
+  )
+  let meta = @core.PageMeta::new(
+    "index.md",
+    @core.ContentKind::Page,
+    @core.SourceFormat::Markdown,
+    frontmatter,
+    @core.RouteStyle::Pretty,
+  )
+  let page = @core.page_view_model_from_meta(meta)
+  inspect(meta.layout_override, content="Some(\"hero\")")
+  inspect(page.kind, content="index")
+  inspect(page.layout, content="hero")
+  inspect(
+    page.theme_meta.get("variant"),
+    content="Some(StringValue(\"feature\"))",
+  )
+  inspect(
+    page.theme_meta.get("sections"),
+    content="Some(ArrayValue([StringValue(\"hero\"), StringValue(\"faq\")]))",
+  )
+}
+
+///|
+test "page_view_model_from_meta falls back to kind for layout" {
+  let meta = @core.PageMeta::new(
+    "guides/getting-started.md",
+    @core.ContentKind::Page,
+    @core.SourceFormat::Markdown,
+    @core.Frontmatter::default(),
+    @core.RouteStyle::Pretty,
+  )
+  let page = @core.page_view_model_from_meta(meta)
+  inspect(page.kind, content="page")
+  inspect(page.layout, content="page")
 }
 
 ///|

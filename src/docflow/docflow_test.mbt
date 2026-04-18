@@ -425,6 +425,172 @@ test "docflow native template renderer leaves plain text unchanged" {
 }
 
 ///|
+test "docflow theme template resolves nested variable paths" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "index.md",
+    source_uuid: "page-001",
+    html: "<p>Hello</p>",
+    note: "nested variable path lookup test",
+  }
+  let context = @docflow.default_theme_render_context(rendered)
+  inspect(
+    @docflow.render_theme_template("<title>{{ page.title }}</title>", context, {}),
+    content="<title>index.md</title>",
+  )
+}
+
+///|
+test "docflow theme template supports include if and for" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "index.md",
+    source_uuid: "page-001",
+    html: "<p>Hello</p>",
+    note: "control flow template test",
+  }
+  let context : @docflow.ThemeRenderContext = {
+    ..@docflow.default_theme_render_context(rendered),
+    collections: {
+      "nav": @core.ThemeConfigValue::ObjectValue({
+        "items": @core.ThemeConfigValue::ArrayValue([
+          @core.ThemeConfigValue::ObjectValue({
+            "title": @core.ThemeConfigValue::StringValue("Home"),
+          }),
+        ]),
+      }),
+    },
+  }
+  inspect(
+    @docflow.render_theme_template(
+      "{% if page.body_html %}<ul>{% for item in collections.nav.items %}{% include \"nav\" %}{% endfor %}</ul>{% endif %}",
+      context,
+      { "nav": "<li>{{ item.title }}</li>" },
+    ),
+    content="<ul><li>Home</li></ul>",
+  )
+}
+
+///|
+test "docflow theme template evaluates if inside for with loop locals" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "index.md",
+    source_uuid: "page-001",
+    html: "<p>Hello</p>",
+    note: "loop-local conditional test",
+  }
+  let context : @docflow.ThemeRenderContext = {
+    ..@docflow.default_theme_render_context(rendered),
+    collections: {
+      "nav": @core.ThemeConfigValue::ObjectValue({
+        "items": @core.ThemeConfigValue::ArrayValue([
+          @core.ThemeConfigValue::ObjectValue({
+            "title": @core.ThemeConfigValue::StringValue("Home"),
+          }),
+          @core.ThemeConfigValue::ObjectValue({
+            "title": @core.ThemeConfigValue::StringValue(""),
+          }),
+          @core.ThemeConfigValue::ObjectValue({}),
+        ]),
+      }),
+    },
+  }
+  inspect(
+    @docflow.render_theme_template(
+      "<ul>{% for item in collections.nav.items %}{% if item.title %}<li>{{ item.title }}</li>{% endif %}{% endfor %}</ul>",
+      context,
+      {},
+    ),
+    content="<ul><li>Home</li></ul>",
+  )
+}
+
+///|
+test "docflow theme template lets loop locals shadow root names" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "index.md",
+    source_uuid: "page-001",
+    html: "<p>Hello</p>",
+    note: "loop-local root shadowing test",
+  }
+  let context : @docflow.ThemeRenderContext = {
+    ..@docflow.default_theme_render_context(rendered),
+    collections: {
+      "pages": @core.ThemeConfigValue::ArrayValue([
+        @core.ThemeConfigValue::ObjectValue({
+          "title": @core.ThemeConfigValue::StringValue("Guide"),
+        }),
+      ]),
+    },
+  }
+  inspect(
+    @docflow.render_theme_template(
+      "{% for page in collections.pages %}<li>{{ page.title }}</li>{% endfor %}",
+      context,
+      {},
+    ),
+    content="<li>Guide</li>",
+  )
+}
+
+///|
+test "docflow theme template fails self include in a controlled way" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "index.md",
+    source_uuid: "page-001",
+    html: "<p>Hello</p>",
+    note: "self include guard test",
+  }
+  let context = @docflow.default_theme_render_context(rendered)
+  inspect(
+    @docflow.render_theme_template("{% include \"self\" %}", context, {
+      "self": "{% include \"self\" %}",
+    }),
+    content="<!-- moonink include cycle: self -> self -->",
+  )
+}
+
+///|
+test "docflow theme template fails cyclic include in a controlled way" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "index.md",
+    source_uuid: "page-001",
+    html: "<p>Hello</p>",
+    note: "cyclic include guard test",
+  }
+  let context = @docflow.default_theme_render_context(rendered)
+  inspect(
+    @docflow.render_theme_template("{% include \"nav\" %}", context, {
+      "nav": "<nav>{% include \"item\" %}</nav>",
+      "item": "<li>{% include \"nav\" %}</li>",
+    }),
+    content="<nav><li><!-- moonink include cycle: nav -> item -> nav --></li></nav>",
+  )
+}
+
+///|
+test "docflow flat template compatibility keeps backlink_urls" {
+  let rendered : @docflow.RenderedDocument = {
+    backend_name: "fake-html-renderer",
+    source_path: "notes/welcome.md",
+    source_uuid: "page-ctx-001",
+    html: "<p>Welcome</p>",
+    note: "flat backlink url compatibility test",
+  }
+  inspect(
+    @docflow.render_template_string("<aside>{{ backlink_urls }}</aside>", {
+      ..@docflow.default_template_context(rendered),
+      backlink_urls: ["/guide/", "/reference/"],
+    }),
+    content="<aside>/guide/,/reference/</aside>",
+  )
+}
+
+///|
 test "docflow apply_template uses provided page metadata context" {
   let rendered : @docflow.RenderedDocument = {
     backend_name: "fake-html-renderer",

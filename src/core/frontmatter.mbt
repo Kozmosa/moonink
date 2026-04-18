@@ -21,6 +21,8 @@ pub(all) struct Frontmatter {
   date : String?
   tags : Array[String]
   draft : Bool
+  layout : String?
+  theme_meta : Map[String, ThemeConfigValue]
   extra : Map[String, String]
   field_shapes : Map[String, FrontmatterFieldShape]
   invalid_scalar_fields : Map[String, Bool]
@@ -35,6 +37,8 @@ pub fn Frontmatter::default() -> Frontmatter {
     date: None,
     tags: [],
     draft: false,
+    layout: None,
+    theme_meta: {},
     extra: {},
     field_shapes: {},
     invalid_scalar_fields: {},
@@ -79,11 +83,77 @@ pub fn extract_frontmatter_raw(source : String) -> (String?, String) {
 }
 
 ///|
+fn theme_meta_key(key : String) -> String? {
+  if !key.has_prefix("theme_") {
+    return None
+  }
+  let normalized = key[6:key.length()].to_string()
+  if normalized.is_empty() {
+    None
+  } else {
+    Some(normalized)
+  }
+}
+
+///|
+fn looks_like_theme_meta_json(value : String) -> Bool {
+  if value == "null" || value == "true" || value == "false" {
+    return true
+  }
+  if value.is_empty() {
+    return false
+  }
+  let first = value[0:1].to_string()
+  first == "\"" ||
+  first == "[" ||
+  first == "{" ||
+  first == "-" ||
+  (first >= "0" && first <= "9")
+}
+
+///|
+fn theme_meta_value(
+  raw_value : String,
+  fallback_value : String,
+) -> ThemeConfigValue {
+  let normalized = raw_value.trim().to_string()
+  if normalized.is_empty() || !looks_like_theme_meta_json(normalized) {
+    return ThemeConfigValue::StringValue(fallback_value)
+  }
+  let value = @json.parse(normalized.view()) catch {
+    _ => return ThemeConfigValue::StringValue(fallback_value)
+  }
+  theme_config_value_from_json(value)
+}
+
+///|
+fn theme_meta_scalar_value(
+  raw_value : String,
+  value : String,
+) -> ThemeConfigValue {
+  theme_meta_value(raw_value, value)
+}
+
+///|
+fn theme_meta_list_value(
+  raw_values : Array[String],
+  values : Array[String],
+) -> ThemeConfigValue {
+  let items : Array[ThemeConfigValue] = []
+  for index in 0..<values.length() {
+    items.push(theme_meta_value(raw_values[index], values[index]))
+  }
+  ThemeConfigValue::ArrayValue(items)
+}
+
+///|
 /// Parse a simple YAML-like key-value frontmatter block into a Frontmatter struct.
 /// Supports: `key: value`, `key: "quoted value"`, `key: [a, b, c]`, `key: true/false`.
 pub fn parse_frontmatter(yaml : String) -> Frontmatter {
   let fields : Map[String, String] = {}
+  let raw_fields : Map[String, String] = {}
   let list_fields : Map[String, Array[String]] = {}
+  let raw_list_fields : Map[String, Array[String]] = {}
   let field_shapes : Map[String, FrontmatterFieldShape] = {}
   let invalid_scalar_fields : Map[String, Bool] = {}
   for line_view in yaml.split("\n") {
@@ -102,6 +172,7 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
         if value.has_prefix("[") && value.has_suffix("]") {
           let inner = value[1:value.length() - 1].to_string()
           let items : Array[String] = []
+          let raw_items : Array[String] = []
           for item_view in inner.split(",") {
             let item = item_view.trim().to_string()
             // Strip quotes
@@ -114,9 +185,11 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
             }
             if !clean.is_empty() {
               items.push(clean)
+              raw_items.push(item)
             }
           }
           list_fields[key] = items
+          raw_list_fields[key] = raw_items
           field_shapes[key] = FrontmatterFieldShape::List
         } else {
           // Strip optional surrounding quotes
@@ -128,6 +201,7 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
             value
           }
           fields[key] = clean
+          raw_fields[key] = value
           field_shapes[key] = FrontmatterFieldShape::Scalar
           if key == "draft" && clean != "true" && clean != "false" {
             invalid_scalar_fields[key] = true
@@ -149,14 +223,42 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
     Some("true") => true
     _ => false
   }
+  let layout = fields.get("layout")
+  let theme_meta : Map[String, ThemeConfigValue] = {}
+  for entry in raw_fields {
+    let (key, raw_value) = entry
+    match theme_meta_key(key) {
+      Some(theme_key) =>
+        match fields.get(key) {
+          Some(value) =>
+            theme_meta[theme_key] = theme_meta_scalar_value(raw_value, value)
+          None => ()
+        }
+      None => ()
+    }
+  }
+  for entry in raw_list_fields {
+    let (key, raw_values) = entry
+    match theme_meta_key(key) {
+      Some(theme_key) =>
+        match list_fields.get(key) {
+          Some(values) =>
+            theme_meta[theme_key] = theme_meta_list_value(raw_values, values)
+          None => ()
+        }
+      None => ()
+    }
+  }
   // Collect remaining fields into extra
   let core_keys : Array[String] = [
-    "title", "description", "type", "date", "draft",
+    "title", "description", "type", "date", "draft", "layout",
   ]
   let extra : Map[String, String] = {}
   for entry in fields {
     let (key, value) = entry
-    if core_keys.search_by(k => k == key) is None && key != "tags" {
+    if core_keys.search_by(k => k == key) is None &&
+      key != "tags" &&
+      theme_meta_key(key) is None {
       extra[key] = value
     }
   }
@@ -167,6 +269,8 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
     date,
     tags,
     draft,
+    layout,
+    theme_meta,
     extra,
     field_shapes,
     invalid_scalar_fields,

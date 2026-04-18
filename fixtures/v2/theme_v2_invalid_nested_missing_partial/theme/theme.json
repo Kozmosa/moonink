@@ -1,0 +1,6 @@
+{
+  "name": "fixture-v2-nested-missing-partial",
+  "layouts": {
+    "page": "layouts/page.html"
+  }
+}
