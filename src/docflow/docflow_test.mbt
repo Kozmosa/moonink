@@ -880,6 +880,17 @@ test "docflow collect_markdown_headings produces stable ids" {
 }
 
 ///|
+test "docflow collect_markdown_headings preserves cjk heading ids" {
+  let headings = @docflow.collect_markdown_headings(
+    "## 第一章 介绍\n## 第二章 架构\n## 第二章 架构",
+  )
+  inspect(headings.length(), content="3")
+  inspect(headings[0].id, content="第一章-介绍")
+  inspect(headings[1].id, content="第二章-架构")
+  inspect(headings[2].id, content="第二章-架构-2")
+}
+
+///|
 test "docflow article pipeline keeps parser wikilinker and render order explicit" {
   let parser = @docflow.markdown_parser_adapter()
   let linker = @docflow.noop_wikilinker()

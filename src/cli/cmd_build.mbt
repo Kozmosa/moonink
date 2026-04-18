@@ -2382,14 +2382,8 @@ fn build_theme_render_context(
   for heading in toc_entries {
     toc_items.push(theme_heading_value(heading))
   }
-  let previous_link = match experience.previous.get(input.meta.url_path) {
-    Some(page_link) => Some(page_link)
-    None => None
-  }
-  let next_link = match experience.next.get(input.meta.url_path) {
-    Some(page_link) => Some(page_link)
-    None => None
-  }
+  let previous_link = experience.previous.get(input.meta.url_path)
+  let next_link = experience.next.get(input.meta.url_path)
   let series_nav = experience.series.get(input.meta.url_path)
   let series_items : Array[@core.ThemeConfigValue] = []
   match series_nav {

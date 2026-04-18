@@ -590,6 +590,22 @@ test "estimate_reading_time_minutes rounds up small documents to one minute" {
 }
 
 ///|
+test "estimate_reading_time_minutes counts cjk characters as individual words" {
+  // 440 CJK characters → ceil(440/220) = 2 minutes
+  let sb = StringBuilder::new()
+  for _ in 0..<440 {
+    sb.write_string("石")
+  }
+  inspect(
+    @core.estimate_reading_time_minutes(
+      sb.to_string(),
+      @core.SourceFormat::Unknown,
+    ),
+    content="2",
+  )
+}
+
+///|
 test "search index excerpt preserves literal punctuation inside markdown text" {
   inspect(
     @core.search_index_excerpt(

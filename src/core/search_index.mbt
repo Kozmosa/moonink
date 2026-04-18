@@ -289,6 +289,14 @@ pub fn source_plain_text(source : String, format : SourceFormat) -> String {
 }
 
 ///|
+fn is_cjk_char(char : String) -> Bool {
+  (char >= "一" && char <= "鿿") ||
+  (char >= "㐀" && char <= "䶿") ||
+  (char >= "ぁ" && char <= "ヿ") ||
+  (char >= "가" && char <= "힣")
+}
+
+///|
 fn count_plain_text_words(source : String) -> Int {
   if source.is_empty() {
     return 0
@@ -297,12 +305,17 @@ fn count_plain_text_words(source : String) -> Int {
   let mut count = 0
   for index in 0..<source.length() {
     let char = char_at(source, index)
-    let is_space = is_whitespace(char)
-    if is_space {
-      in_word = false
-    } else if !in_word {
-      in_word = true
+    if is_cjk_char(char) {
       count += 1
+      in_word = false
+    } else {
+      let is_space = is_whitespace(char)
+      if is_space {
+        in_word = false
+      } else if !in_word {
+        in_word = true
+        count += 1
+      }
     }
   }
   count

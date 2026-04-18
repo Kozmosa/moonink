@@ -38,6 +38,14 @@ fn trim_hyphen_edges(source : String) -> String {
 }
 
 ///|
+fn is_cjk_char(char : String) -> Bool {
+  (char >= "一" && char <= "鿿") ||
+  (char >= "㐀" && char <= "䶿") ||
+  (char >= "ぁ" && char <= "ヿ") ||
+  (char >= "가" && char <= "힣")
+}
+
+///|
 fn slugify_heading_title(title : String) -> String {
   let builder = StringBuilder::new()
   let mut previous_was_separator = false
@@ -45,6 +53,9 @@ fn slugify_heading_title(title : String) -> String {
     let char = title[index:index + 1].to_string()
     if is_ascii_letter(char) || is_ascii_digit(char) {
       builder.write_string(char.to_lower())
+      previous_was_separator = false
+    } else if is_cjk_char(char) {
+      builder.write_string(char)
       previous_was_separator = false
     } else if is_slug_separator(char) {
       if !previous_was_separator {
