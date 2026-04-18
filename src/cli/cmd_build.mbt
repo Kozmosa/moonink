@@ -927,7 +927,8 @@ fn navigation_parent_key(page : @core.SitePage) -> String? {
 
 ///|
 fn navigation_sort_key(page : @core.SitePage) -> String {
-  if page.is_index {
+  let basename = basename_without_extension(page.source_path)
+  if page.is_index || basename == "README" {
     page.source_path
   } else {
     "zzz/" + page.source_path
@@ -973,12 +974,25 @@ fn build_navigation_item(
 }
 
 ///|
+fn has_navigation_node_key(
+  pages : Array[@core.SitePage],
+  key : String,
+) -> Bool {
+  for page in pages {
+    if navigation_node_key(page) == key {
+      return true
+    }
+  }
+  false
+}
+
+///|
 pub fn build_navigation_model(
   pages : Array[@core.SitePage],
 ) -> @core.NavigationModel {
   let nav_pages : Array[@core.SitePage] = []
   for page in pages {
-    if page.content_kind == @core.ContentKind::Page && !page.nav_hidden {
+    if !page.nav_hidden {
       nav_pages.push(page)
     }
   }
@@ -990,13 +1004,15 @@ pub fn build_navigation_model(
     match navigation_parent_key(page) {
       None => items.push(build_navigation_item(nav_pages, page))
       Some("") => items.push(build_navigation_item(nav_pages, page))
+      Some(parent) if !has_navigation_node_key(nav_pages, parent) =>
+        items.push(build_navigation_item(nav_pages, page))
       _ => ()
     }
   }
   {
     items,
     total_items: nav_pages.length(),
-    note: "Navigation model groups page content by source path hierarchy.",
+    note: "Navigation model groups page and article content by source path hierarchy.",
   }
 }
 

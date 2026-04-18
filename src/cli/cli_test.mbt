@@ -86,9 +86,9 @@ test "build site assembly model combines pages and navigation" {
   let assembly = @cli.build_site_assembly_model(config, inputs, inventory)
   inspect(assembly.page_count, content="2")
   inspect(assembly.article_count, content="1")
-  inspect(assembly.navigation_items, content="2")
+  inspect(assembly.navigation_items, content="3")
   inspect(assembly.pages.length(), content="3")
-  inspect(assembly.navigation.items.length(), content="2")
+  inspect(assembly.navigation.items.length(), content="3")
 }
 
 ///|
@@ -337,12 +337,13 @@ test "build navigation model uses nav_title and hides nav_hidden pages" {
     },
   ]
   let navigation = @cli.build_navigation_model(pages)
-  inspect(navigation.total_items, content="3")
-  inspect(navigation.items.length(), content="2")
+  inspect(navigation.total_items, content="4")
+  inspect(navigation.items.length(), content="3")
   inspect(navigation.items[0].title, content="Home")
-  inspect(navigation.items[1].title, content="Documentation")
-  inspect(navigation.items[1].children.length(), content="1")
-  inspect(navigation.items[1].children[0].title, content="Quick Start")
+  inspect(navigation.items[1].title, content="Hello")
+  inspect(navigation.items[2].title, content="Documentation")
+  inspect(navigation.items[2].children.length(), content="1")
+  inspect(navigation.items[2].children[0].title, content="Quick Start")
 }
 
 ///|
@@ -1186,7 +1187,7 @@ test "runtime cli build renders automatic navigation for pretty routes" {
     index_html.contains("href=\"/guide/config/\">Config</a>"),
     content="false",
   )
-  inspect(index_html.contains("Hello Article"), content="false")
+  inspect(index_html.contains("Hello Article"), content="true")
   inspect(index_html.contains("data-section-title=\"Home\""), content="true")
   inspect(index_html.contains("data-section-url=\"/\""), content="true")
   inspect(
@@ -1538,6 +1539,24 @@ test "runtime cli build formats io errors when no config exists" {
 }
 
 ///|
+test "runtime cli build includes frontmatter-free article links in navigation" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/obsidian_direct_basic", "obsidian-nav-articles",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(index_html.contains("href=\"/notes/project/\""), content="true")
+  inspect(index_html.contains(">Project Overview<"), content="true")
+}
+
+///|
 test "runtime cli build respects direct route layout" {
   let fixture_root = "fixtures/v2/direct_route"
   let stale_path = fixture_root + "/dist/stale.txt"
@@ -1746,7 +1765,7 @@ test "runtime cli build uses theme v2 page kind layouts" {
   inspect(index_html.contains("data-page-kind=\"index\""), content="true")
   inspect(
     index_html.contains(
-      "<header class=\"theme-header\" data-nav-count=\"2\">Theme V2 Basic</header>",
+      "<header class=\"theme-header\" data-nav-count=\"3\">Theme V2 Basic</header>",
     ),
     content="true",
   )

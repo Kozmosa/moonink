@@ -159,6 +159,65 @@ fn should_skip_helper_source(
 }
 
 ///|
+fn strip_source_extension(path : String) -> String {
+  if path.has_suffix(".md") {
+    path[:path.length() - 3].to_string()
+  } else if path.has_suffix(".html") {
+    path[:path.length() - 5].to_string()
+  } else if path.has_suffix(".htm") {
+    path[:path.length() - 4].to_string()
+  } else {
+    path
+  }
+}
+
+///|
+fn basename_without_extension(path : String) -> String {
+  let stripped = strip_source_extension(path)
+  let mut result = stripped
+  for part_view in stripped.split("/") {
+    result = part_view.to_string()
+  }
+  result
+}
+
+///|
+fn first_markdown_h1(body : String) -> String? {
+  for line_view in body.split("\n") {
+    let line = line_view.to_string().trim().to_string()
+    if line.has_prefix("# ") {
+      let heading = line[2:line.length()].trim().to_string()
+      if heading != "" {
+        return Some(heading)
+      }
+    }
+  }
+  None
+}
+
+///|
+fn resolved_input_title(
+  source_path : String,
+  frontmatter : @core.Frontmatter,
+  format : @core.SourceFormat,
+  body : String,
+  is_index : Bool,
+) -> String {
+  match frontmatter.title {
+    Some(title) => title
+    None =>
+      match format {
+        @core.SourceFormat::Markdown =>
+          match first_markdown_h1(body) {
+            Some(title) => title
+            None => if is_index { "Home" } else { basename_without_extension(source_path) }
+          }
+        _ => if is_index { "Home" } else { basename_without_extension(source_path) }
+      }
+  }
+}
+
+///|
 pub fn load_build_inputs_result(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
@@ -183,12 +242,22 @@ pub fn load_build_inputs_result(
       file.format,
       frontmatter.content_type,
     )
-    let meta = @core.PageMeta::new(
+    let initial_meta = @core.PageMeta::new(
       relative_path,
       content_kind,
       file.format,
       frontmatter,
       config.route_style,
+    )
+    let meta = @core.page_meta_with_title(
+      initial_meta,
+      resolved_input_title(
+        relative_path,
+        frontmatter,
+        file.format,
+        body,
+        initial_meta.is_index,
+      ),
     )
     inputs.push({
       absolute_source_path: file.path,
