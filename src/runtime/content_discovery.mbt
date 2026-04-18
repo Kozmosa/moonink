@@ -261,14 +261,19 @@ pub fn load_build_inputs_result(
       frontmatter,
       config.route_style,
     )
+    let normalized_meta = if initial_meta.is_index {
+      { ..initial_meta, content_kind: @core.ContentKind::Page }
+    } else {
+      initial_meta
+    }
     let meta = @core.page_meta_with_title(
-      initial_meta,
+      normalized_meta,
       resolved_input_title(
         relative_path,
         frontmatter,
         file.format,
         body,
-        initial_meta.is_index,
+        normalized_meta.is_index,
       ),
     )
     inputs.push({

@@ -657,6 +657,7 @@ test "load_build_inputs_result promotes root README to homepage when index is ab
   let readme = by_path.get("README.md").unwrap()
   inspect(readme.meta.url_path, content="/")
   inspect(readme.meta.output_path, content="index.html")
+  inspect(readme.meta.content_kind, content="Page")
   inspect(readme.meta.is_index, content="true")
 }
 

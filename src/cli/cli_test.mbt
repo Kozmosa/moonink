@@ -1565,6 +1565,13 @@ test "runtime cli build includes frontmatter-free article links in navigation" {
   ) catch {
     _ => panic()
   }
+  inspect(index_html.contains("data-layout-kind=\"index\""), content="true")
+  inspect(index_html.contains("data-kind=\"index\""), content="true")
+  inspect(
+    index_html.contains("data-section-title=\"Vault Home\""),
+    content="true",
+  )
+  inspect(index_html.contains("data-section-url=\"/\""), content="true")
   inspect(index_html.contains("href=\"/notes/project/\""), content="true")
   inspect(index_html.contains(">Project Overview<"), content="true")
 }

@@ -68,5 +68,11 @@ pub fn page_meta_with_title(meta : PageMeta, title : String) -> PageMeta {
 
 ///|
 pub fn page_meta_as_home(meta : PageMeta) -> PageMeta {
-  { ..meta, url_path: "/", output_path: "index.html", is_index: true }
+  {
+    ..meta,
+    url_path: "/",
+    output_path: "index.html",
+    content_kind: ContentKind::Page,
+    is_index: true,
+  }
 }
