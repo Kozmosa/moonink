@@ -17,6 +17,17 @@ fn run_native_onboard_command() -> CliOutcome {
 }
 
 ///|
+pub fn default_onboard_config_json(site_name : String) -> String {
+  "{\n" +
+  "  \"site_name\": \"" + site_name + "\",\n" +
+  "  \"content_dir\": \".\",\n" +
+  "  \"output_dir\": \"dist\",\n" +
+  "  \"exclude\": [\".obsidian\", \"dist\", \".git\", \"node_modules\", \".trash\", \"templates\", \"Templates\"],\n" +
+  "  \"route_style\": \"pretty\"\n" +
+  "}"
+}
+
+///|
 fn run_onboard_command_runtime() -> CliOutcome {
   // Check if moonink.json already exists
   if @runtime.io_path_exists("moonink.json") {
@@ -25,16 +36,7 @@ fn run_onboard_command_runtime() -> CliOutcome {
       message: "[onboard] moonink.json already exists\nstatus: aborted to avoid overwriting existing config",
     }
   }
-  // Generate default config JSON
-  let config_content =
-    #|{
-    #|  "site_name": "My Site",
-    #|  "content_dir": ".",
-    #|  "output_dir": "dist",
-    #|  "exclude": [".obsidian", "dist", ".git", "node_modules"],
-    #|  "route_style": "pretty"
-    #|}
-  @runtime.io_write_string("moonink.json", config_content) catch {
+  @runtime.io_write_string("moonink.json", default_onboard_config_json("My Site")) catch {
     err =>
       return {
         exit_code: 1,

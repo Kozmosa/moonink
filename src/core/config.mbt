@@ -164,8 +164,8 @@ pub fn normalize_config_path_or_error(
 }
 
 ///|
-fn default_exclude() -> Array[String] {
-  [".obsidian", "dist", ".git", "node_modules"]
+pub fn default_exclude() -> Array[String] {
+  [".obsidian", "dist", ".git", "node_modules", ".trash", "templates", "Templates"]
 }
 
 ///|

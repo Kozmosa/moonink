@@ -138,6 +138,32 @@ test "parse_config_json uses defaults for optional fields" {
 }
 
 ///|
+test "parse_config_json uses obsidian-friendly default excludes" {
+  let json =
+    #|{"site_name": "Vault"}
+  let config = @core.parse_config_json("moonink.json", json) catch {
+    _ => panic()
+  }
+  inspect(
+    config.exclude,
+    content="[\".obsidian\", \"dist\", \".git\", \"node_modules\", \".trash\", \"templates\", \"Templates\"]",
+  )
+}
+
+///|
+test "parse_config_json preserves explicit excludes" {
+  let json =
+    #|{"site_name": "Vault", "exclude": ["assets", "cache"]}
+  let config = @core.parse_config_json(
+    "moonink.json",
+    json,
+  ) catch {
+    _ => panic()
+  }
+  inspect(config.exclude, content="[\"assets\", \"cache\"]")
+}
+
+///|
 test "parse_config_json parses optional template_file" {
   let json =
     #|{"site_name": "Templated", "template_file": "templates/site.html"}

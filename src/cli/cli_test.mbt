@@ -526,6 +526,14 @@ test "parse cli command supports raw command tokens" {
 }
 
 ///|
+test "default onboard config json includes obsidian-friendly excludes" {
+  let config_json = @cli.default_onboard_config_json("Vault")
+  inspect(config_json.contains("\".trash\""), content="true")
+  inspect(config_json.contains("\"templates\""), content="true")
+  inspect(config_json.contains("\"Templates\""), content="true")
+}
+
+///|
 test "parse cli command supports full argv forms" {
   inspect(@cli.parse_cli_command(["moonink"]), content="Help")
   inspect(@cli.parse_cli_command(["moonink", "build"]), content="Build")
