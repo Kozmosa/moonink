@@ -270,6 +270,36 @@ test "parse_theme_manifest_result rejects malformed token entries" {
 }
 
 ///|
+test "parse_theme_manifest_result rejects invalid token names" {
+  let json =
+    #|{"name": "paper", "tokens": [{"name": "color-bg", "default": "#fff"}]}
+  inspect(
+    @core.parse_theme_manifest_result(json),
+    content="Err(InvalidField(key=\"tokens\", detail=\"token `name` values must be dot-separated lowercase ASCII letters and digits\"))",
+  )
+}
+
+///|
+test "parse_theme_manifest_result rejects token names with empty segments" {
+  let json =
+    #|{"name": "paper", "tokens": [{"name": "color..bg", "default": "#fff"}]}
+  inspect(
+    @core.parse_theme_manifest_result(json),
+    content="Err(InvalidField(key=\"tokens\", detail=\"token `name` values must be dot-separated lowercase ASCII letters and digits\"))",
+  )
+}
+
+///|
+test "parse_theme_manifest_result rejects duplicate token names" {
+  let json =
+    #|{"name": "paper", "tokens": [{"name": "color.bg", "default": "#fff"}, {"name": "color.bg", "default": "#eee"}]}
+  inspect(
+    @core.parse_theme_manifest_result(json),
+    content="Err(InvalidField(key=\"tokens\", detail=\"token `name` values must be unique\"))",
+  )
+}
+
+///|
 test "parse_theme_manifest_result rejects malformed page_overrides entries" {
   let json =
     #|{"name": "paper", "page_overrides": ["landing", false]}
@@ -390,7 +420,7 @@ test "parse_frontmatter preserves typed theme page override values" {
 }
 
 ///|
-test "page_view_model_from_meta exposes layout override and theme meta" {
+test "page_view_model_from_meta exposes resolved layout and theme meta" {
   let frontmatter = @core.parse_frontmatter(
     "title: Landing\nlayout: hero\ntheme_variant: feature\ntheme_sections: [hero, faq]\ntype: page",
   )
@@ -403,7 +433,8 @@ test "page_view_model_from_meta exposes layout override and theme meta" {
   )
   let page = @core.page_view_model_from_meta(meta)
   inspect(meta.layout_override, content="Some(\"hero\")")
-  inspect(page.layout, content="Some(\"hero\")")
+  inspect(page.kind, content="index")
+  inspect(page.layout, content="hero")
   inspect(
     page.theme_meta.get("variant"),
     content="Some(StringValue(\"feature\"))",
@@ -412,6 +443,20 @@ test "page_view_model_from_meta exposes layout override and theme meta" {
     page.theme_meta.get("sections"),
     content="Some(ArrayValue([StringValue(\"hero\"), StringValue(\"faq\")]))",
   )
+}
+
+///|
+test "page_view_model_from_meta falls back to kind for layout" {
+  let meta = @core.PageMeta::new(
+    "guides/getting-started.md",
+    @core.ContentKind::Page,
+    @core.SourceFormat::Markdown,
+    @core.Frontmatter::default(),
+    @core.RouteStyle::Pretty,
+  )
+  let page = @core.page_view_model_from_meta(meta)
+  inspect(page.kind, content="page")
+  inspect(page.layout, content="page")
 }
 
 ///|

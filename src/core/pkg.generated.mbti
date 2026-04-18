@@ -60,6 +60,12 @@ pub fn search_index_excerpt(String?, String, SourceFormat) -> String
 
 pub fn should_exclude(String, Array[String]) -> Bool
 
+pub fn theme_config_value_from_json(Json) -> ThemeConfigValue
+
+pub fn theme_page_kind(PageMeta) -> String
+
+pub fn theme_page_layout_key(PageMeta) -> String
+
 // Errors
 pub(all) suberror ConfigError {
   IOError(ProjectIOError)
@@ -252,9 +258,9 @@ pub(all) struct ThemeManifest {
 pub impl Show for ThemeManifest
 
 pub(all) struct ThemePageViewModel {
-  layout : String?
+  kind : String
+  layout : String
   theme_meta : Map[String, ThemeConfigValue]
-  slots : Map[String, String]
 } derive(Eq, @debug.Debug)
 
 pub(all) struct ThemeTokenDeclaration {

@@ -68,6 +68,30 @@ pub impl Show for ThemeManifestError with output(self, logger) {
 }
 
 ///|
+fn is_valid_theme_token_segment_char(char : String) -> Bool {
+  (char >= "a" && char <= "z") || (char >= "0" && char <= "9")
+}
+
+///|
+fn is_valid_theme_token_name(name : String) -> Bool {
+  if name.length() == 0 {
+    return false
+  }
+  for part_view in name.split(".") {
+    let part = part_view.to_string()
+    if part.length() == 0 {
+      return false
+    }
+    for i in 0..<part.length() {
+      if !is_valid_theme_token_segment_char(part[i:i + 1].to_string()) {
+        return false
+      }
+    }
+  }
+  true
+}
+
+///|
 fn require_json_object_string_map(
   obj : Map[String, Json],
   key : String,
@@ -105,6 +129,7 @@ fn parse_theme_token_declarations(
     None => []
     Some(Array(items)) => {
       let result : Array[ThemeTokenDeclaration] = []
+      let token_names : Map[String, Bool] = {}
       for item in items {
         guard item is Object(token_obj) else {
           raise ThemeManifestError::InvalidField(
@@ -120,6 +145,19 @@ fn parse_theme_token_declarations(
               detail="each token must include a string `name`",
             )
         }
+        if !is_valid_theme_token_name(name) {
+          raise ThemeManifestError::InvalidField(
+            key="tokens",
+            detail="token `name` values must be dot-separated lowercase ASCII letters and digits",
+          )
+        }
+        if token_names.get(name) is Some(_) {
+          raise ThemeManifestError::InvalidField(
+            key="tokens",
+            detail="token `name` values must be unique",
+          )
+        }
+        token_names[name] = true
         let default_value = match token_obj.get("default") {
           None => None
           Some(String(value)) => Some(value)

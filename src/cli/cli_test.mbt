@@ -1282,6 +1282,40 @@ test "runtime cli build ignores ordinary markdown links in backlink index" {
 }
 
 ///|
+test "runtime cli build uses built-in theme v2 fallback" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-built-in-theme-v2",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(index_html.contains("data-theme-v2=\"default\""), content="true")
+  inspect(index_html.contains("data-layout-kind=\"index\""), content="true")
+  inspect(
+    index_html.contains("href=\"/assets/theme-vars.css\""),
+    content="true",
+  )
+  inspect(
+    index_html.contains("href=\"/assets/moonink-default.css\""),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/assets/theme-vars.css"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/assets/moonink-default.css"),
+    content="true",
+  )
+}
+
+///|
 test "runtime cli build writes minimal fixture html files" {
   let fixture_root = prepare_isolated_fixture_copy(
     "fixtures/v2/minimal", "minimal-build-default",
@@ -1334,7 +1368,7 @@ test "runtime cli build writes minimal fixture html files" {
     content="true",
   )
   inspect(index_html.contains("class=\"moonink-page\""), content="true")
-  inspect(index_html.contains("data-content-layout=\"page\""), content="true")
+  inspect(index_html.contains("data-content-layout=\"index\""), content="true")
   inspect(
     index_html.contains("class=\"content-title\">Home</h1>"),
     content="true",
@@ -1344,7 +1378,7 @@ test "runtime cli build writes minimal fixture html files" {
     content="true",
   )
   inspect(index_html.contains("Fixture Site"), content="true")
-  inspect(index_html.contains("data-kind=\"page\""), content="true")
+  inspect(index_html.contains("data-kind=\"index\""), content="true")
   inspect(index_html.contains("data-url=\"/\""), content="true")
   inspect(index_html.contains("data-section-title=\"Home\""), content="true")
   inspect(index_html.contains("data-section-url=\"/\""), content="true")
@@ -1620,6 +1654,426 @@ test "runtime cli build prefers theme layout over template file" {
     _ => panic()
   }
   inspect(theme_css.contains("rebeccapurple"), content="true")
+}
+
+///|
+test "runtime cli build uses theme v2 page kind layouts" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/theme_v2_basic", "theme-v2-layouts",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let hello_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/hello/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let about_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/about/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(index_html.contains("data-layout-kind=\"index\""), content="true")
+  inspect(index_html.contains("data-page-kind=\"index\""), content="true")
+  inspect(
+    index_html.contains(
+      "<header class=\"theme-header\" data-nav-count=\"2\">Theme V2 Basic</header>",
+    ),
+    content="true",
+  )
+  inspect(hello_html.contains("data-layout-kind=\"article\""), content="true")
+  inspect(about_html.contains("data-layout-kind=\"page\""), content="true")
+}
+
+///|
+test "runtime cli build emits theme vars css and declared slot injections" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/theme_v2_basic", "theme-v2-vars",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let vars_css = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/assets/theme-vars.css",
+  ) catch {
+    _ => panic()
+  }
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let hello_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/hello/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let about_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/about/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(vars_css.contains("--moonink-color-bg: #fff8e1;"), content="true")
+  inspect(vars_css.contains("--moonink-spacing-gap: 1.5rem;"), content="true")
+  inspect(
+    index_html.contains("href=\"/assets/theme-vars.css\""),
+    content="true",
+  )
+  inspect(
+    hello_html.contains("href=\"/assets/theme-vars.css\""),
+    content="true",
+  )
+  inspect(
+    about_html.contains("href=\"/assets/theme-vars.css\""),
+    content="true",
+  )
+  inspect(index_html.contains("data-analytics=\"plausible\""), content="true")
+  inspect(index_html.contains("src=\"/assets/site-init.js\""), content="true")
+  inspect(index_html.contains("moonink-default.css"), content="false")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/assets/site-init.js"),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli build uses configured theme directory" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/theme_v2_basic", "theme-v2-config-selector",
+  )
+  @runtime.io_copy_dir_recursive(
+    fixture_root + "/theme",
+    fixture_root + "/alt-theme",
+  ) catch {
+    _ => panic()
+  }
+  @runtime.io_remove_dir_all(fixture_root + "/theme") catch {
+    _ => panic()
+  }
+  let config_json =
+    #|{
+    #|  "site_name": "Theme V2 Basic",
+    #|  "theme": "alt-theme",
+    #|  "theme_config": {
+    #|    "color": {
+    #|      "bg": "#fff8e1"
+    #|    },
+    #|    "slots": {
+    #|      "head": "<meta data-analytics=\"plausible\">",
+    #|      "scripts": "<script src=\"/assets/site-init.js\"></script>"
+    #|    }
+    #|  }
+    #|}
+  @runtime.io_write_string(fixture_root + "/moonink.json", config_json) catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(index_html.contains("data-theme-v2=\"basic\""), content="true")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/assets/site-init.js"),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli check reports theme v2 missing partial" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/theme_v2_invalid_missing_partial", "theme-v2-check-fail",
+  )
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("theme/template"), content="true")
+  inspect(
+    outcome.message.contains("Failed to load active theme bundle"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("MissingPartial(name=\"header\")"),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli check reports illegal page override field" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/theme_v2_page_overrides", "theme-v2-override-check",
+  )
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("theme/template"), content="true")
+  inspect(
+    outcome.message.contains("unsupported page override `banner`"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("Allowed page overrides: layout, summary"),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli check reports invalid configured theme path" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "check-invalid-theme-path",
+  )
+  let config_json =
+    #|{"site_name": "Fixture Site", "theme": "../bad-theme"}
+  @runtime.io_write_string(fixture_root + "/moonink.json", config_json) catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("[check] theme/template"), content="true")
+  inspect(
+    outcome.message.contains("Failed to resolve active theme path"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("parent traversal is not allowed"),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli check ignores theme files under configured content dir" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/theme_v2_basic", "check-content-dir-theme-ignore",
+  )
+  @runtime.io_ensure_dir(fixture_root + "/docs") catch {
+    _ => panic()
+  }
+  @runtime.io_copy_file(
+    fixture_root + "/index.md",
+    fixture_root + "/docs/index.md",
+  ) catch {
+    _ => panic()
+  }
+  @runtime.io_copy_file(
+    fixture_root + "/hello.md",
+    fixture_root + "/docs/hello.md",
+  ) catch {
+    _ => panic()
+  }
+  @runtime.io_copy_file(
+    fixture_root + "/about.html",
+    fixture_root + "/docs/about.html",
+  ) catch {
+    _ => panic()
+  }
+  @runtime.io_copy_dir_recursive(
+    fixture_root + "/theme",
+    fixture_root + "/docs/theme",
+  ) catch {
+    _ => panic()
+  }
+  @runtime.io_write_string(
+    fixture_root + "/docs/layout.html",
+    "<html data-template=\"content-dir\"></html>",
+  ) catch {
+    _ => panic()
+  }
+  let config_json =
+    #|{
+    #|  "site_name": "Theme V2 Basic",
+    #|  "content_dir": "docs",
+    #|  "theme": "docs/theme",
+    #|  "template_file": "docs/layout.html"
+    #|}
+  @runtime.io_write_string(fixture_root + "/moonink.json", config_json) catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(outcome.message.contains("processed: 3"), content="true")
+  inspect(outcome.message.contains("diagnostics: 0"), content="true")
+}
+
+///|
+test "runtime cli check reports missing theme v2 layout for page kind" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/theme_v2_basic", "theme-v2-missing-kind-layout-check",
+  )
+  let manifest =
+    #|{
+    #|  "name": "fixture-v2",
+    #|  "layouts": {
+    #|    "index": "layouts/index.html",
+    #|    "page": "layouts/page.html"
+    #|  }
+    #|}
+  @runtime.io_write_string(fixture_root + "/theme/theme.json", manifest) catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("theme/template"), content="true")
+  inspect(
+    outcome.message.contains("missing theme layout `article`"),
+    content="true",
+  )
+  inspect(outcome.message.contains("[hello.md]"), content="true")
+}
+
+///|
+test "runtime cli check reports missing theme v2 layout for layout override" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/theme_v2_page_overrides", "theme-v2-missing-override-layout-check",
+  )
+  let index_source =
+    #|---
+    #|title: Home
+    #|type: page
+    #|layout: landing
+    #|theme_summary: Quick intro
+    #|---
+    #|
+    #|# Home
+  @runtime.io_write_string(fixture_root + "/index.md", index_source) catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("theme/template"), content="true")
+  inspect(
+    outcome.message.contains("missing theme layout `landing`"),
+    content="true",
+  )
+  inspect(outcome.message.contains("[index.md]"), content="true")
+}
+
+///|
+test "runtime cli build exposes theme v2 section collection" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/theme_v2_basic", "theme-v2-section-collection",
+  )
+  let index_layout =
+    #|<html data-theme-v2="basic" data-layout-kind="index" data-section-count="{{ collections.sections.count }}"><body>{% for item in collections.sections.items %}<span class="section-item">{{ item.title }}</span>{% endfor %}<main data-page-kind="{{ page.kind }}">{{ page.body_html }}</main></body></html>
+  @runtime.io_write_string(
+    fixture_root + "/theme/layouts/index.html",
+    index_layout,
+  ) catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(index_html.contains("data-section-count=\"1\""), content="true")
+  inspect(
+    index_html.contains("<span class=\"section-item\">Home</span>"),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli build keeps output when theme v2 preflight fails" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/theme_v2_basic", "theme-v2-preflight-build-failure",
+  )
+  let stale_path = fixture_root + "/dist/stale.txt"
+  @runtime.io_ensure_dir(fixture_root + "/dist") catch {
+    _ => panic()
+  }
+  @runtime.io_write_string(stale_path, "stale") catch {
+    _ => panic()
+  }
+  let manifest =
+    #|{
+    #|  "name": "fixture-v2",
+    #|  "layouts": {
+    #|    "index": "layouts/index.html",
+    #|    "page": "layouts/page.html"
+    #|  }
+    #|}
+  @runtime.io_write_string(fixture_root + "/theme/theme.json", manifest) catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(
+    outcome.message.contains("missing theme layout `article`"),
+    content="true",
+  )
+  inspect(@runtime.io_path_exists(stale_path), content="true")
+}
+
+///|
+test "runtime cli check skips layout lookup for unsupported layout override" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/theme_v2_page_overrides", "theme-v2-override-parity-check",
+  )
+  let manifest =
+    #|{
+    #|  "name": "fixture-v2-overrides",
+    #|  "layouts": {
+    #|    "index": "layouts/index.html",
+    #|    "page": "layouts/index.html",
+    #|    "article": "layouts/index.html"
+    #|  },
+    #|  "page_overrides": ["summary"]
+    #|}
+  @runtime.io_write_string(fixture_root + "/theme/theme.json", manifest) catch {
+    _ => panic()
+  }
+  let index_source =
+    #|---
+    #|title: Home
+    #|type: page
+    #|layout: landing
+    #|theme_summary: Quick intro
+    #|---
+    #|
+    #|# Home
+  @runtime.io_write_string(fixture_root + "/index.md", index_source) catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(
+    outcome.message.contains("unsupported page override `layout`"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("missing theme layout `landing`"),
+    content="false",
+  )
 }
 
 ///|

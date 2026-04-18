@@ -6,9 +6,9 @@ This document is a maintained global architecture note for the MoonInk CLI.
 It must be updated whenever the CLI surface, execution flow, or structural
 package boundaries change materially.
 
-**Last updated:** 2026-04-14 — reflects the current `help` / `onboard` / `build` /
-`check` / `serve` surface, the real build pipeline, and the split between the main
-workspace dry-run preview path and the standalone native preview entrypoint.
+**Last updated:** 2026-04-18 — reflects the current `help` / `onboard` /
+`build` / `check` / `serve` surface, Theme System V2 bundle rendering,
+compatibility fallback rules, and the current build-time theme context contract.
 
 ## Current CLI Surface
 
@@ -23,24 +23,27 @@ workspace dry-run preview path and the standalone native preview entrypoint.
 
 ## Current Package Structure
 
-```
+```text
 src/
   core/       — pure types and logic; zero external deps
-  docflow/    — document pipeline adapters and backends
+  docflow/    — document pipeline adapters and theme template engine
   runtime/    — filesystem IO boundary; wraps moonbitlang/x/fs
   cli/        — command dispatch and user-facing execution
   cmd/main/   — binary entry point
 ```
 
-Dependency graph:
+Dependency flow:
 
-```
-cmd/main → cli → core
-                 runtime → core
-                 docflow → core
+```text
+cmd/main -> cli
+cli -> runtime
+cli -> docflow
+cli -> core
+runtime -> core
+docflow -> core
 ```
 
-The current CLI implementation keeps parsing and dispatch in `src/cli/moonink.mbt`.
+`src/cli/moonink.mbt` still owns command parsing and dispatch.
 `cli_run()` remains the pure test path, while `cli_exec()` routes side-effecting
 commands through the runtime boundary.
 
@@ -85,27 +88,34 @@ Current real behavior:
 1. Reads `moonink.json` via `runtime/config_loader.mbt`.
 2. Discovers content via `runtime/content_discovery.mbt` using recursive scan + exclude rules.
 3. Loads build inputs with parsed frontmatter metadata and classified content kind.
-4. Fully clears `output_dir` before rebuilding.
-5. Copies project-root `public/` assets into the output root.
-6. Resolves the active layout source with this precedence:
-   - `theme/layout.html` if present in the project;
-   - configured `template_file` if present in config;
-   - repository-owned built-in default theme otherwise.
-7. Copies theme assets into `dist/assets/` when the active layout exposes an asset directory.
-8. Builds the site assembly model from discovered pages and navigation metadata.
-9. Builds a route-aware WikiLinker index and a markdown-wikilink backlink index.
-10. Parses each source document through DocFlow adapters.
-11. Applies WikiLink rewriting and collects rendered HTML.
-12. Injects template context including:
-    - site/page metadata;
-    - `navigation_html`;
-    - section context (`current_section_title`, `current_section_url`);
-    - page header fields (`page_header_title`, `page_header_html`);
-    - `backlinks_html`;
-    - theme metadata (`theme_name`, `theme_asset_root`, `page_body_class`);
-    - rendered `body_html`.
-13. Emits HTML files using `core.output_html_path(...)`, respecting configured `route_style` (`pretty` or `direct`).
-14. Reports processed source counts plus page/article breakdown.
+4. Resolves the active presentation path with this precedence:
+   - configured project Theme V2 bundle at `<theme>/theme.json` when `moonink.json.theme` is set, otherwise `theme/theme.json`;
+   - configured project legacy `<theme>/layout.html` when `moonink.json.theme` is set, otherwise `theme/layout.html`, if no project bundle exists;
+   - configured `template_file` if no project bundle or legacy project layout exists;
+   - repository-owned built-in Theme V2 bundle otherwise.
+5. For Theme V2 builds, validates every page against the manifest contract before output cleanup:
+   - the selected layout key must exist;
+   - page overrides must be allowlisted by `page_overrides`.
+6. Fully clears `output_dir` before rebuilding.
+7. Copies project-root `public/` assets into the output root.
+8. Copies active theme assets into `dist/assets/`.
+9. For Theme V2 builds, emits `dist/assets/theme-vars.css` from declared manifest tokens plus `theme_config` overrides.
+10. Builds the site assembly model from discovered pages and navigation metadata.
+11. Builds a route-aware WikiLinker index and a markdown-wikilink backlink index.
+12. Parses each source document through DocFlow adapters.
+13. Applies WikiLink rewriting and collects rendered HTML.
+14. For Theme V2 builds, computes the selected layout key as:
+    - `layout` frontmatter override when present;
+    - otherwise page kind `index`, `page`, or `article`.
+15. For Theme V2 builds, assembles a structured render context with:
+    - `site` metadata including `theme_name`, `theme_asset_root`, and full `theme_config`;
+    - `page` metadata including kind, layout key, section context, rendered body, and page-level theme metadata;
+    - `collections.nav`, `collections.pages`, `collections.backlinks`, and `collections.sections`;
+    - built-in and manifest-declared `slots`.
+16. Renders Theme V2 templates through `docflow.render_theme_template(...)`, including `{% if %}`, `{% for %}`, and partial includes.
+17. Emits HTML files using `core.output_html_path(...)`, respecting configured `route_style` (`pretty` or `direct`).
+18. Emits `dist/search-index.json` as part of the standard build artifact set.
+19. Reports processed source counts plus page/article breakdown.
 
 Current build pipeline:
 
@@ -113,15 +123,17 @@ Current build pipeline:
 Config load
   -> Content discovery (recursive scan + exclude)
   -> Build input load (frontmatter parse + article/page classification)
+  -> Active theme resolution (Theme V2 bundle or legacy layout path)
+  -> Theme preflight validation
   -> Output cleanup
   -> Public asset copy
-  -> Active theme/layout resolution
   -> Theme asset copy
+  -> Theme token CSS emission
   -> Site assembly (pages + navigation)
   -> WikiLink index + backlink index
   -> DocFlow: ParserAdapter -> WikiLinker -> RenderAdapter
-  -> TemplateContext assembly
-  -> emit to dist/
+  -> Theme render context assembly
+  -> HTML + search-index emission
 ```
 
 ### check
@@ -133,24 +145,24 @@ Current behavior:
 
 1. Reads config and discovers content.
 2. Loads build inputs.
-3. Builds the WikiLink target index.
-4. Aggregates non-emitting diagnostics into grouped categories:
+3. Resolves the active theme path using the same Theme V2 vs legacy precedence as `build`.
+4. Builds the WikiLink target index.
+5. Aggregates non-emitting diagnostics into grouped categories:
    - `theme/template`
    - `frontmatter`
    - `routes`
    - `document`
-5. Applies blocking validation for:
-   - active theme/template resolution failures;
+6. Applies blocking validation for:
+   - active theme bundle or legacy layout resolution failures;
+   - missing Theme V2 layouts for required page kinds or layout overrides;
+   - unsupported Theme V2 page override fields;
    - obvious frontmatter type mismatches, including invalid boolean-like `draft` values;
    - final emitted output path conflicts.
-6. Parses each document through format-appropriate parser adapters.
-7. Applies WikiLink resolution and records unresolved/ambiguous WikiLink diagnostics as warning-only document diagnostics.
-8. Reports processed counts plus grouped error/warning summaries.
-9. Returns exit code `0` when only warnings or no diagnostics are present, and `1` when blocking errors are present.
-10. Does not clear `dist/`, write HTML, or copy assets.
-
-This makes `check` the non-emitting validation pass for build-affecting
-configuration/content issues while keeping WikiLink quality issues as warnings.
+7. Parses each document through format-appropriate parser adapters.
+8. Applies WikiLink resolution and records unresolved or ambiguous WikiLink diagnostics as warning-only document diagnostics.
+9. Reports processed counts plus grouped error/warning summaries.
+10. Returns exit code `0` when only warnings or no diagnostics are present, and `1` when blocking errors are present.
+11. Does not clear `dist/`, write HTML, or copy assets.
 
 ### serve
 
@@ -171,8 +183,6 @@ Behavior split:
 - The native mocket preview runner is delegated through the runtime boundary.
 - The standalone real preview server lives in the separate `native-serve/` subproject, which is launched independently from the main MoonInk workspace.
 
-So `serve` is best described as **build-plus-preview orchestration with delegated native serving**, not as a stub and not as an all-in-one in-workspace server.
-
 ## Content Model
 
 Dual-track classification (no separate directories required):
@@ -182,6 +192,13 @@ Dual-track classification (no separate directories required):
 | `.html` | Page |
 | `.md` with `type: page` in frontmatter | Page |
 | other `.md` | Article |
+
+Theme V2 additionally derives a page-kind layout key:
+
+- section/index content -> `index`
+- non-index pages -> `page`
+- articles -> `article`
+- explicit frontmatter `layout` overrides the derived key
 
 Default exclude patterns: `.obsidian`, `.git`, `node_modules`, `dist`, any hidden directory.
 
@@ -198,12 +215,38 @@ Key fields currently exercised by the CLI include:
 - `exclude`
 - `route_style` (`"pretty"` or `"direct"`)
 - `template_file`
+- `theme`
+  - selects the project-local theme directory name used for Theme V2 bundles or legacy theme layouts; defaults to `theme`
+- `theme_config`
 
-Theme/layout precedence is resolved at runtime rather than in config parsing:
+`theme_config` is preserved as nested `ThemeConfigValue` data rather than flattened at parse time.
+Flattening only happens later for Theme V2 token emission.
 
-1. project `theme/layout.html`
-2. configured `template_file`
-3. built-in default theme
+## Theme V2 Contract
+
+Theme V2 bundles are project-local manifests rooted at `<theme>/theme.json`, where `<theme>` comes from `moonink.json.theme` or defaults to `theme`.
+The manifest currently supports:
+
+- `name`
+- `layouts`
+- `tokens`
+- `page_overrides`
+- `slots`
+
+Runtime loader guarantees:
+
+- layout sources are loaded eagerly from the manifest map
+- missing partial references fail during bundle load
+- invalid token names fail during manifest parse
+- duplicate token names are rejected
+- the built-in Theme V2 bundle under `src/runtime/builtin_theme/` is the default build/check fallback
+
+Legacy compatibility guarantees:
+
+- configured project `<theme>/layout.html` still wins over `template_file` when no Theme V2 bundle exists
+- `template_file` still works without a Theme V2 bundle
+- the old built-in layout loader remains available for the legacy layout API
+- build/check now prefer the built-in Theme V2 bundle when no project bundle or legacy override path exists
 
 ## Runtime IO Direction
 
@@ -211,50 +254,53 @@ Theme/layout precedence is resolved at runtime rather than in config parsing:
 - `runtime/async.mbt` — `RuntimeIOTask[T]` wrapper (currently synchronous `Ready(T)`)
 - `runtime/native.mbt` — default native runtime adapter for CLI-side side effects
 - `runtime/policy.mbt` — conflict and cancellation policy types
-- `runtime/config_loader.mbt` — config loading and active layout resolution
+- `runtime/config_loader.mbt` — config loading and legacy active-layout resolution
+- `runtime/theme_loader.mbt` — Theme V2 bundle loading, token flattening, slot extraction, and built-in bundle fallback
 - `runtime/content_discovery.mbt` — recursive content discovery / inventory creation
 - preview launch helpers — runtime boundary for dry-run vs native preview execution
 
 Feature modules in `core` and `docflow` expose result-oriented APIs and remain IO-free.
 Only `runtime` and `cli` touch the filesystem.
 
-## Current Build/Template Responsibilities
+## Current Build And Template Responsibilities
 
 The CLI build layer currently owns several presentation-adjacent integration steps
 that are intentionally kept above `docflow` and `core`:
 
-- derive `SitePage` records from build inputs;
-- assemble navigation from page-only structure plus `nav_title` / `nav_hidden` metadata;
-- derive section context for the current page;
-- build page-header HTML;
-- compute backlinks from markdown wikilink sources;
-- construct template context and hand it to `docflow.apply_template(...)`;
-- decide output paths from `route_style`.
+- derive `SitePage` records from build inputs
+- assemble navigation from page-only structure plus `nav_title` / `nav_hidden` metadata
+- derive section context for the current page
+- build page-header HTML and backlink HTML helpers
+- compute backlinks from markdown wikilink sources
+- validate Theme V2 layout coverage and override allowlists
+- merge theme tokens and emit CSS custom properties
+- construct Theme V2 render context and hand it to `docflow.render_theme_template(...)`
+- decide output paths from `route_style`
 
-This keeps `docflow` focused on parser/render adapter behavior while leaving site-wide
-assembly and theme-facing context composition in the CLI build layer.
+This keeps `docflow` focused on parser/render adapter behavior plus generic theme-template rendering while leaving site-wide assembly and theme-contract decisions in the CLI build layer.
 
 ## Structural Constraints
 
-- keep `cmd/main` thin (argv normalization only);
-- keep `cli_run()` pure for testability;
-- `core` must remain dependency-free (no `x/fs`, no `markdown`);
-- preserve explicit stage boundaries: config → discovery → parse → render → template → emit;
-- keep filesystem access inside `runtime` / CLI runtime entrypoints;
-- prefer integrating new site-generation behavior into the existing build pipeline rather than introducing parallel pipelines.
+- keep `cmd/main` thin (argv normalization only)
+- keep `cli_run()` pure for testability
+- `core` must remain dependency-free (no `x/fs`, no `markdown`)
+- preserve explicit stage boundaries: config -> discovery -> parse -> render -> template -> emit
+- keep filesystem access inside `runtime` / CLI runtime entrypoints
+- prefer integrating new site-generation behavior into the existing build pipeline rather than introducing parallel pipelines
 
 ## Known Gaps
 
-- no structured option parser yet (flags and options are not parsed);
-- `serve` in the main workspace validates preview launch and reports readiness, but the real long-running preview server still lives in `native-serve/` rather than the main workspace binary;
-- backlinks are currently exposed as pre-rendered `backlinks_html` rather than a richer structured template model;
-- custom project themes must explicitly render supported context fields themselves; built-in-theme behavior is not automatically inherited;
-- backlink coverage is currently explicit for pretty-route output, while direct-route-specific backlink assertions are still a follow-up.
+- no structured option parser yet (flags and options are not parsed)
+- `serve` in the main workspace validates preview launch and reports readiness, but the real long-running preview server still lives in `native-serve/` rather than the main workspace binary
+- Theme V2 bundles are currently project-local only; there is no inheritance or layering implementation yet
+- partial loading currently scans the `partials/` directory non-recursively
+- tokens only emit scalar string/number/bool values to CSS custom properties
+- backlink presentation is still partly exposed as pre-rendered HTML helpers in addition to the richer collection model
 
 ## Next Planned Evolution
 
-1. add structured command flags (for example `--config`, `--output`, or serve host/port overrides);
-2. decide whether theme/template documentation should formally freeze the full current template contract, including `backlinks_html`;
-3. extend backlink coverage and/or evolve backlinks from pre-rendered HTML into a richer structured model if the presentation requirements grow;
-4. decide whether the main workspace `serve` command should remain delegated orchestration or absorb more of the native preview lifecycle over time;
-5. continue strengthening `check` as the non-emitting validation path for config/content diagnostics.
+1. decide whether Theme V2 should grow layered or inheritable bundle composition without breaking the current project-local contract
+2. formalize theme-author documentation for the structured `site` / `page` / `collections` / `slots` contract
+3. decide whether recursive partial discovery is worth standardizing or whether flat partial sets are sufficient
+4. continue strengthening `check` as the non-emitting validation path for theme and content diagnostics
+5. add structured command flags such as `--config`, `--output`, or serve host/port overrides

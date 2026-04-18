@@ -62,6 +62,89 @@ fn relative_source_path(
 }
 
 ///|
+fn content_root_relative_helper_path(
+  config : @core.MooninkConfig,
+  helper_path : String,
+) -> String? {
+  let normalized = @core.normalize_relative_path(helper_path) catch {
+    _ => return None
+  }
+  if config.content_dir == "." {
+    return Some(normalized)
+  }
+  let content_dir = @core.normalize_relative_path(config.content_dir) catch {
+    _ => return None
+  }
+  if normalized == content_dir {
+    return Some(".")
+  }
+  let prefix = content_dir + "/"
+  if normalized.has_prefix(prefix) {
+    return Some(normalized[prefix.length():].to_string())
+  }
+  None
+}
+
+///|
+fn configured_theme_helper_path(config : @core.MooninkConfig) -> String? {
+  match config.theme {
+    Some(theme_dir) => content_root_relative_helper_path(config, theme_dir)
+    None => content_root_relative_helper_path(config, "theme")
+  }
+}
+
+///|
+fn configured_template_helper_path(config : @core.MooninkConfig) -> String? {
+  match config.template_file {
+    Some(template_file) =>
+      content_root_relative_helper_path(config, template_file)
+    None => None
+  }
+}
+
+///|
+fn is_helper_path(path : String, helper_root : String) -> Bool {
+  path == helper_root || path.has_prefix(helper_root + "/")
+}
+
+///|
+fn should_skip_root_helper_dir(
+  config : @core.MooninkConfig,
+  entry : String,
+) -> Bool {
+  if config.content_dir == "." && entry == "public" {
+    return true
+  }
+  match configured_theme_helper_path(config) {
+    Some(theme_root) if theme_root != "." && !theme_root.contains("/") =>
+      entry == theme_root
+    _ => false
+  }
+}
+
+///|
+fn should_skip_helper_source(
+  config : @core.MooninkConfig,
+  relative_path : String,
+) -> Bool {
+  let normalized = @core.normalize_relative_path(relative_path) catch {
+    _ => return false
+  }
+  if config.content_dir == "." && is_helper_path(normalized, "public") {
+    return true
+  }
+  match configured_theme_helper_path(config) {
+    Some(theme_root) if theme_root != "." &&
+      is_helper_path(normalized, theme_root) => return true
+    _ => ()
+  }
+  match configured_template_helper_path(config) {
+    Some(template_path) if normalized == template_path => true
+    _ => false
+  }
+}
+
+///|
 pub fn load_build_inputs_result(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
@@ -73,6 +156,9 @@ pub fn load_build_inputs_result(
     }
     let relative_path = relative_source_path(inventory.root, file.path) catch {
       err => return Err(err)
+    }
+    if should_skip_helper_source(config, relative_path) {
+      continue
     }
     let (frontmatter, body) = match file.format {
       @core.SourceFormat::Markdown =>
@@ -115,6 +201,7 @@ pub fn load_build_inputs_task(
 fn collect_content_files(
   root : String,
   exclude : Array[String],
+  skip_dir : (String) -> Bool,
 ) -> Array[@core.ContentFile] raise @core.ContentDiscoveryError {
   if !io_path_exists(root) {
     raise @core.ContentDiscoveryError::MissingDirectory(root)
@@ -127,7 +214,7 @@ fn collect_content_files(
   let entries = io_read_dir(root) catch { err => raise io_discovery_error(err) }
   for entry in entries {
     // Skip excluded directories
-    if @core.should_exclude(entry, exclude) {
+    if @core.should_exclude(entry, exclude) || skip_dir(entry) {
       continue
     }
     let full_path = join_content_path(root, entry)
@@ -135,7 +222,7 @@ fn collect_content_files(
       err => raise io_discovery_error(err)
     }
     if is_dir {
-      let nested = collect_content_files(full_path, exclude)
+      let nested = collect_content_files(full_path, exclude, skip_dir)
       for file in nested {
         discovered.push(file)
       }
@@ -187,8 +274,20 @@ pub fn discover_content_result(
   if exclude.search_by(e => e == config.output_dir) is None {
     exclude.push(config.output_dir)
   }
-  let files = collect_content_files(content_root, exclude) catch {
+  let discovered = collect_content_files(content_root, exclude, fn(entry) {
+    should_skip_root_helper_dir(config, entry)
+  }) catch {
     err => return Err(err)
+  }
+  let files : Array[@core.ContentFile] = []
+  for file in discovered {
+    let relative_path = relative_source_path(content_root, file.path) catch {
+      err => return Err(err)
+    }
+    if should_skip_helper_source(config, relative_path) {
+      continue
+    }
+    files.push(file)
   }
   let mut total_articles = 0
   let mut total_pages = 0

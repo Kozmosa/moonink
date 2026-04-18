@@ -211,45 +211,43 @@ pub fn extract_json_object(
 fn extract_theme_config(
   obj : Map[String, Json],
 ) -> Map[String, ThemeConfigValue] raise ConfigError {
-  match obj.get("theme_config") {
-    None => {}
-    Some(Object(value)) =>
-      parse_theme_config_object(value) catch {
-        err => raise err
+  match extract_json_object(obj, "theme_config") {
+    Some(value) => parse_theme_config_object(value)
+    None =>
+      match obj.get("theme_config") {
+        None => {}
+        Some(_) =>
+          raise ConfigError::InvalidField(
+            key="theme_config",
+            detail="must be a JSON object",
+          )
       }
-    Some(_) =>
-      raise ConfigError::InvalidField(
-        key="theme_config",
-        detail="must be a JSON object",
-      )
   }
 }
 
 ///|
 fn parse_theme_config_object(
   obj : Map[String, Json],
-) -> Map[String, ThemeConfigValue] raise ConfigError {
+) -> Map[String, ThemeConfigValue] {
   let result : Map[String, ThemeConfigValue] = {}
   for entry in obj {
     let (key, value) = entry
-    result[key] = parse_theme_config_value(value) catch { err => raise err }
+    result[key] = theme_config_value_from_json(value)
   }
   result
 }
 
 ///|
-fn parse_theme_config_array(
-  values : Array[Json],
-) -> Array[ThemeConfigValue] raise ConfigError {
+fn parse_theme_config_array(values : Array[Json]) -> Array[ThemeConfigValue] {
   let result : Array[ThemeConfigValue] = []
   for value in values {
-    result.push(parse_theme_config_value(value) catch { err => raise err })
+    result.push(theme_config_value_from_json(value))
   }
   result
 }
 
 ///|
-fn parse_theme_config_value(value : Json) -> ThemeConfigValue raise ConfigError {
+pub fn theme_config_value_from_json(value : Json) -> ThemeConfigValue {
   match value {
     Null => ThemeConfigValue::NullValue
     True => ThemeConfigValue::BoolValue(true)
@@ -263,17 +261,8 @@ fn parse_theme_config_value(value : Json) -> ThemeConfigValue raise ConfigError 
       )
     String(text) => ThemeConfigValue::StringValue(text)
     Array(values) =>
-      ThemeConfigValue::ArrayValue(
-        parse_theme_config_array(values) catch {
-          err => raise err
-        },
-      )
-    Object(obj) =>
-      ThemeConfigValue::ObjectValue(
-        parse_theme_config_object(obj) catch {
-          err => raise err
-        },
-      )
+      ThemeConfigValue::ArrayValue(parse_theme_config_array(values))
+    Object(obj) => ThemeConfigValue::ObjectValue(parse_theme_config_object(obj))
   }
 }
 

@@ -7,7 +7,11 @@ import {
 }
 
 // Values
+pub fn built_in_default_theme_root() -> String
+
 pub fn current_utc_iso8601_second() -> String
+
+pub fn declared_slot_values(Array[String], Map[String, @core.ThemeConfigValue]) -> Map[String, String]
 
 pub fn default_runtime_task_policy() -> RuntimeTaskPolicy
 
@@ -16,6 +20,8 @@ pub fn discover_content_result(@core.MooninkConfig) -> Result[@core.ContentInven
 pub fn discover_content_task(@core.MooninkConfig) -> RuntimeIOTask[Result[@core.ContentInventory, @core.ContentDiscoveryError]]
 
 pub fn dry_run_preview_runner() -> PreviewRunner
+
+pub fn flatten_theme_config_values(Map[String, @core.ThemeConfigValue]) -> Map[String, String]
 
 pub fn io_copy_dir_recursive(String, String) -> Unit raise @core.ProjectIOError
 
@@ -58,6 +64,8 @@ pub fn load_config_result(String) -> Result[@core.MooninkConfig, @core.ConfigErr
 pub fn load_config_task(String) -> RuntimeIOTask[Result[@core.MooninkConfig, @core.ConfigError]]
 
 pub fn load_template_source_result(@core.MooninkConfig) -> Result[String?, @core.ConfigError]
+
+pub fn merge_theme_tokens(Array[@core.ThemeTokenDeclaration], Map[String, @core.ThemeConfigValue]) -> Map[String, String]
 
 pub fn native_mocket_preview_runner() -> PreviewRunner
 

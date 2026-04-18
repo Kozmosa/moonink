@@ -96,35 +96,19 @@ fn theme_meta_key(key : String) -> String? {
 }
 
 ///|
-fn theme_meta_from_json(value : Json) -> ThemeConfigValue {
-  match value {
-    Null => ThemeConfigValue::NullValue
-    True => ThemeConfigValue::BoolValue(true)
-    False => ThemeConfigValue::BoolValue(false)
-    Number(_, repr~) =>
-      ThemeConfigValue::NumberValue(
-        match repr {
-          Some(repr) => repr
-          None => value.stringify()
-        },
-      )
-    String(text) => ThemeConfigValue::StringValue(text)
-    Array(values) => {
-      let items : Array[ThemeConfigValue] = []
-      for entry in values {
-        items.push(theme_meta_from_json(entry))
-      }
-      ThemeConfigValue::ArrayValue(items)
-    }
-    Object(entries) => {
-      let items : Map[String, ThemeConfigValue] = {}
-      for entry in entries {
-        let (key, item) = entry
-        items[key] = theme_meta_from_json(item)
-      }
-      ThemeConfigValue::ObjectValue(items)
-    }
+fn looks_like_theme_meta_json(value : String) -> Bool {
+  if value == "null" || value == "true" || value == "false" {
+    return true
   }
+  if value.is_empty() {
+    return false
+  }
+  let first = value[0:1].to_string()
+  first == "\"" ||
+  first == "[" ||
+  first == "{" ||
+  first == "-" ||
+  (first >= "0" && first <= "9")
 }
 
 ///|
@@ -133,13 +117,13 @@ fn theme_meta_value(
   fallback_value : String,
 ) -> ThemeConfigValue {
   let normalized = raw_value.trim().to_string()
-  if normalized.is_empty() {
+  if normalized.is_empty() || !looks_like_theme_meta_json(normalized) {
     return ThemeConfigValue::StringValue(fallback_value)
   }
   let value = @json.parse(normalized.view()) catch {
     _ => return ThemeConfigValue::StringValue(fallback_value)
   }
-  theme_meta_from_json(value)
+  theme_config_value_from_json(value)
 }
 
 ///|

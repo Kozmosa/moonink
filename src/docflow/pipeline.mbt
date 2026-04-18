@@ -187,13 +187,17 @@ fn theme_root_value(
   context : ThemeRenderContext,
   root : String,
 ) -> @core.ThemeConfigValue? {
-  match root {
-    "site" => Some(@core.ThemeConfigValue::ObjectValue(context.site))
-    "page" => Some(@core.ThemeConfigValue::ObjectValue(context.page))
-    "collections" =>
-      Some(@core.ThemeConfigValue::ObjectValue(context.collections))
-    "slots" => Some(@core.ThemeConfigValue::ObjectValue(context.slots))
-    _ => context.locals.get(root)
+  match context.locals.get(root) {
+    Some(value) => Some(value)
+    None =>
+      match root {
+        "site" => Some(@core.ThemeConfigValue::ObjectValue(context.site))
+        "page" => Some(@core.ThemeConfigValue::ObjectValue(context.page))
+        "collections" =>
+          Some(@core.ThemeConfigValue::ObjectValue(context.collections))
+        "slots" => Some(@core.ThemeConfigValue::ObjectValue(context.slots))
+        _ => None
+      }
   }
 }
 
@@ -409,10 +413,7 @@ fn render_template_includes(
                 let next_stack = copy_string_array(include_stack)
                 next_stack.push(name)
                 render_theme_template_with_stack(
-                  partial,
-                  context,
-                  partials,
-                  next_stack,
+                  partial, context, partials, next_stack,
                 )
               }
               output = output + rendered
@@ -462,10 +463,7 @@ fn render_template_conditionals(
                 let rendered = match lookup_theme_value(context, condition) {
                   Some(value) if theme_value_is_truthy(value) =>
                     render_theme_template_with_stack(
-                      body,
-                      context,
-                      partials,
-                      include_stack,
+                      body, context, partials, include_stack,
                     )
                   _ => ""
                 }
@@ -571,10 +569,7 @@ fn render_template_loops(
                         )
                         parts.push(
                           render_theme_template_with_stack(
-                            body,
-                            local_context,
-                            partials,
-                            include_stack,
+                            body, local_context, partials, include_stack,
                           ),
                         )
                       }
@@ -616,18 +611,14 @@ fn render_theme_template_with_stack(
   partials : Map[String, String],
   include_stack : Array[String],
 ) -> String {
-  let with_loops = render_template_loops(template, context, partials, include_stack)
+  let with_loops = render_template_loops(
+    template, context, partials, include_stack,
+  )
   let with_conditionals = render_template_conditionals(
-    with_loops,
-    context,
-    partials,
-    include_stack,
+    with_loops, context, partials, include_stack,
   )
   let with_includes = render_template_includes(
-    with_conditionals,
-    context,
-    partials,
-    include_stack,
+    with_conditionals, context, partials, include_stack,
   )
   render_template_paths(with_includes, context)
 }

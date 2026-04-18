@@ -59,8 +59,21 @@ fn theme_child_path(
   base : String,
   child : String,
 ) -> String raise ThemeLoadError {
-  @core.join_relative_path(base, child) catch {
+  let normalized_child = @core.normalize_relative_path(child) catch {
     err => raise theme_path_error(child, err)
+  }
+  if base == "/" {
+    "/" + normalized_child
+  } else if base.has_prefix("/") {
+    if base.has_suffix("/") {
+      base + normalized_child
+    } else {
+      base + "/" + normalized_child
+    }
+  } else {
+    @core.join_relative_path(base, normalized_child) catch {
+      err => raise theme_path_error(child, err)
+    }
   }
 }
 
@@ -129,6 +142,59 @@ fn partial_name_from_path(path : String) -> String {
 }
 
 ///|
+fn trim_template_tag_name(name : String) -> String {
+  name.trim().to_string()
+}
+
+///|
+fn find_template_tag_close(template : String, start : Int) -> Int? {
+  if start < 0 || start + 1 >= template.length() {
+    return None
+  }
+  for i in start..<(template.length() - 1) {
+    let pair = template[i:i + 2].to_string()
+    if pair == "%}" {
+      return Some(i)
+    }
+  }
+  None
+}
+
+///|
+fn parse_include_name(tag : String) -> String? {
+  if !tag.has_prefix("include ") {
+    return None
+  }
+  let name = tag[8:].to_string().trim().to_string()
+  if name.length() >= 2 &&
+    name[0:1].to_string() == "\"" &&
+    name[name.length() - 1:name.length()].to_string() == "\"" {
+    Some(name[1:name.length() - 1].to_string())
+  } else {
+    None
+  }
+}
+
+///|
+fn copy_string_array(source : Array[String]) -> Array[String] {
+  let copied : Array[String] = []
+  for entry in source {
+    copied.push(entry)
+  }
+  copied
+}
+
+///|
+fn string_array_contains(source : Array[String], target : String) -> Bool {
+  for entry in source {
+    if entry == target {
+      return true
+    }
+  }
+  false
+}
+
+///|
 fn load_theme_partial_map(
   theme_root : String,
 ) -> Result[Map[String, String], ThemeLoadError] {
@@ -156,46 +222,176 @@ fn load_theme_partial_map(
 }
 
 ///|
-fn validate_theme_partial_references(
-  layouts : Map[String, String],
+fn validate_theme_partial_references_in_source(
+  source : String,
   partials : Map[String, String],
+  stack : Array[String],
 ) -> Result[Unit, ThemeLoadError] {
-  let marker = "{% include \""
-  for entry in layouts {
-    let (_, source) = entry
-    let mut cursor = 0
-    while cursor + marker.length() <= source.length() {
-      let maybe_marker = source[cursor:cursor + marker.length()].to_string()
-      if maybe_marker != marker {
-        cursor = cursor + 1
-        continue
-      }
-      let name_start = cursor + marker.length()
-      let mut name_end = name_start
-      while name_end < source.length() &&
-            source[name_end:name_end + 1].to_string() != "\"" {
-        name_end = name_end + 1
-      }
-      if name_end >= source.length() {
-        cursor = source.length()
-      } else {
-        let partial_name = source[name_start:name_end].to_string()
-        if partials.get(partial_name) is None {
-          return Err(ThemeLoadError::MissingPartial(name=partial_name))
+  let mut cursor = 0
+  while cursor < source.length() {
+    if cursor + 1 < source.length() &&
+      source[cursor:cursor + 2].to_string() == "{%" {
+      match find_template_tag_close(source, cursor + 2) {
+        Some(close) => {
+          let tag = trim_template_tag_name(source[cursor + 2:close].to_string())
+          match parse_include_name(tag) {
+            Some(name) => {
+              if partials.get(name) is None {
+                return Err(ThemeLoadError::MissingPartial(name~))
+              }
+              if !string_array_contains(stack, name) {
+                let next_stack = copy_string_array(stack)
+                next_stack.push(name)
+                match partials.get(name) {
+                  Some(partial_source) =>
+                    match
+                      validate_theme_partial_references_in_source(
+                        partial_source, partials, next_stack,
+                      ) {
+                      Ok(_) => ()
+                      Err(err) => return Err(err)
+                    }
+                  None => ()
+                }
+              }
+            }
+            None => ()
+          }
+          cursor = close + 2
         }
-        cursor = name_end + 1
+        None => return Ok(())
       }
+    } else {
+      cursor = cursor + 1
     }
   }
   Ok(())
 }
 
 ///|
+fn validate_theme_partial_references(
+  layouts : Map[String, String],
+  partials : Map[String, String],
+) -> Result[Unit, ThemeLoadError] {
+  for entry in layouts {
+    let (_, source) = entry
+    match validate_theme_partial_references_in_source(source, partials, []) {
+      Ok(_) => ()
+      Err(err) => return Err(err)
+    }
+  }
+  Ok(())
+}
+
+///|
+fn theme_config_scalar_string(value : @core.ThemeConfigValue) -> String? {
+  match value {
+    @core.ThemeConfigValue::StringValue(text) => Some(text)
+    @core.ThemeConfigValue::NumberValue(number) => Some(number)
+    @core.ThemeConfigValue::BoolValue(flag) =>
+      Some(if flag { "true" } else { "false" })
+    _ => None
+  }
+}
+
+///|
+fn theme_config_path(prefix : String, key : String) -> String {
+  if prefix.is_empty() {
+    key
+  } else {
+    prefix + "." + key
+  }
+}
+
+///|
+fn flatten_theme_config_entries(
+  prefix : String,
+  source : Map[String, @core.ThemeConfigValue],
+  flattened : Map[String, String],
+) -> Unit {
+  for entry in source {
+    let (key, value) = entry
+    let path = theme_config_path(prefix, key)
+    match value {
+      @core.ThemeConfigValue::ObjectValue(entries) =>
+        flatten_theme_config_entries(path, entries, flattened)
+      _ =>
+        match theme_config_scalar_string(value) {
+          Some(text) => flattened[path] = text
+          None => ()
+        }
+    }
+  }
+}
+
+///|
+pub fn flatten_theme_config_values(
+  config : Map[String, @core.ThemeConfigValue],
+) -> Map[String, String] {
+  let flattened : Map[String, String] = {}
+  flatten_theme_config_entries("", config, flattened)
+  flattened
+}
+
+///|
+pub fn merge_theme_tokens(
+  tokens : Array[@core.ThemeTokenDeclaration],
+  config : Map[String, @core.ThemeConfigValue],
+) -> Map[String, String] {
+  let overrides = flatten_theme_config_values(config)
+  let merged : Map[String, String] = {}
+  for token in tokens {
+    match overrides.get(token.name) {
+      Some(value) => merged[token.name] = value
+      None =>
+        match token.default_value {
+          Some(value) => merged[token.name] = value
+          None => ()
+        }
+    }
+  }
+  merged
+}
+
+///|
+pub fn declared_slot_values(
+  slot_names : Array[String],
+  config : Map[String, @core.ThemeConfigValue],
+) -> Map[String, String] {
+  let values : Map[String, String] = {}
+  let configured_slots = match config.get("slots") {
+    Some(@core.ThemeConfigValue::ObjectValue(entries)) => entries
+    _ => return values
+  }
+  for slot_name in slot_names {
+    match configured_slots.get(slot_name) {
+      Some(@core.ThemeConfigValue::StringValue(value)) =>
+        values[slot_name] = value
+      _ => ()
+    }
+  }
+  values
+}
+
+///|
 pub fn load_active_theme_bundle_result(
   config : @core.MooninkConfig,
 ) -> Result[ActiveThemeBundle, ThemeLoadError] {
-  let theme_root = project_theme_root(config) catch {
+  let project_root = project_theme_root(config) catch {
     err => return Err(ThemeLoadError::Config(err))
+  }
+  let project_manifest_path = theme_child_path(project_root, "theme.json") catch {
+    err => return Err(err)
+  }
+  let theme_root = if io_path_exists(project_manifest_path) {
+    project_root
+  } else {
+    built_in_default_theme_root()
+  }
+  let source_kind = if theme_root == project_root {
+    ActiveThemeSource::ProjectTheme
+  } else {
+    ActiveThemeSource::BuiltInDefault
   }
   let manifest = match load_theme_manifest_result(theme_root) {
     Ok(manifest) => manifest
@@ -216,7 +412,7 @@ pub fn load_active_theme_bundle_result(
         layouts,
         partials,
         assets_root: Some(theme_root + "/assets"),
-        source_kind: ActiveThemeSource::ProjectTheme,
+        source_kind,
       })
     Err(err) => Err(err)
   }
