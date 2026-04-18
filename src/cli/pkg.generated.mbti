@@ -116,7 +116,7 @@ pub(all) struct BuildWithDiagnostics {
 pub(all) enum CheckCategory {
   ThemeTemplate
   Frontmatter
-  Document
+  Wikilinks
   Routes
 } derive(Eq, @debug.Debug)
 

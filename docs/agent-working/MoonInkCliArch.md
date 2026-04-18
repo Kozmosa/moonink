@@ -151,7 +151,7 @@ Current behavior:
    - `theme/template`
    - `frontmatter`
    - `routes`
-   - `document`
+   - `wikilinks`
 6. Applies blocking validation for:
    - active theme bundle or legacy layout resolution failures;
    - missing Theme V2 layouts for required page kinds or layout overrides;
@@ -159,8 +159,8 @@ Current behavior:
    - obvious frontmatter type mismatches, including invalid boolean-like `draft` values;
    - final emitted output path conflicts.
 7. Parses each document through format-appropriate parser adapters.
-8. Applies WikiLink resolution and records unresolved or ambiguous WikiLink diagnostics as warning-only document diagnostics.
-9. Reports processed counts plus grouped error/warning summaries.
+8. Applies WikiLink resolution and records unresolved or ambiguous WikiLink diagnostics as warning-only `wikilinks` diagnostics.
+9. Renders non-empty diagnostic groups in the fixed order `theme/template`, `frontmatter`, `routes`, `wikilinks`, then prints summary counts plus pass/fail status.
 10. Returns exit code `0` when only warnings or no diagnostics are present, and `1` when blocking errors are present.
 11. Does not clear `dist/`, write HTML, or copy assets.
 
