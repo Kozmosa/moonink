@@ -159,6 +159,42 @@ test "discover_content_result collects vault assets and skips helper directories
 }
 
 ///|
+test "discover_content_result honors explicit empty excludes in obsidian fixture" {
+  let scratch_root = "fixtures/v2/_test_runs/runtime-empty-exclude-obsidian"
+  let config_json =
+    #|{
+    #|  "site_name": "Vault Fixture",
+    #|  "exclude": []
+    #|}
+  let _ = try? @runtime.io_remove_dir_all(scratch_root)
+  @runtime.io_copy_dir_recursive(
+    "fixtures/v2/obsidian_direct_basic", scratch_root,
+  ) catch {
+    _ => panic()
+  }
+  @runtime.io_write_string(scratch_root + "/moonink.json", config_json) catch {
+    _ => panic()
+  }
+  let config = match
+    @runtime.load_config_result(scratch_root + "/moonink.json") {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let inventory = match @runtime.discover_content_result(config) {
+    Ok(inventory) => inventory
+    Err(_) => panic()
+  }
+  inspect(inventory.files.length(), content="3")
+  inspect(
+    inventory.files.search_by(fn(file) {
+      file.path.has_suffix("Templates/daily.md")
+    })
+    is Some(_),
+    content="true",
+  )
+}
+
+///|
 test "discover_content_result ignores configured theme directory" {
   let config_json =
     #|{

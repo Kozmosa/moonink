@@ -163,6 +163,16 @@ test "parse_config_json preserves explicit excludes" {
 }
 
 ///|
+test "parse_config_json preserves explicit empty excludes" {
+  let json =
+    #|{"site_name": "Vault", "exclude": []}
+  let config = @core.parse_config_json("moonink.json", json) catch {
+    _ => panic()
+  }
+  inspect(config.exclude, content="[]")
+}
+
+///|
 test "parse_config_json parses optional template_file" {
   let json =
     #|{"site_name": "Templated", "template_file": "templates/site.html"}
