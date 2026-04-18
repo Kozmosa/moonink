@@ -19,6 +19,12 @@ pub(all) struct Frontmatter {
   description : String?
   content_type : String?
   date : String?
+  updated : String?
+  summary : String?
+  series : String?
+  cover : String?
+  author : String?
+  column : String?
   tags : Array[String]
   draft : Bool
   layout : String?
@@ -35,6 +41,12 @@ pub fn Frontmatter::default() -> Frontmatter {
     description: None,
     content_type: None,
     date: None,
+    updated: None,
+    summary: None,
+    series: None,
+    cover: None,
+    author: None,
+    column: None,
     tags: [],
     draft: false,
     layout: None,
@@ -215,6 +227,12 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
   let description = fields.get("description")
   let content_type = fields.get("type")
   let date = fields.get("date")
+  let updated = fields.get("updated")
+  let summary = fields.get("summary")
+  let series = fields.get("series")
+  let cover = fields.get("cover")
+  let author = fields.get("author")
+  let column = fields.get("column")
   let tags = match list_fields.get("tags") {
     Some(t) => t
     None => []
@@ -251,7 +269,8 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
   }
   // Collect remaining fields into extra
   let core_keys : Array[String] = [
-    "title", "description", "type", "date", "draft", "layout",
+    "title", "description", "type", "date", "updated", "summary", "series", "cover",
+    "author", "column", "draft", "layout",
   ]
   let extra : Map[String, String] = {}
   for entry in fields {
@@ -267,6 +286,12 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
     description,
     content_type,
     date,
+    updated,
+    summary,
+    series,
+    cover,
+    author,
+    column,
     tags,
     draft,
     layout,

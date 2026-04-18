@@ -1,3 +1,7 @@
 <header class="site-header">
-  <a href="{{ site.url }}">{{ site.name }}</a>
+  <a class="site-brand" href="{{ site.url }}">{{ site.name }}</a>
+  <div class="site-header-meta">
+    {% if page.column %}<span class="site-chip">{{ page.column }}</span>{% endif %}
+    <span>{{ page.kind }}</span>
+  </div>
 </header>

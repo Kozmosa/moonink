@@ -215,6 +215,26 @@ test "docflow indexed wikilinker collects only resolved wikilink targets" {
 }
 
 ///|
+test "docflow indexed wikilinker collects resolved mention snippets" {
+  let parsed : @docflow.ParsedDocument = {
+    backend_name: "fake-markdown-parser",
+    source_format: @core.SourceFormat::Markdown,
+    source_path: "articles/hello.md",
+    source_uuid: "article-mentions-001",
+    diagnostics: @docflow.empty_document_diagnostics(),
+    backend_payload: Some(
+      "A first line about [[about|About Page]].\nSecond line stays unrelated.",
+    ),
+  }
+  let linker = @docflow.indexed_wikilinker({ "about": "/about/" }, {})
+  let mentions = @docflow.collect_resolved_wikilink_mentions(linker, parsed)
+  inspect(mentions.length(), content="1")
+  inspect(mentions[0].target_url, content="/about/")
+  inspect(mentions[0].label, content="About Page")
+  inspect(mentions[0].snippet, content="A first line about About Page.")
+}
+
+///|
 test "docflow indexed wikilinker ignores non-markdown payloads" {
   let parsed : @docflow.ParsedDocument = {
     backend_name: "html-passthrough-parser",
@@ -841,7 +861,22 @@ test "docflow markdown render adapter renders heading html" {
     Err(_) => panic()
   }
   let rendered = @docflow.render_with_adapter(renderer, parsed)
-  inspect(rendered.html, content="<h1>Hello MoonInk</h1>\n")
+  inspect(
+    rendered.html,
+    content="<h1 id=\"hello-moonink\">Hello MoonInk</h1>\n",
+  )
+}
+
+///|
+test "docflow collect_markdown_headings produces stable ids" {
+  let headings = @docflow.collect_markdown_headings(
+    "# Hello MoonInk\n## Second Step\n## Second Step\n### Detail",
+  )
+  inspect(headings.length(), content="4")
+  inspect(headings[0].id, content="hello-moonink")
+  inspect(headings[1].id, content="second-step")
+  inspect(headings[2].id, content="second-step-2")
+  inspect(headings[3].level, content="3")
 }
 
 ///|
@@ -862,7 +897,10 @@ test "docflow article pipeline keeps parser wikilinker and render order explicit
   }
   inspect(pipeline.parsed.backend_name, content="markdown-parser-adapter")
   inspect(pipeline.linked.backend_name, content="markdown-parser-adapter")
-  inspect(pipeline.rendered.html, content="<h1>Pipeline Heading</h1>\n")
+  inspect(
+    pipeline.rendered.html,
+    content="<h1 id=\"pipeline-heading\">Pipeline Heading</h1>\n",
+  )
 }
 
 ///|

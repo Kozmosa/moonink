@@ -13,10 +13,60 @@ pub(all) struct SitePage {
   nav_title : String
   nav_hidden : Bool
   description : String
+  summary : String
+  date : String?
+  updated : String?
+  tags : Array[String]
+  series : String?
+  cover : String?
+  author : String?
+  column : String?
+  reading_time_minutes : Int
+  source_format : SourceFormat
   source_path : String
   url_path : String
   content_kind : ContentKind
   is_index : Bool
+} derive(Debug, Eq)
+
+///|
+pub(all) struct HeadingEntry {
+  level : Int
+  id : String
+  title : String
+} derive(Debug, Eq)
+
+///|
+pub(all) struct PageLink {
+  title : String
+  url_path : String
+  source_path : String
+} derive(Debug, Eq)
+
+///|
+pub(all) struct BacklinkEntry {
+  page : PageLink
+  snippet : String
+  date : String?
+  series : String?
+} derive(Debug, Eq)
+
+///|
+pub(all) struct RelatedEntry {
+  page : PageLink
+  reason : String
+  score : Int
+  shared_tags : Array[String]
+  series : String?
+  date : String?
+} derive(Debug, Eq)
+
+///|
+pub(all) struct SeriesNav {
+  name : String
+  previous : PageLink?
+  next : PageLink?
+  items : Array[PageLink]
 } derive(Debug, Eq)
 
 ///|

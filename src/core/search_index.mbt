@@ -151,6 +151,40 @@ fn strip_markdown_link(source : String, start : Int) -> (String, Int)? {
 }
 
 ///|
+fn strip_markdown_wikilink(source : String, start : Int) -> (String, Int)? {
+  let is_embed = char_at(source, start) == "!"
+  let open_start = if is_embed { start + 1 } else { start }
+  if open_start + 1 >= source.length() ||
+    source[open_start:open_start + 2].to_string() != "[[" {
+    return None
+  }
+  let mut close = open_start + 2
+  while close + 1 < source.length() &&
+        source[close:close + 2].to_string() != "]]" {
+    close += 1
+  }
+  if close + 1 >= source.length() {
+    return None
+  }
+  let inner = source[open_start + 2:close].to_string().trim().to_string()
+  if inner.is_empty() {
+    return Some(("", close + 2))
+  }
+  match inner.split_once("|") {
+    Some((target, label)) => {
+      let clean_label = label.trim().to_string()
+      let clean_target = target.trim().to_string()
+      if clean_label.is_empty() {
+        Some((clean_target, close + 2))
+      } else {
+        Some((clean_label, close + 2))
+      }
+    }
+    None => Some((inner, close + 2))
+  }
+}
+
+///|
 fn trim_space_before_punctuation(source : String) -> String {
   let result = StringBuilder::new()
   for i in 0..<source.length() {
@@ -203,25 +237,33 @@ fn strip_markdown_markers(source : String) -> String {
   let result = StringBuilder::new()
   let mut index = 0
   while index < source.length() {
-    match strip_markdown_link(source, index) {
+    match strip_markdown_wikilink(source, index) {
       Some((label, next_index)) => {
         result.write_string(label)
         result.write_string(" ")
         index = next_index
       }
-      None => {
-        let char = char_at(source, index)
-        if char == "#" && is_line_start(source, index) {
-          result.write_string(" ")
-        } else if char == ">" && is_line_start(source, index) {
-          result.write_string(" ")
-        } else if is_markdown_emphasis_marker(source, index) {
-          result.write_string(" ")
-        } else {
-          result.write_string(char)
+      None =>
+        match strip_markdown_link(source, index) {
+          Some((label, next_index)) => {
+            result.write_string(label)
+            result.write_string(" ")
+            index = next_index
+          }
+          None => {
+            let char = char_at(source, index)
+            if char == "#" && is_line_start(source, index) {
+              result.write_string(" ")
+            } else if char == ">" && is_line_start(source, index) {
+              result.write_string(" ")
+            } else if is_markdown_emphasis_marker(source, index) {
+              result.write_string(" ")
+            } else {
+              result.write_string(char)
+            }
+            index += 1
+          }
         }
-        index += 1
-      }
     }
   }
   trim_space_before_punctuation(collapse_whitespace(result.to_string()))
@@ -230,6 +272,57 @@ fn strip_markdown_markers(source : String) -> String {
 ///|
 fn normalize_excerpt(source : String) -> String {
   collapse_whitespace(source)
+}
+
+///|
+pub fn normalize_inline_text(source : String) -> String {
+  normalize_excerpt(source)
+}
+
+///|
+pub fn source_plain_text(source : String, format : SourceFormat) -> String {
+  match format {
+    SourceFormat::Markdown => strip_markdown_markers(source)
+    SourceFormat::Html => strip_html_tags(source)
+    SourceFormat::Unknown => normalize_excerpt(source)
+  }
+}
+
+///|
+fn count_plain_text_words(source : String) -> Int {
+  if source.is_empty() {
+    return 0
+  }
+  let mut in_word = false
+  let mut count = 0
+  for index in 0..<source.length() {
+    let char = char_at(source, index)
+    let is_space = is_whitespace(char)
+    if is_space {
+      in_word = false
+    } else if !in_word {
+      in_word = true
+      count += 1
+    }
+  }
+  count
+}
+
+///|
+pub fn estimate_reading_time_minutes(
+  source : String,
+  format : SourceFormat,
+) -> Int {
+  let word_count = count_plain_text_words(source_plain_text(source, format))
+  if word_count <= 0 {
+    return 1
+  }
+  let rounded = (word_count + 219) / 220
+  if rounded <= 0 {
+    1
+  } else {
+    rounded
+  }
 }
 
 ///|
@@ -247,11 +340,7 @@ pub fn search_index_excerpt(
     }
     None => ()
   }
-  match format {
-    SourceFormat::Markdown => strip_markdown_markers(source)
-    SourceFormat::Html => strip_html_tags(source)
-    SourceFormat::Unknown => normalize_excerpt(source)
-  }
+  source_plain_text(source, format)
 }
 
 ///|
