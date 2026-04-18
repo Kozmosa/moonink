@@ -1122,6 +1122,19 @@ test "runtime cli check reports invalid draft scalar as blocking" {
 }
 
 ///|
+test "runtime cli check warns when a vault has no homepage note" {
+  let outcome = @cli.run_check_command_runtime_from_config(
+    "fixtures/v2/obsidian_direct_no_home/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(outcome.message.contains("No homepage note detected"), content="true")
+  inspect(
+    outcome.message.contains("[check] summary: 0 errors, 1 warnings"),
+    content="true",
+  )
+}
+
+///|
 test "runtime cli check reports missing config" {
   let outcome = @cli.run_check_command_runtime_from_config(
     "fixtures/v2/missing_config/moonink.json",
@@ -1554,6 +1567,49 @@ test "runtime cli build includes frontmatter-free article links in navigation" {
   }
   inspect(index_html.contains("href=\"/notes/project/\""), content="true")
   inspect(index_html.contains(">Project Overview<"), content="true")
+}
+
+///|
+test "runtime cli build copies vault assets from the content tree" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/obsidian_direct_basic", "obsidian-vault-assets-build",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/Attachments/diagram.png"),
+    content="true",
+  )
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(
+    index_html.contains("src=\"/Attachments/diagram.png\""),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli build fails when a vault asset collides with a reserved output artifact" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/obsidian_direct_basic", "obsidian-output-collision",
+  )
+  @runtime.io_write_string(fixture_root + "/search-index.json", "shadow") catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("search-index.json"), content="true")
+  inspect(
+    outcome.message.contains("vault asset output path conflict"),
+    content="true",
+  )
 }
 
 ///|

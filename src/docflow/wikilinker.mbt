@@ -137,11 +137,11 @@ fn rewrite_markdown_wikilinks(
             match resolve_resource_target(linker, target) {
               Ok(url) =>
                 if is_image_resource_target(target) {
-                  result.write_string("<img src=\"")
-                  result.write_string(url)
-                  result.write_string("\" alt=\"")
+                  result.write_string("![")
                   result.write_string(label)
-                  result.write_string("\">")
+                  result.write_string("](")
+                  result.write_string(url)
+                  result.write_string(")")
                 } else {
                   result.write_string("[")
                   result.write_string(label)

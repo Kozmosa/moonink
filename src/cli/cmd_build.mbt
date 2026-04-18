@@ -49,6 +49,7 @@ pub(all) enum CheckCategory {
   Frontmatter
   Document
   Routes
+  Site
 } derive(Debug, Eq)
 
 ///|
@@ -310,6 +311,61 @@ fn write_build_output(
   }
   @runtime.io_write_string(full_path, html) catch {
     err => raise BuildCommandError::ProjectIO(err)
+  }
+}
+
+///|
+fn reserved_output_paths() -> Array[String] {
+  ["search-index.json", "assets/theme-vars.css"]
+}
+
+///|
+fn validate_static_asset_output_conflicts(
+  inventory : @core.ContentInventory,
+  inputs : Array[@runtime.BuildInput],
+) -> Unit raise BuildCommandError {
+  let output_paths = collect_output_path_sources(inputs)
+  for asset in inventory.asset_files {
+    if output_paths.get(asset.relative_path) is Some(_) {
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "build",
+          asset.relative_path,
+          "vault asset output path conflict with generated html",
+        ),
+      )
+    }
+    if reserved_output_paths().search_by(fn(path) { path == asset.relative_path }) is Some(_) {
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "build",
+          asset.relative_path,
+          "vault asset output path conflict with generated artifact",
+        ),
+      )
+    }
+  }
+}
+
+///|
+fn copy_content_tree_assets(
+  config : @core.MooninkConfig,
+  inventory : @core.ContentInventory,
+) -> Unit raise BuildCommandError {
+  for asset in inventory.asset_files {
+    let target = @core.join_relative_path(output_root(config), asset.relative_path) catch {
+      err =>
+        raise BuildCommandError::ProjectIO(
+          @core.project_io_error(
+            "copy_vault_asset",
+            asset.relative_path,
+            @core.format_path_policy_error(err),
+          ),
+        )
+    }
+    @runtime.io_copy_file(asset.path, target) catch {
+      err => raise BuildCommandError::ProjectIO(err)
+    }
   }
 }
 
@@ -1871,10 +1927,16 @@ fn build_site_result(
     }
     None => ()
   }
+  validate_static_asset_output_conflicts(inventory, inputs) catch {
+    err => return Err(err)
+  }
   prepare_output_dir(config) catch {
     err => return Err(err)
   }
   copy_public_assets(config) catch {
+    err => return Err(err)
+  }
+  copy_content_tree_assets(config, inventory) catch {
     err => return Err(err)
   }
   match theme_bundle {
@@ -2134,12 +2196,33 @@ fn validate_frontmatter_for_check(
 }
 
 ///|
+fn append_homepage_warning(
+  inputs : Array[@runtime.BuildInput],
+  report : CheckReport,
+) -> CheckReport {
+  if inputs.search_by(fn(input) { input.meta.is_index }) is Some(_) {
+    return report
+  }
+  report_with_entry(report, {
+    category: CheckCategory::Site,
+    severity: CheckSeverity::Warning,
+    source_path: None,
+    message: "No homepage note detected",
+    hint: Some(
+      "Add root index.md or README.md to make the vault landing page explicit.",
+    ),
+    line: None,
+  })
+}
+
+///|
 fn check_category_label(category : CheckCategory) -> String {
   match category {
     CheckCategory::ThemeTemplate => "theme/template"
     CheckCategory::Frontmatter => "frontmatter"
     CheckCategory::Document => "document"
     CheckCategory::Routes => "routes"
+    CheckCategory::Site => "site"
   }
 }
 
@@ -2243,6 +2326,7 @@ fn check_site_result(
     Err(err) => return Err(CheckCommandError::ContentDiscovery(err))
   }
   let mut report = empty_check_report()
+  report = append_homepage_warning(inputs, report)
   report = validate_check_active_theme_layout(config, inputs, report)
   report = append_route_conflicts(inputs, config.route_style, report)
   let wikilinker = build_wikilinker_with_assets(inputs, inventory.asset_files)

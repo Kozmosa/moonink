@@ -174,7 +174,7 @@ test "docflow indexed wikilinker rewrites image embeds" {
   let linked = @docflow.apply_wikilinker(linker, parsed)
   inspect(
     linked.backend_payload,
-    content="Some(\"<img src=\\\"/Attachments/diagram.png\\\" alt=\\\"diagram.png\\\">\")",
+    content="Some(\"![diagram.png](/Attachments/diagram.png)\")",
   )
 }
 
