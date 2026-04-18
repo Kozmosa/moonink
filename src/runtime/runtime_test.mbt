@@ -139,7 +139,9 @@ test "discover_content_result ignores root helper directories" {
 ///|
 test "discover_content_result collects vault assets and skips helper directories by default" {
   let config = match
-    @runtime.load_config_result("fixtures/v2/obsidian_direct_basic/moonink.json") {
+    @runtime.load_config_result(
+      "fixtures/v2/obsidian_direct_basic/moonink.json",
+    ) {
     Ok(config) => config
     Err(_) => panic()
   }
@@ -598,7 +600,9 @@ test "discover_content_build inputs read frontmatter-aware metadata" {
 ///|
 test "load_build_inputs_result promotes root README to homepage when index is absent" {
   let config = match
-    @runtime.load_config_result("fixtures/v2/obsidian_direct_basic/moonink.json") {
+    @runtime.load_config_result(
+      "fixtures/v2/obsidian_direct_basic/moonink.json",
+    ) {
     Ok(config) => config
     Err(_) => panic()
   }
@@ -623,7 +627,9 @@ test "load_build_inputs_result promotes root README to homepage when index is ab
 ///|
 test "load_build_inputs_result prefers first markdown heading as resolved title" {
   let config = match
-    @runtime.load_config_result("fixtures/v2/obsidian_direct_basic/moonink.json") {
+    @runtime.load_config_result(
+      "fixtures/v2/obsidian_direct_basic/moonink.json",
+    ) {
     Ok(config) => config
     Err(_) => panic()
   }
