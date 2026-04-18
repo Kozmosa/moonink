@@ -47,7 +47,7 @@ pub(all) struct CheckSummary {
 pub(all) enum CheckCategory {
   ThemeTemplate
   Frontmatter
-  Document
+  Wikilinks
   Routes
 } derive(Debug, Eq)
 
@@ -1991,7 +1991,7 @@ fn check_entry_from_docflow_diagnostic(
   entry : @docflow.DocumentDiagnostic,
 ) -> CheckEntry {
   {
-    category: CheckCategory::Document,
+    category: CheckCategory::Wikilinks,
     severity: match entry.severity {
       @docflow.DiagnosticSeverity::Error => CheckSeverity::Error
       _ => CheckSeverity::Warning
@@ -2102,7 +2102,7 @@ fn check_category_label(category : CheckCategory) -> String {
   match category {
     CheckCategory::ThemeTemplate => "theme/template"
     CheckCategory::Frontmatter => "frontmatter"
-    CheckCategory::Document => "document"
+    CheckCategory::Wikilinks => "wikilinks"
     CheckCategory::Routes => "routes"
   }
 }
@@ -2116,9 +2116,8 @@ fn check_severity_label(severity : CheckSeverity) -> String {
 }
 
 ///|
-fn format_check_entry(entry : CheckEntry) -> String {
+fn format_check_entry_body(entry : CheckEntry) -> String {
   let lines : Array[String] = []
-  lines.push("[check] " + check_category_label(entry.category))
   let source_line = match entry.source_path {
     Some(path) => "[" + path + "]"
     None => ""
@@ -2139,10 +2138,57 @@ fn format_check_entry(entry : CheckEntry) -> String {
 }
 
 ///|
+fn check_output_categories() -> Array[CheckCategory] {
+  [
+    CheckCategory::ThemeTemplate,
+    CheckCategory::Frontmatter,
+    CheckCategory::Routes,
+    CheckCategory::Wikilinks,
+  ]
+}
+
+///|
+fn check_entries_for_category(
+  report : CheckReport,
+  category : CheckCategory,
+) -> Array[CheckEntry] {
+  let entries : Array[CheckEntry] = []
+  for entry in report.entries {
+    if entry.category == category {
+      entries.push(entry)
+    }
+  }
+  entries
+}
+
+///|
+fn format_check_group(
+  category : CheckCategory,
+  entries : Array[CheckEntry],
+) -> String {
+  let rendered_entries : Array[String] = []
+  for entry in entries {
+    rendered_entries.push(format_check_entry_body(entry))
+  }
+  "[check] " +
+  check_category_label(category) +
+  "\n" +
+  rendered_entries.iter().join("\n---\n")
+}
+
+///|
+fn check_report_passed(report : CheckReport) -> Bool {
+  report.error_count == 0
+}
+
+///|
 fn format_check_report(report : CheckReport) -> String {
   let sections : Array[String] = []
-  for entry in report.entries {
-    sections.push(format_check_entry(entry))
+  for category in check_output_categories() {
+    let entries = check_entries_for_category(report, category)
+    if !entries.is_empty() {
+      sections.push(format_check_group(category, entries))
+    }
   }
   sections.push(
     "[check] summary: " +
@@ -2152,8 +2198,8 @@ fn format_check_report(report : CheckReport) -> String {
     " warnings",
   )
   sections.push(
-    if report.error_count == 0 {
-      "[check] completed"
+    if check_report_passed(report) {
+      "[check] passed"
     } else {
       "[check] failed"
     },
@@ -2175,10 +2221,17 @@ fn summarize_check_success(
   inventory : @core.ContentInventory,
   summary : CheckSummary,
 ) -> CliOutcome {
+  let passed = check_report_passed(summary.report)
   let header = if summary.report.entries.is_empty() {
-    "[check] completed"
+    if passed {
+      "[check] passed"
+    } else {
+      "[check] failed"
+    }
+  } else if passed {
+    "[check] passed with diagnostics"
   } else {
-    "[check] completed with diagnostics"
+    "[check] failed with diagnostics"
   }
   let report_details = if summary.report.entries.is_empty() {
     ""
@@ -2186,7 +2239,7 @@ fn summarize_check_success(
     "\n---\n" + format_check_report(summary.report)
   }
   {
-    exit_code: if summary.report.error_count == 0 {
+    exit_code: if passed {
       0
     } else {
       1

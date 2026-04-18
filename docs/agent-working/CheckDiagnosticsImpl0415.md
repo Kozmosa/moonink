@@ -10,6 +10,7 @@ Implemented in this slice:
 
 - grouped `check` diagnostics reporting with explicit categories;
 - structured check report model in the CLI runtime path;
+- fixed-order grouped check rendering under `theme/template`, `frontmatter`, `routes`, and `wikilinks`;
 - blocking theme/template validation during `check`;
 - blocking frontmatter type mismatch validation for obvious scalar/list mistakes;
 - blocking validation for invalid scalar `draft` values that are not `true`/`false`;
@@ -37,7 +38,11 @@ Not implemented in this slice:
 - `fixtures/v2/check_route_conflict/*`
 - `fixtures/v2/check_mixed_diagnostics/*`
 - `fixtures/v2/check_frontmatter_invalid_draft/*`
+- `fixtures/v2/check_group_order/*`
 - `docs/agent-working/MoonInkCliArch.md`
+- `docs/superpowers/plans/2026-04-18-check-diagnostics-completion.md`
+- `docs/agent-working/CheckDiagnosticsImpl0415.md`
+- `docs/agent-working/worklog/20260418.md`
 - `docs/agent-working/worklog/20260415.md`
 
 ## Design Decisions
@@ -77,19 +82,26 @@ real emitted-path collisions instead of speculative route similarities.
 CLI can distinguish obvious schema mismatches without reparsing raw frontmatter or
 expanding into a full schema system.
 
+### Finish The User-Facing Grouping Contract
+
+The original slice landed the right blocking policy and report counts, but still exposed
+WikiLink warnings through a generic `document` label and rendered entries in append order.
+The completion update closes that drift by:
+
+- renaming the user-facing document diagnostics group to `wikilinks`;
+- rendering non-empty groups in the fixed order `theme/template`, `frontmatter`, `routes`,
+  `wikilinks`;
+- using explicit pass/fail wording in both the header and final summary status line.
+
 ## Current Limitations
 
 - `draft` validation is still intentionally narrow: list values and invalid scalar
   booleans are blocked, but broader metadata policy is still out of scope.
-- Document diagnostics are currently grouped under a generic `document` category rather
-  than splitting wikilinks into a more specific user-facing label.
-- Summary/details formatting is stable for current fixtures, but the report model still
-  lives entirely in the CLI layer.
+- The report model still lives entirely in the CLI layer rather than a shared runtime
+  diagnostics package.
 
 ## Recommended Next Steps
 
-1. decide whether the user-facing `document` label should become `wikilinks` once the
-   diagnostics surface is more specialized;
-2. consider whether broader frontmatter schema validation belongs in `check` or a
+1. consider whether broader frontmatter schema validation belongs in `check` or a
    future dedicated diagnostics command;
-3. extend diagnostics coverage only when new checks remain clearly build-affecting.
+2. extend diagnostics coverage only when new checks remain clearly build-affecting.

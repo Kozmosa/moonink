@@ -1,4 +1,20 @@
 ///|
+fn find_substring_or_panic(haystack : String, needle : String) -> Int {
+  let h_len = haystack.length()
+  let n_len = needle.length()
+  if n_len > h_len {
+    panic()
+  }
+  for i in 0..<=(h_len - n_len) {
+    let slice = haystack[i:i + n_len].to_string()
+    if slice == needle {
+      return i
+    }
+  }
+  panic()
+}
+
+///|
 test "build site assembly model combines pages and navigation" {
   let config : @core.MooninkConfig = {
     config_path: "moonink.json",
@@ -862,7 +878,7 @@ test "runtime cli check succeeds for minimal fixture without diagnostics" {
     fixture_root + "/moonink.json",
   )
   inspect(outcome.exit_code, content="0")
-  inspect(outcome.message.contains("[check] completed"), content="true")
+  inspect(outcome.message.contains("[check] passed"), content="true")
   inspect(outcome.message.contains("diagnostics: 0"), content="true")
   inspect(@runtime.io_path_exists(stale_path), content="true")
 }
@@ -876,7 +892,7 @@ test "runtime cli check respects output override without writing output" {
   )
   inspect(outcome.exit_code, content="0")
   inspect(
-    outcome.message.contains("[check] completed with diagnostics"),
+    outcome.message.contains("[check] passed with diagnostics"),
     content="true",
   )
   inspect(
@@ -896,9 +912,11 @@ test "runtime cli check reports wikilink diagnostics without writing output" {
   )
   inspect(outcome.exit_code, content="0")
   inspect(
-    outcome.message.contains("[check] completed with diagnostics"),
+    outcome.message.contains("[check] passed with diagnostics"),
     content="true",
   )
+  inspect(outcome.message.contains("[check] wikilinks"), content="true")
+  inspect(outcome.message.contains("[check] document"), content="false")
   inspect(
     outcome.message.contains("Unresolved wikilink target: missing-page"),
     content="true",
@@ -907,7 +925,7 @@ test "runtime cli check reports wikilink diagnostics without writing output" {
     outcome.message.contains("[check] summary: 0 errors, 1 warnings"),
     content="true",
   )
-  inspect(outcome.message.contains("[check] completed"), content="true")
+  inspect(outcome.message.contains("[check] passed"), content="true")
   inspect(
     @runtime.io_path_exists(fixture_root + "/dist/index.html"),
     content="false",
@@ -1018,7 +1036,8 @@ test "runtime cli check reports mixed blocking and warning diagnostics" {
   )
   inspect(outcome.exit_code, content="1")
   inspect(outcome.message.contains("[check] routes"), content="true")
-  inspect(outcome.message.contains("[check] document"), content="true")
+  inspect(outcome.message.contains("[check] wikilinks"), content="true")
+  inspect(outcome.message.contains("[check] document"), content="false")
   inspect(
     outcome.message.contains("Unresolved wikilink target: missing-page"),
     content="true",
@@ -1032,6 +1051,46 @@ test "runtime cli check reports mixed blocking and warning diagnostics" {
     content="true",
   )
   inspect(outcome.message.contains("[check] failed"), content="true")
+}
+
+///|
+test "runtime cli check renders grouped diagnostics in fixed category order" {
+  let fixture_root = "fixtures/v2/check_group_order"
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("[check] frontmatter"), content="true")
+  inspect(outcome.message.contains("[check] routes"), content="true")
+  inspect(outcome.message.contains("[check] wikilinks"), content="true")
+  inspect(outcome.message.contains("[check] document"), content="false")
+  inspect(
+    outcome.message.contains("Frontmatter field `tags` must be an array"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("Final output path conflict"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("Unresolved wikilink target: missing-page"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("[check] summary: 2 errors, 1 warnings"),
+    content="true",
+  )
+  let frontmatter_offset = find_substring_or_panic(
+    outcome.message,
+    "[check] frontmatter",
+  )
+  let routes_offset = find_substring_or_panic(outcome.message, "[check] routes")
+  let wikilinks_offset = find_substring_or_panic(
+    outcome.message,
+    "[check] wikilinks",
+  )
+  inspect((frontmatter_offset < routes_offset).to_string(), content="true")
+  inspect((routes_offset < wikilinks_offset).to_string(), content="true")
 }
 
 ///|
