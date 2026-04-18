@@ -161,7 +161,7 @@ Current behavior:
    - `theme/template`
    - `frontmatter`
    - `routes`
-   - `document`
+   - `wikilinks`
 6. Applies blocking validation for:
    - active theme bundle or legacy layout resolution failures;
    - missing Theme V2 layouts for required page kinds or layout overrides;
