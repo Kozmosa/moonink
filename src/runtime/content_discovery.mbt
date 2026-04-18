@@ -107,9 +107,11 @@ fn configured_config_helper_path(config : @core.MooninkConfig) -> String? {
   if config.content_dir != "." {
     return None
   }
-  Some(relative_source_path(config.project_root, config.config_path) catch {
-    _ => return None
-  })
+  Some(
+    relative_source_path(config.project_root, config.config_path) catch {
+      _ => return None
+    },
+  )
 }
 
 ///|
@@ -210,9 +212,19 @@ fn resolved_input_title(
         @core.SourceFormat::Markdown =>
           match first_markdown_h1(body) {
             Some(title) => title
-            None => if is_index { "Home" } else { basename_without_extension(source_path) }
+            None =>
+              if is_index {
+                "Home"
+              } else {
+                basename_without_extension(source_path)
+              }
           }
-        _ => if is_index { "Home" } else { basename_without_extension(source_path) }
+        _ =>
+          if is_index {
+            "Home"
+          } else {
+            basename_without_extension(source_path)
+          }
       }
   }
 }
@@ -306,10 +318,7 @@ fn collect_content_tree(
     }
     if is_dir {
       let (nested_content, nested_assets) = collect_content_tree(
-        content_root,
-        full_path,
-        exclude,
-        skip_dir,
+        content_root, full_path, exclude, skip_dir,
       )
       for file in nested_content {
         content.push(file)
@@ -377,7 +386,7 @@ fn apply_homepage_override(inputs : Array[BuildInput]) -> Array[BuildInput] {
         @core.page_meta_as_home(input.meta)
       _ => input.meta
     }
-    normalized.push({ ..input, meta })
+    normalized.push({ ..input, meta, })
   }
   normalized
 }
@@ -403,9 +412,7 @@ pub fn discover_content_result(
     content_root,
     content_root,
     exclude,
-    fn(entry) {
-    should_skip_root_helper_dir(config, entry)
-  },
+    fn(entry) { should_skip_root_helper_dir(config, entry) },
   ) catch {
     err => return Err(err)
   }

@@ -335,7 +335,10 @@ fn validate_static_asset_output_conflicts(
         ),
       )
     }
-    if reserved_output_paths().search_by(fn(path) { path == asset.relative_path }) is Some(_) {
+    if reserved_output_paths().search_by(fn(path) {
+        path == asset.relative_path
+      })
+      is Some(_) {
       raise BuildCommandError::ProjectIO(
         @core.project_io_error(
           "build",
@@ -353,7 +356,10 @@ fn copy_content_tree_assets(
   inventory : @core.ContentInventory,
 ) -> Unit raise BuildCommandError {
   for asset in inventory.asset_files {
-    let target = @core.join_relative_path(output_root(config), asset.relative_path) catch {
+    let target = @core.join_relative_path(
+      output_root(config),
+      asset.relative_path,
+    ) catch {
       err =>
         raise BuildCommandError::ProjectIO(
           @core.project_io_error(
@@ -521,11 +527,7 @@ pub fn build_wikilinker_with_assets(
       register_exact_target(resource_targets, basename, url)
     }
   }
-  {
-    ..note_linker,
-    resource_targets,
-    ambiguous_resource_targets,
-  }
+  { ..note_linker, resource_targets, ambiguous_resource_targets }
 }
 
 ///|
@@ -1064,10 +1066,7 @@ fn build_navigation_item(
 }
 
 ///|
-fn has_navigation_node_key(
-  pages : Array[@core.SitePage],
-  key : String,
-) -> Bool {
+fn has_navigation_node_key(pages : Array[@core.SitePage], key : String) -> Bool {
   for page in pages {
     if navigation_node_key(page) == key {
       return true
@@ -1422,10 +1421,7 @@ fn build_template_context(
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
 ) -> @docflow.TemplateContext {
-  let current_section = find_current_section_page(
-    assembly.pages,
-    input.meta,
-  )
+  let current_section = find_current_section_page(assembly.pages, input.meta)
   let current_section_title = match current_section {
     Some(section) => section.nav_title
     None => ""
@@ -1641,10 +1637,7 @@ fn build_theme_render_context(
   rendered : @docflow.RenderedDocument,
 ) -> @docflow.ThemeRenderContext {
   let page_model = @core.page_view_model_from_meta(input.meta)
-  let current_section = find_current_section_page(
-    assembly.pages,
-    input.meta,
-  )
+  let current_section = find_current_section_page(assembly.pages, input.meta)
   let current_section_title = match current_section {
     Some(section) => section.nav_title
     None => ""

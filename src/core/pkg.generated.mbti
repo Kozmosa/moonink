@@ -16,6 +16,8 @@ pub fn classify_source_format(String) -> SourceFormat
 
 pub fn config_with_output_dir(MooninkConfig, String) -> MooninkConfig raise ConfigError
 
+pub fn default_exclude() -> Array[String]
+
 pub fn dirname_relative_path(String) -> String raise PathPolicyError
 
 pub fn extract_frontmatter_raw(String) -> (String?, String)
@@ -41,6 +43,10 @@ pub fn normalize_output_dir_or_error(String) -> String raise ConfigError
 pub fn normalize_relative_path(String) -> String raise PathPolicyError
 
 pub fn output_html_path(String, RouteStyle) -> String
+
+pub fn page_meta_as_home(PageMeta) -> PageMeta
+
+pub fn page_meta_with_title(PageMeta, String) -> PageMeta
 
 pub fn page_view_model_from_meta(PageMeta) -> ThemePageViewModel
 
@@ -117,8 +123,10 @@ pub(all) struct ContentFile {
 pub(all) struct ContentInventory {
   root : String
   files : Array[ContentFile]
+  asset_files : Array[StaticAssetFile]
   total_articles : Int
   total_pages : Int
+  total_assets : Int
   note : String
 } derive(Eq, @debug.Debug)
 
@@ -183,11 +191,14 @@ pub(all) struct NavigationModel {
 pub(all) struct PageMeta {
   source_path : String
   url_path : String
+  output_path : String
   content_kind : ContentKind
   format : SourceFormat
   frontmatter : Frontmatter
   layout_override : String?
+  resolved_title : String
   sort_key : String
+  is_index : Bool
 } derive(Eq, @debug.Debug)
 pub fn PageMeta::new(String, ContentKind, SourceFormat, Frontmatter, RouteStyle) -> Self
 
@@ -237,6 +248,11 @@ pub(all) enum SourceFormat {
   Unknown
 } derive(Eq, @debug.Debug)
 pub impl Show for SourceFormat
+
+pub(all) struct StaticAssetFile {
+  path : String
+  relative_path : String
+} derive(Eq, @debug.Debug)
 
 pub(all) enum ThemeConfigValue {
   NullValue

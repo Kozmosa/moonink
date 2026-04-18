@@ -23,11 +23,15 @@ pub fn build_site_pages(Array[@runtime.BuildInput]) -> Array[@core.SitePage]
 
 pub fn build_wikilinker(Array[@runtime.BuildInput]) -> @docflow.WikiLinker
 
+pub fn build_wikilinker_with_assets(Array[@runtime.BuildInput], Array[@core.StaticAssetFile]) -> @docflow.WikiLinker
+
 pub fn cli_exec(Array[String]) -> CliOutcome
 
 pub fn cli_help_text() -> String
 
 pub fn cli_run(Array[String]) -> CliOutcome
+
+pub fn default_onboard_config_json(String) -> String
 
 pub fn format_runtime_ready_message(ServeSession) -> String
 
@@ -118,6 +122,7 @@ pub(all) enum CheckCategory {
   Frontmatter
   Document
   Routes
+  Site
 } derive(Eq, @debug.Debug)
 
 pub struct CheckCliOptions {

@@ -2,12 +2,7 @@
 pub fn theme_page_kind(meta : PageMeta) -> String {
   match meta.content_kind {
     ContentKind::Article => "article"
-    ContentKind::Page =>
-      if meta.is_index {
-        "index"
-      } else {
-        "page"
-      }
+    ContentKind::Page => if meta.is_index { "index" } else { "page" }
   }
 }
 

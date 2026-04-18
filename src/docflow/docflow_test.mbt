@@ -144,11 +144,9 @@ test "docflow indexed wikilinker rewrites resource wikilinks as ordinary links" 
     diagnostics: @docflow.empty_document_diagnostics(),
     backend_payload: Some("See [[diagram.png]]."),
   }
-  let linker = @docflow.indexed_wikilinker(
-    {},
-    {},
-    resource_targets={ "diagram.png": "/Attachments/diagram.png" },
-  )
+  let linker = @docflow.indexed_wikilinker({}, {}, resource_targets={
+    "diagram.png": "/Attachments/diagram.png",
+  })
   let linked = @docflow.apply_wikilinker(linker, parsed)
   inspect(
     linked.backend_payload,
@@ -166,11 +164,9 @@ test "docflow indexed wikilinker rewrites image embeds" {
     diagnostics: @docflow.empty_document_diagnostics(),
     backend_payload: Some("![[diagram.png]]"),
   }
-  let linker = @docflow.indexed_wikilinker(
-    {},
-    {},
-    resource_targets={ "diagram.png": "/Attachments/diagram.png" },
-  )
+  let linker = @docflow.indexed_wikilinker({}, {}, resource_targets={
+    "diagram.png": "/Attachments/diagram.png",
+  })
   let linked = @docflow.apply_wikilinker(linker, parsed)
   inspect(
     linked.backend_payload,
@@ -188,7 +184,10 @@ test "docflow indexed wikilinker warns on unresolved resource embeds" {
     diagnostics: @docflow.empty_document_diagnostics(),
     backend_payload: Some("![[missing.png]]"),
   }
-  let linked = @docflow.apply_wikilinker(@docflow.indexed_wikilinker({}, {}), parsed)
+  let linked = @docflow.apply_wikilinker(
+    @docflow.indexed_wikilinker({}, {}),
+    parsed,
+  )
   inspect(linked.diagnostics.entries.length(), content="1")
   inspect(
     @docflow.format_document_diagnostic(linked.diagnostics.entries[0]),

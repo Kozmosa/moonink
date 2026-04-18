@@ -19,7 +19,9 @@ fn run_native_onboard_command() -> CliOutcome {
 ///|
 pub fn default_onboard_config_json(site_name : String) -> String {
   "{\n" +
-  "  \"site_name\": \"" + site_name + "\",\n" +
+  "  \"site_name\": \"" +
+  site_name +
+  "\",\n" +
   "  \"content_dir\": \".\",\n" +
   "  \"output_dir\": \"dist\",\n" +
   "  \"exclude\": [\".obsidian\", \"dist\", \".git\", \"node_modules\", \".trash\", \"templates\", \"Templates\"],\n" +
@@ -36,7 +38,10 @@ fn run_onboard_command_runtime() -> CliOutcome {
       message: "[onboard] moonink.json already exists\nstatus: aborted to avoid overwriting existing config",
     }
   }
-  @runtime.io_write_string("moonink.json", default_onboard_config_json("My Site")) catch {
+  @runtime.io_write_string(
+    "moonink.json",
+    default_onboard_config_json("My Site"),
+  ) catch {
     err =>
       return {
         exit_code: 1,

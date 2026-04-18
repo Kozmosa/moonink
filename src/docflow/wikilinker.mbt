@@ -187,7 +187,7 @@ fn rewrite_markdown_wikilinks(
           } else {
             match resolve_wikilink(linker, target) {
               Ok(url) => result.write_string("[\{label}](\{url})")
-              Err(None) => {
+              Err(None) =>
                 match resolve_resource_target(linker, target) {
                   Ok(url) => result.write_string("[\{label}](\{url})")
                   Err(Some(hint)) => {
@@ -211,7 +211,6 @@ fn rewrite_markdown_wikilinks(
                     )
                   }
                 }
-              }
               Err(Some(hint)) => {
                 result.write_string(raw)
                 linked = append_wikilink_diagnostic(

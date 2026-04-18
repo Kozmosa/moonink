@@ -156,10 +156,7 @@ test "parse_config_json uses obsidian-friendly default excludes" {
 test "parse_config_json preserves explicit excludes" {
   let json =
     #|{"site_name": "Vault", "exclude": ["assets", "cache"]}
-  let config = @core.parse_config_json(
-    "moonink.json",
-    json,
-  ) catch {
+  let config = @core.parse_config_json("moonink.json", json) catch {
     _ => panic()
   }
   inspect(config.exclude, content="[\"assets\", \"cache\"]")

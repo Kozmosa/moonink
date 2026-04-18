@@ -2264,10 +2264,7 @@ test "runtime cli build renders automatic navigation for direct routes" {
   )
   inspect(index_html.contains("Direct Hello Article"), content="false")
   inspect(index_html.contains("data-section-title=\"Home\""), content="true")
-  inspect(
-    index_html.contains("data-section-url=\"/\""),
-    content="true",
-  )
+  inspect(index_html.contains("data-section-url=\"/\""), content="true")
   inspect(
     index_html.contains(
       "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Home</span></nav>",
