@@ -6,10 +6,11 @@ This document is a maintained global architecture note for the MoonInk CLI.
 It must be updated whenever the CLI surface, execution flow, or structural
 package boundaries change materially.
 
-**Last updated:** 2026-04-18 — reflects the current `help` / `onboard` /
+**Last updated:** 2026-04-19 — reflects the current `help` / `onboard` /
 `build` / `check` / `serve` surface, Theme System V2 bundle rendering,
 Obsidian direct-output defaults, content-tree asset handling, homepage
-inference, and the current build-time theme context contract.
+inference, and the M1 article-experience contract for metadata, TOC,
+contextual backlinks, related notes, and series navigation.
 
 ## Current CLI Surface
 
@@ -101,22 +102,28 @@ Current real behavior:
 7. Copies project-root `public/` assets into the output root.
 8. Copies active theme assets into `dist/assets/`.
 9. For Theme V2 builds, emits `dist/assets/theme-vars.css` from declared manifest tokens plus `theme_config` overrides.
-10. Builds the site assembly model from discovered pages and navigation metadata.
-11. Builds a route-aware WikiLinker index and a markdown-wikilink backlink index.
+10. Builds the site assembly model from discovered pages, presentation metadata, and navigation.
+11. Builds a route-aware WikiLinker index plus article-experience signals:
+    - contextual backlinks from markdown wikilink mentions;
+    - related-note candidates from link + tag + series overlap;
+    - article previous/next navigation;
+    - series navigation;
+    - markdown heading outlines for TOC rendering.
 12. Parses each source document through DocFlow adapters.
 13. Applies WikiLink rewriting and collects rendered HTML.
-14. For Theme V2 builds, computes the selected layout key as:
+14. For markdown renders, injects stable heading `id` attributes so TOC links can target real anchors.
+15. For Theme V2 builds, computes the selected layout key as:
     - `layout` frontmatter override when present;
     - otherwise page kind `index`, `page`, or `article`.
-15. For Theme V2 builds, assembles a structured render context with:
+16. For Theme V2 builds, assembles a structured render context with:
     - `site` metadata including `theme_name`, `theme_asset_root`, and full `theme_config`;
-    - `page` metadata including kind, layout key, section context, rendered body, and page-level theme metadata;
-    - `collections.nav`, `collections.pages`, `collections.backlinks`, and `collections.sections`;
+    - `page` metadata including kind, layout key, summary/date/updated/tags/series/cover/author/column/reading-time, section context, rendered body, and page-level theme metadata;
+    - `collections.nav`, `collections.pages`, `collections.backlinks`, `collections.related`, `collections.toc`, `collections.series`, and `collections.sections`;
     - built-in and manifest-declared `slots`.
-16. Renders Theme V2 templates through `docflow.render_theme_template(...)`, including `{% if %}`, `{% for %}`, and partial includes.
-17. Emits HTML files using `core.output_html_path(...)`, respecting configured `route_style` (`pretty` or `direct`).
-18. Emits `dist/search-index.json` as part of the standard build artifact set.
-19. Reports processed source counts plus page/article breakdown.
+17. Renders Theme V2 templates through `docflow.render_theme_template(...)`, including `{% if %}`, `{% for %}`, and partial includes.
+18. Emits HTML files using `core.output_html_path(...)`, respecting configured `route_style` (`pretty` or `direct`).
+19. Emits `dist/search-index.json` as part of the standard build artifact set.
+20. Reports processed source counts plus page/article breakdown.
 
 Obsidian direct-output extensions on top of that baseline:
 
@@ -139,8 +146,8 @@ Config load
   -> Public asset copy
   -> Theme asset copy
   -> Theme token CSS emission
-  -> Site assembly (pages + navigation)
-  -> WikiLink index + backlink index
+  -> Site assembly (pages + metadata + navigation)
+  -> WikiLink index + article-experience signals
   -> DocFlow: ParserAdapter -> WikiLinker -> RenderAdapter
   -> Theme render context assembly
   -> HTML + search-index emission
@@ -212,6 +219,16 @@ Theme V2 additionally derives a page-kind layout key:
 - articles -> `article`
 - explicit frontmatter `layout` overrides the derived key
 
+Article-experience metadata now recognized in frontmatter:
+
+- `summary`
+- `updated`
+- `series`
+- `cover`
+- `author`
+- `column`
+- derived `reading_time_minutes` from source body text
+
 Default exclude patterns now include `.obsidian`, `.git`, `node_modules`, `dist`, `.trash`, `templates`, `Templates`, plus any hidden directory.
 
 ## Configuration
@@ -282,8 +299,11 @@ that are intentionally kept above `docflow` and `core`:
 - derive `SitePage` records from build inputs
 - assemble navigation from page-only structure plus `nav_title` / `nav_hidden` metadata
 - derive section context for the current page
-- build page-header HTML and backlink HTML helpers
-- compute backlinks from markdown wikilink sources
+- build page-header HTML and contextual backlink HTML helpers
+- compute backlinks from markdown wikilink mention snippets
+- compute related-note candidates from outbound links, reverse links, shared tags, and shared series
+- compute article previous/next ordering and series navigation
+- derive markdown heading outlines and TOC anchors
 - validate Theme V2 layout coverage and override allowlists
 - merge theme tokens and emit CSS custom properties
 - construct Theme V2 render context and hand it to `docflow.render_theme_template(...)`
@@ -307,12 +327,14 @@ This keeps `docflow` focused on parser/render adapter behavior plus generic them
 - Theme V2 bundles are currently project-local only; there is no inheritance or layering implementation yet
 - partial loading currently scans the `partials/` directory non-recursively
 - tokens only emit scalar string/number/bool values to CSS custom properties
-- backlink presentation is still partly exposed as pre-rendered HTML helpers in addition to the richer collection model
+- homepage curation, collection pages, RSS/social metadata, and the broader explore layer remain out of scope for this M1 article-experience slice
+- related-note scoring is currently a simple heuristic over links, shared tags, and shared series rather than a richer semantic ranking model
 
 ## Next Planned Evolution
 
 1. decide whether Theme V2 should grow layered or inheritable bundle composition without breaking the current project-local contract
-2. formalize theme-author documentation for the structured `site` / `page` / `collections` / `slots` contract
-3. decide whether recursive partial discovery is worth standardizing or whether flat partial sets are sufficient
-4. continue strengthening `check` as the non-emitting validation path for theme and content diagnostics
-5. add structured command flags such as `--config`, `--output`, or serve host/port overrides
+2. formalize theme-author documentation for the structured `site` / `page` / `collections` / `slots` contract, including the new article-experience fields
+3. decide whether homepage curation, topic/tag/series pages, and archive/RSS/social metadata should form the next Quartz-style milestone
+4. decide whether recursive partial discovery is worth standardizing or whether flat partial sets are sufficient
+5. continue strengthening `check` as the non-emitting validation path for theme and content diagnostics
+6. add structured command flags such as `--config`, `--output`, or serve host/port overrides
