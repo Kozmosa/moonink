@@ -123,9 +123,6 @@ fn launch_native_preview(session : @cli.ServeSession) -> Unit {
 
 ///|
 fn run_prebuilt_preview(options : ServePrebuiltOptions) -> Unit {
-  if options.root.is_empty() {
-    return
-  }
   let startup = @cli.start_prepared_serve_session_result(
     @cli.prepare_serve_session(
       options.root,
