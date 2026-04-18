@@ -41,6 +41,8 @@ pub fn parse_cli_command(Array[String]) -> CliCommand
 
 pub fn parse_cli_request(Array[String]) -> ParsedCliRequest
 
+pub fn prepare_main_serve_launch_result(String, String?, String, Int) -> Result[MainServeLaunch, String]
+
 pub fn prepare_serve_runtime_session(String, String?, String, Int) -> Result[PreparedServeRuntime, String]
 
 pub fn prepare_serve_session(String, host? : String, port? : Int, note? : String) -> ServeSession
@@ -58,6 +60,8 @@ pub fn run_check_command_runtime() -> CliOutcome
 pub fn run_check_command_runtime_from_config(String) -> CliOutcome
 
 pub fn run_check_command_runtime_from_config_with_output(String, String?) -> CliOutcome
+
+pub fn run_main_serve_command(ServeCliOptions) -> CliOutcome
 
 pub fn run_runtime_cli_request(ParsedCliRequest) -> CliOutcome
 
@@ -171,6 +175,13 @@ pub impl Show for CliCommand
 pub(all) struct CliOutcome {
   exit_code : Int
   message : String
+} derive(Eq, @debug.Debug)
+
+pub struct MainServeLaunch {
+  build_message : String
+  preview_root : String
+  host : String
+  port : Int
 } derive(Eq, @debug.Debug)
 
 pub(all) enum ParsedCliRequest {

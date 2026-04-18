@@ -25,6 +25,14 @@ pub(all) struct PreparedServeRuntime {
 } derive(Debug, Eq)
 
 ///|
+pub struct MainServeLaunch {
+  build_message : String
+  preview_root : String
+  host : String
+  port : Int
+} derive(Debug, Eq)
+
+///|
 pub fn prepare_serve_session(
   preview_root : String,
   host? : String = DEFAULT_SERVE_HOST,
@@ -58,6 +66,15 @@ pub fn format_serve_build_warnings(
       diagnostic.entry.message
   }
   output
+}
+
+///|
+fn format_serve_build_stage(stage : ServeBuildStage) -> String {
+  match stage {
+    ServeBuildStage::Clean(_) => "[serve] build completed"
+    ServeBuildStage::WithWarnings(_, diagnostics) =>
+      format_serve_build_warnings(diagnostics)
+  }
 }
 
 ///|
@@ -180,6 +197,64 @@ fn run_serve_command(options : ServeCliOptions) -> CliOutcome {
 }
 
 ///|
+pub fn prepare_main_serve_launch_result(
+  config_path : String,
+  output_dir : String?,
+  host : String,
+  port : Int,
+) -> Result[MainServeLaunch, String] {
+  let prepared = match
+    prepare_serve_runtime_session(config_path, output_dir, host, port) {
+    Ok(prepared) => prepared
+    Err(message) => return Err(message)
+  }
+  Ok({
+    build_message: format_serve_build_stage(prepared.build_stage),
+    preview_root: prepared.session.preview_root,
+    host: prepared.session.host,
+    port: prepared.session.port,
+  })
+}
+
+///|
+pub fn run_main_serve_command(options : ServeCliOptions) -> CliOutcome {
+  let launch = match
+    prepare_main_serve_launch_result(
+      options.config_path,
+      options.output_dir,
+      options.host,
+      options.port,
+    ) {
+    Ok(launch) => launch
+    Err(message) => return { exit_code: 1, message }
+  }
+  println(launch.build_message)
+  let command = match
+    @runtime.native_serve_delegate_command_result(
+      launch.preview_root,
+      launch.host,
+      launch.port,
+    ) {
+    Ok(command) => command
+    Err(err) =>
+      return {
+        exit_code: 1,
+        message: "[serve] failed during preview startup\n" +
+        @core.format_project_io_error(err),
+      }
+  }
+  @runtime.exec_native_serve_delegate(command) catch {
+    err =>
+      return {
+        exit_code: 1,
+        message: "[serve] failed during preview startup\n" +
+        @core.format_project_io_error(err),
+      }
+  }
+  { exit_code: 0, message: "" }
+}
+
+///|
 pub fn run_serve_command_runtime_from_config_with_runner(
   config_path : String,
   output_dir : String?,
@@ -197,11 +272,7 @@ pub fn run_serve_command_runtime_from_config_with_runner(
     Ok(session) => session
     Err(message) => return { exit_code: 1, message }
   }
-  let build_message = match prepared.build_stage {
-    ServeBuildStage::Clean(_) => "[serve] build completed"
-    ServeBuildStage::WithWarnings(_, diagnostics) =>
-      format_serve_build_warnings(diagnostics)
-  }
+  let build_message = format_serve_build_stage(prepared.build_stage)
   let final_session = match runner {
     @runtime.PreviewRunner::DryRun => startup
     @runtime.PreviewRunner::NativeMocket =>

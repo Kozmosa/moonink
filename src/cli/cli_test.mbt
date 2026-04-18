@@ -845,6 +845,34 @@ test "runtime cli serve respects host port and output override" {
 }
 
 ///|
+test "main serve launch plan builds once before delegated preview startup" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/minimal", "minimal-main-serve-delegate",
+  )
+  let launch = match
+    prepare_main_serve_launch_result(
+      fixture_root + "/moonink.json",
+      Some("preview-dist"),
+      "0.0.0.0",
+      4173,
+    ) {
+    Ok(launch) => launch
+    Err(message) => {
+      inspect(message, content="")
+      panic()
+    }
+  }
+  inspect(launch.build_message, content="[serve] build completed")
+  inspect(launch.preview_root, content=fixture_root + "/preview-dist")
+  inspect(launch.host, content="0.0.0.0")
+  inspect(launch.port.to_string(), content="4173")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/preview-dist/hello/index.html"),
+    content="true",
+  )
+}
+
+///|
 test "runtime cli serve continues after build warnings" {
   let fixture_root = prepare_isolated_fixture_copy(
     "fixtures/v2/check_wikilink_warning", "check-wikilink-warning-serve",
@@ -868,6 +896,38 @@ test "runtime cli serve continues after build warnings" {
       #|status: Dry-run preview launch validated the built output without starting a server.
     ),
   )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="true",
+  )
+}
+
+///|
+test "main serve launch plan keeps warning-tolerant build semantics" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/check_wikilink_warning", "main-serve-warning-delegate",
+  )
+  let launch = match
+    prepare_main_serve_launch_result(
+      fixture_root + "/moonink.json",
+      None,
+      "127.0.0.1",
+      3000,
+    ) {
+    Ok(launch) => launch
+    Err(message) => {
+      inspect(message, content="")
+      panic()
+    }
+  }
+  inspect(
+    launch.build_message,
+    content=(
+      #|[serve] build completed with warnings
+      #|[hello.md] Unresolved wikilink target: missing-page
+    ),
+  )
+  inspect(launch.preview_root, content=fixture_root + "/dist")
   inspect(
     @runtime.io_path_exists(fixture_root + "/dist/index.html"),
     content="true",

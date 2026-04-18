@@ -2,14 +2,17 @@ import {
   "kozmosa/moonink/core" @core,
   "moonbitlang/x/fs" @fs,
   "moonbitlang/core/env" @env,
+  "moonbitlang/core/encoding/utf8" @utf8,
   "moonbitlang/x/time" @time,
 }
 
 options(
-  "native-stub": [ "search_index_clock.c" ],
+  "native-stub": [ "search_index_clock.c", "serve_delegate.c" ],
   targets: {
     "search_index_clock_js.mbt": [ "js" ],
     "search_index_clock_native.mbt": [ "native", "llvm" ],
     "search_index_clock_wasm.mbt": [ "wasm", "wasm-gc" ],
+    "serve_delegate_native.mbt": [ "native", "llvm" ],
+    "serve_delegate_stub.mbt": [ "js", "wasm", "wasm-gc" ],
   },
 )
