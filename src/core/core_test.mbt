@@ -50,8 +50,10 @@ test "build_site_model_dummy preserves inventory counts" {
   let inventory : @core.ContentInventory = {
     root: "fixtures/v2/minimal",
     files: [],
+    asset_files: [],
     total_articles: 2,
     total_pages: 3,
+    total_assets: 0,
     note: "inventory for site model dummy test",
   }
   let config : @core.MooninkConfig = {

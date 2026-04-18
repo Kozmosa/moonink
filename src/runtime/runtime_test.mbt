@@ -137,6 +137,26 @@ test "discover_content_result ignores root helper directories" {
 }
 
 ///|
+test "discover_content_result collects vault assets and skips helper directories by default" {
+  let config = match
+    @runtime.load_config_result("fixtures/v2/obsidian_direct_basic/moonink.json") {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let inventory = match @runtime.discover_content_result(config) {
+    Ok(inventory) => inventory
+    Err(_) => panic()
+  }
+  inspect(inventory.files.length(), content="2")
+  inspect(inventory.asset_files.length(), content="1")
+  inspect(
+    inventory.asset_files[0].relative_path,
+    content="Attachments/diagram.png",
+  )
+  inspect(inventory.total_assets, content="1")
+}
+
+///|
 test "discover_content_result ignores configured theme directory" {
   let config_json =
     #|{

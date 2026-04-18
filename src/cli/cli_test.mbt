@@ -17,8 +17,10 @@ test "build site assembly model combines pages and navigation" {
   let inventory : @core.ContentInventory = {
     root: "fixtures/v2/minimal",
     files: [],
+    asset_files: [],
     total_articles: 1,
     total_pages: 2,
+    total_assets: 0,
     note: "inventory for assembly test",
   }
   let inputs : Array[@runtime.BuildInput] = [

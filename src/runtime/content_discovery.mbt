@@ -103,6 +103,16 @@ fn configured_template_helper_path(config : @core.MooninkConfig) -> String? {
 }
 
 ///|
+fn configured_config_helper_path(config : @core.MooninkConfig) -> String? {
+  if config.content_dir != "." {
+    return None
+  }
+  Some(relative_source_path(config.project_root, config.config_path) catch {
+    _ => return None
+  })
+}
+
+///|
 fn is_helper_path(path : String, helper_root : String) -> Bool {
   path == helper_root || path.has_prefix(helper_root + "/")
 }
@@ -132,6 +142,10 @@ fn should_skip_helper_source(
   }
   if config.content_dir == "." && is_helper_path(normalized, "public") {
     return true
+  }
+  match configured_config_helper_path(config) {
+    Some(config_path) if normalized == config_path => return true
+    _ => ()
   }
   match configured_theme_helper_path(config) {
     Some(theme_root) if theme_root != "." &&
@@ -196,13 +210,13 @@ pub fn load_build_inputs_task(
 }
 
 ///|
-/// Recursively collect content files (.md and .html) from a directory,
-/// respecting exclude patterns.
-fn collect_content_files(
+/// Recursively collect content files and passthrough assets from a directory.
+fn collect_content_tree(
+  content_root : String,
   root : String,
   exclude : Array[String],
   skip_dir : (String) -> Bool,
-) -> Array[@core.ContentFile] raise @core.ContentDiscoveryError {
+) -> (Array[@core.ContentFile], Array[@core.StaticAssetFile]) raise @core.ContentDiscoveryError {
   if !io_path_exists(root) {
     raise @core.ContentDiscoveryError::MissingDirectory(root)
   }
@@ -210,10 +224,10 @@ fn collect_content_files(
   if !is_dir {
     raise @core.ContentDiscoveryError::NotDirectory(root)
   }
-  let discovered : Array[@core.ContentFile] = []
+  let content : Array[@core.ContentFile] = []
+  let assets : Array[@core.StaticAssetFile] = []
   let entries = io_read_dir(root) catch { err => raise io_discovery_error(err) }
   for entry in entries {
-    // Skip excluded directories
     if @core.should_exclude(entry, exclude) || skip_dir(entry) {
       continue
     }
@@ -222,9 +236,17 @@ fn collect_content_files(
       err => raise io_discovery_error(err)
     }
     if is_dir {
-      let nested = collect_content_files(full_path, exclude, skip_dir)
-      for file in nested {
-        discovered.push(file)
+      let (nested_content, nested_assets) = collect_content_tree(
+        content_root,
+        full_path,
+        exclude,
+        skip_dir,
+      )
+      for file in nested_content {
+        content.push(file)
+      }
+      for asset in nested_assets {
+        assets.push(asset)
       }
       continue
     }
@@ -235,26 +257,28 @@ fn collect_content_files(
       continue
     }
     let format = @core.classify_source_format(full_path)
+    let relative_path = relative_source_path(content_root, full_path) catch {
+      err => raise err
+    }
     match format {
       @core.SourceFormat::Markdown =>
-        // Need to read file to check frontmatter for type classification
-        // For initial discovery, default to Article; will be refined after frontmatter parsing
-        discovered.push({
+        content.push({
           path: full_path,
           content_kind: @core.ContentKind::Article,
           format,
         })
       @core.SourceFormat::Html =>
-        discovered.push({
+        content.push({
           path: full_path,
           content_kind: @core.ContentKind::Page,
           format,
         })
-      _ => ()
+      _ => assets.push({ path: full_path, relative_path })
     }
   }
-  discovered.sort_by(fn(a, b) { a.path.compare(b.path) })
-  discovered
+  content.sort_by(fn(a, b) { a.path.compare(b.path) })
+  assets.sort_by(fn(a, b) { a.relative_path.compare(b.relative_path) })
+  (content, assets)
 }
 
 ///|
@@ -274,13 +298,19 @@ pub fn discover_content_result(
   if exclude.search_by(e => e == config.output_dir) is None {
     exclude.push(config.output_dir)
   }
-  let discovered = collect_content_files(content_root, exclude, fn(entry) {
+  let (discovered_files, discovered_assets) = collect_content_tree(
+    content_root,
+    content_root,
+    exclude,
+    fn(entry) {
     should_skip_root_helper_dir(config, entry)
-  }) catch {
+  },
+  ) catch {
     err => return Err(err)
   }
   let files : Array[@core.ContentFile] = []
-  for file in discovered {
+  let asset_files : Array[@core.StaticAssetFile] = []
+  for file in discovered_files {
     let relative_path = relative_source_path(content_root, file.path) catch {
       err => return Err(err)
     }
@@ -288,6 +318,12 @@ pub fn discover_content_result(
       continue
     }
     files.push(file)
+  }
+  for asset in discovered_assets {
+    if should_skip_helper_source(config, asset.relative_path) {
+      continue
+    }
+    asset_files.push(asset)
   }
   let mut total_articles = 0
   let mut total_pages = 0
@@ -300,9 +336,11 @@ pub fn discover_content_result(
   Ok({
     root: content_root,
     files,
+    asset_files,
     total_articles,
     total_pages,
-    note: "Content discovery scans the content directory recursively, excluding configured patterns.",
+    total_assets: asset_files.length(),
+    note: "Content discovery scans the content directory recursively, excluding configured patterns and collecting passthrough assets.",
   })
 }
 
