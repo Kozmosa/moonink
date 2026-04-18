@@ -39,6 +39,13 @@ pub(all) struct ContentFile {
 } derive(Debug, Eq)
 
 ///|
+/// A discovered static asset that should be copied through to output.
+pub(all) struct StaticAssetFile {
+  path : String
+  relative_path : String
+} derive(Debug, Eq)
+
+///|
 /// Content discovery failures.
 pub(all) suberror ContentDiscoveryError {
   IOError(ProjectIOError)
@@ -52,8 +59,10 @@ pub(all) suberror ContentDiscoveryError {
 pub(all) struct ContentInventory {
   root : String
   files : Array[ContentFile]
+  asset_files : Array[StaticAssetFile]
   total_articles : Int
   total_pages : Int
+  total_assets : Int
   note : String
 } derive(Debug, Eq)
 

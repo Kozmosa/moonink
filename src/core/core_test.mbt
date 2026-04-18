@@ -50,8 +50,10 @@ test "build_site_model_dummy preserves inventory counts" {
   let inventory : @core.ContentInventory = {
     root: "fixtures/v2/minimal",
     files: [],
+    asset_files: [],
     total_articles: 2,
     total_pages: 3,
+    total_assets: 0,
     note: "inventory for site model dummy test",
   }
   let config : @core.MooninkConfig = {
@@ -135,6 +137,39 @@ test "parse_config_json uses defaults for optional fields" {
   inspect(config.route_style, content="Pretty")
   inspect(config.template_file, content="None")
   inspect(config.exclude.length() > 0, content="true")
+}
+
+///|
+test "parse_config_json uses obsidian-friendly default excludes" {
+  let json =
+    #|{"site_name": "Vault"}
+  let config = @core.parse_config_json("moonink.json", json) catch {
+    _ => panic()
+  }
+  inspect(
+    config.exclude,
+    content="[\".obsidian\", \"dist\", \".git\", \"node_modules\", \".trash\", \"templates\", \"Templates\"]",
+  )
+}
+
+///|
+test "parse_config_json preserves explicit excludes" {
+  let json =
+    #|{"site_name": "Vault", "exclude": ["assets", "cache"]}
+  let config = @core.parse_config_json("moonink.json", json) catch {
+    _ => panic()
+  }
+  inspect(config.exclude, content="[\"assets\", \"cache\"]")
+}
+
+///|
+test "parse_config_json preserves explicit empty excludes" {
+  let json =
+    #|{"site_name": "Vault", "exclude": []}
+  let config = @core.parse_config_json("moonink.json", json) catch {
+    _ => panic()
+  }
+  inspect(config.exclude, content="[]")
 }
 
 ///|
@@ -460,6 +495,24 @@ test "page_view_model_from_meta falls back to kind for layout" {
 }
 
 ///|
+test "theme_page_kind prioritizes index flag over article content kind" {
+  let meta : @core.PageMeta = {
+    source_path: "README.md",
+    url_path: "/",
+    output_path: "index.html",
+    content_kind: @core.ContentKind::Article,
+    format: @core.SourceFormat::Markdown,
+    frontmatter: @core.Frontmatter::default(),
+    layout_override: None,
+    resolved_title: "Vault Home",
+    sort_key: "README.md",
+    is_index: true,
+  }
+  inspect(@core.theme_page_kind(meta), content="index")
+  inspect(@core.page_view_model_from_meta(meta).layout, content="index")
+}
+
+///|
 test "parse_frontmatter_from_source handles full document" {
   let source = "---\ntitle: Hello\ntype: page\n---\n\n# Body content"
   let (fm, body) = @core.parse_frontmatter_from_source(source)
@@ -621,7 +674,7 @@ test "generate_route direct style" {
   )
   inspect(
     @core.generate_route("index.md", @core.RouteStyle::Direct),
-    content="/index.html",
+    content="/",
   )
 }
 

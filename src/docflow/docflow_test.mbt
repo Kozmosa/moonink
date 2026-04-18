@@ -135,6 +135,67 @@ test "docflow indexed wikilinker supports path and extension targets" {
 }
 
 ///|
+test "docflow indexed wikilinker rewrites resource wikilinks as ordinary links" {
+  let parsed : @docflow.ParsedDocument = {
+    backend_name: "fake-markdown-parser",
+    source_format: @core.SourceFormat::Markdown,
+    source_path: "README.md",
+    source_uuid: "vault-home",
+    diagnostics: @docflow.empty_document_diagnostics(),
+    backend_payload: Some("See [[diagram.png]]."),
+  }
+  let linker = @docflow.indexed_wikilinker({}, {}, resource_targets={
+    "diagram.png": "/Attachments/diagram.png",
+  })
+  let linked = @docflow.apply_wikilinker(linker, parsed)
+  inspect(
+    linked.backend_payload,
+    content="Some(\"See [diagram.png](/Attachments/diagram.png).\")",
+  )
+}
+
+///|
+test "docflow indexed wikilinker rewrites image embeds" {
+  let parsed : @docflow.ParsedDocument = {
+    backend_name: "fake-markdown-parser",
+    source_format: @core.SourceFormat::Markdown,
+    source_path: "README.md",
+    source_uuid: "vault-home",
+    diagnostics: @docflow.empty_document_diagnostics(),
+    backend_payload: Some("![[diagram.png]]"),
+  }
+  let linker = @docflow.indexed_wikilinker({}, {}, resource_targets={
+    "diagram.png": "/Attachments/diagram.png",
+  })
+  let linked = @docflow.apply_wikilinker(linker, parsed)
+  inspect(
+    linked.backend_payload,
+    content="Some(\"![diagram.png](/Attachments/diagram.png)\")",
+  )
+}
+
+///|
+test "docflow indexed wikilinker warns on unresolved resource embeds" {
+  let parsed : @docflow.ParsedDocument = {
+    backend_name: "fake-markdown-parser",
+    source_format: @core.SourceFormat::Markdown,
+    source_path: "README.md",
+    source_uuid: "vault-home",
+    diagnostics: @docflow.empty_document_diagnostics(),
+    backend_payload: Some("![[missing.png]]"),
+  }
+  let linked = @docflow.apply_wikilinker(
+    @docflow.indexed_wikilinker({}, {}),
+    parsed,
+  )
+  inspect(linked.diagnostics.entries.length(), content="1")
+  inspect(
+    @docflow.format_document_diagnostic(linked.diagnostics.entries[0]),
+    content="(WARN) Unresolved resource target: missing.png",
+  )
+}
+
+///|
 test "docflow indexed wikilinker collects only resolved wikilink targets" {
   let parsed : @docflow.ParsedDocument = {
     backend_name: "fake-markdown-parser",

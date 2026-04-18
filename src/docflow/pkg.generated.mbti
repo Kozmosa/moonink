@@ -47,7 +47,7 @@ pub fn format_document_diagnostics(DocumentDiagnostics) -> String
 
 pub fn html_passthrough_parser_adapter() -> ParserAdapter
 
-pub fn indexed_wikilinker(Map[String, String], Map[String, Array[String]], name? : String, note? : String) -> WikiLinker
+pub fn indexed_wikilinker(Map[String, String], Map[String, Array[String]], resource_targets? : Map[String, String], ambiguous_resource_targets? : Map[String, Array[String]], name? : String, note? : String) -> WikiLinker
 
 pub fn lookup_parser_adapter(ParserRegistry, @core.SourceFormat) -> Result[ParserAdapter, AdapterRegistryError]
 
@@ -247,6 +247,8 @@ pub(all) struct WikiLinker {
   note : String
   exact_targets : Map[String, String]
   ambiguous_targets : Map[String, Array[String]]
+  resource_targets : Map[String, String]
+  ambiguous_resource_targets : Map[String, Array[String]]
 } derive(Eq, @debug.Debug)
 
 // Type aliases

@@ -33,8 +33,10 @@ test "build site assembly model combines pages and navigation" {
   let inventory : @core.ContentInventory = {
     root: "fixtures/v2/minimal",
     files: [],
+    asset_files: [],
     total_articles: 1,
     total_pages: 2,
+    total_assets: 0,
     note: "inventory for assembly test",
   }
   let inputs : Array[@runtime.BuildInput] = [
@@ -46,6 +48,7 @@ test "build site assembly model combines pages and navigation" {
       meta: {
         source_path: "index.md",
         url_path: "/",
+        output_path: "index.html",
         content_kind: @core.ContentKind::Page,
         format: @core.SourceFormat::Markdown,
         frontmatter: {
@@ -54,7 +57,9 @@ test "build site assembly model combines pages and navigation" {
           content_type: Some("page"),
         },
         layout_override: None,
+        resolved_title: "",
         sort_key: "index.md",
+        is_index: true,
       },
     },
     {
@@ -65,11 +70,14 @@ test "build site assembly model combines pages and navigation" {
       meta: {
         source_path: "about.html",
         url_path: "/about/",
+        output_path: "about/index.html",
         content_kind: @core.ContentKind::Page,
         format: @core.SourceFormat::Html,
         frontmatter: @core.Frontmatter::default(),
         layout_override: None,
+        resolved_title: "",
         sort_key: "about.html",
+        is_index: false,
       },
     },
     {
@@ -80,20 +88,23 @@ test "build site assembly model combines pages and navigation" {
       meta: {
         source_path: "hello.md",
         url_path: "/hello/",
+        output_path: "hello/index.html",
         content_kind: @core.ContentKind::Article,
         format: @core.SourceFormat::Markdown,
         frontmatter: @core.Frontmatter::default(),
         layout_override: None,
+        resolved_title: "",
         sort_key: "hello.md",
+        is_index: false,
       },
     },
   ]
   let assembly = @cli.build_site_assembly_model(config, inputs, inventory)
   inspect(assembly.page_count, content="2")
   inspect(assembly.article_count, content="1")
-  inspect(assembly.navigation_items, content="2")
+  inspect(assembly.navigation_items, content="3")
   inspect(assembly.pages.length(), content="3")
-  inspect(assembly.navigation.items.length(), content="2")
+  inspect(assembly.navigation.items.length(), content="3")
 }
 
 ///|
@@ -107,6 +118,7 @@ test "build backlink index records markdown source urls once per page" {
       meta: {
         source_path: "index.md",
         url_path: "/",
+        output_path: "index.html",
         content_kind: @core.ContentKind::Page,
         format: @core.SourceFormat::Markdown,
         frontmatter: {
@@ -114,7 +126,9 @@ test "build backlink index records markdown source urls once per page" {
           content_type: Some("page"),
         },
         layout_override: None,
+        resolved_title: "",
         sort_key: "index.md",
+        is_index: true,
       },
     },
     {
@@ -125,11 +139,14 @@ test "build backlink index records markdown source urls once per page" {
       meta: {
         source_path: "hello.md",
         url_path: "/hello/",
+        output_path: "hello/index.html",
         content_kind: @core.ContentKind::Article,
         format: @core.SourceFormat::Markdown,
         frontmatter: @core.Frontmatter::default(),
         layout_override: None,
+        resolved_title: "",
         sort_key: "hello.md",
+        is_index: false,
       },
     },
   ]
@@ -151,6 +168,7 @@ test "build backlink index ignores unresolved and ambiguous wikilinks" {
       meta: {
         source_path: "index.md",
         url_path: "/",
+        output_path: "index.html",
         content_kind: @core.ContentKind::Page,
         format: @core.SourceFormat::Markdown,
         frontmatter: {
@@ -158,7 +176,9 @@ test "build backlink index ignores unresolved and ambiguous wikilinks" {
           content_type: Some("page"),
         },
         layout_override: None,
+        resolved_title: "",
         sort_key: "index.md",
+        is_index: true,
       },
     },
     {
@@ -169,11 +189,14 @@ test "build backlink index ignores unresolved and ambiguous wikilinks" {
       meta: {
         source_path: "guide/intro.md",
         url_path: "/guide/intro/",
+        output_path: "guide/intro/index.html",
         content_kind: @core.ContentKind::Article,
         format: @core.SourceFormat::Markdown,
         frontmatter: @core.Frontmatter::default(),
         layout_override: None,
+        resolved_title: "",
         sort_key: "guide/intro.md",
+        is_index: false,
       },
     },
     {
@@ -184,11 +207,14 @@ test "build backlink index ignores unresolved and ambiguous wikilinks" {
       meta: {
         source_path: "reference/intro.md",
         url_path: "/reference/intro/",
+        output_path: "reference/intro/index.html",
         content_kind: @core.ContentKind::Article,
         format: @core.SourceFormat::Markdown,
         frontmatter: @core.Frontmatter::default(),
         layout_override: None,
+        resolved_title: "",
         sort_key: "reference/intro.md",
+        is_index: false,
       },
     },
   ]
@@ -327,12 +353,13 @@ test "build navigation model uses nav_title and hides nav_hidden pages" {
     },
   ]
   let navigation = @cli.build_navigation_model(pages)
-  inspect(navigation.total_items, content="3")
-  inspect(navigation.items.length(), content="2")
+  inspect(navigation.total_items, content="4")
+  inspect(navigation.items.length(), content="3")
   inspect(navigation.items[0].title, content="Home")
-  inspect(navigation.items[1].title, content="Documentation")
-  inspect(navigation.items[1].children.length(), content="1")
-  inspect(navigation.items[1].children[0].title, content="Quick Start")
+  inspect(navigation.items[1].title, content="Hello")
+  inspect(navigation.items[2].title, content="Documentation")
+  inspect(navigation.items[2].children.length(), content="1")
+  inspect(navigation.items[2].children[0].title, content="Quick Start")
 }
 
 ///|
@@ -385,6 +412,7 @@ test "site page title derives from frontmatter basename and root index" {
   let titled_meta : @core.PageMeta = {
     source_path: "guide/install.md",
     url_path: "/guide/install/",
+    output_path: "guide/install/index.html",
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: {
@@ -392,25 +420,33 @@ test "site page title derives from frontmatter basename and root index" {
       title: Some("Install Guide"),
     },
     layout_override: None,
+    resolved_title: "",
     sort_key: "guide/install.md",
+    is_index: false,
   }
   let untitled_meta : @core.PageMeta = {
     source_path: "guide/config.md",
     url_path: "/guide/config/",
+    output_path: "guide/config/index.html",
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: @core.Frontmatter::default(),
     layout_override: None,
+    resolved_title: "",
     sort_key: "guide/config.md",
+    is_index: false,
   }
   let index_meta : @core.PageMeta = {
     source_path: "index.md",
     url_path: "/",
+    output_path: "index.html",
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: @core.Frontmatter::default(),
     layout_override: None,
+    resolved_title: "",
     sort_key: "index.md",
+    is_index: true,
   }
   inspect(@cli.site_page_title(titled_meta), content="Install Guide")
   inspect(@cli.site_page_title(untitled_meta), content="config")
@@ -422,6 +458,7 @@ test "site page navigation metadata derives from frontmatter extra" {
   let nav_meta : @core.PageMeta = {
     source_path: "guide/install.md",
     url_path: "/guide/install/",
+    output_path: "guide/install/index.html",
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: {
@@ -430,16 +467,21 @@ test "site page navigation metadata derives from frontmatter extra" {
       extra: { "nav_title": "Quick Start", "nav_hidden": "true" },
     },
     layout_override: None,
+    resolved_title: "",
     sort_key: "guide/install.md",
+    is_index: false,
   }
   let default_meta : @core.PageMeta = {
     source_path: "guide/config.md",
     url_path: "/guide/config/",
+    output_path: "guide/config/index.html",
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: @core.Frontmatter::default(),
     layout_override: None,
+    resolved_title: "",
     sort_key: "guide/config.md",
+    is_index: false,
   }
   inspect(@cli.site_page_nav_title(nav_meta), content="Quick Start")
   inspect(@cli.site_page_nav_hidden(nav_meta), content="true")
@@ -452,6 +494,7 @@ test "site page navigation metadata falls back on empty title and strict hidden 
   let empty_title_meta : @core.PageMeta = {
     source_path: "guide/advanced.md",
     url_path: "/guide/advanced/",
+    output_path: "guide/advanced/index.html",
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: {
@@ -460,11 +503,14 @@ test "site page navigation metadata falls back on empty title and strict hidden 
       extra: { "nav_title": "" },
     },
     layout_override: None,
+    resolved_title: "",
     sort_key: "guide/advanced.md",
+    is_index: false,
   }
   let loose_hidden_meta : @core.PageMeta = {
     source_path: "guide/draft.md",
     url_path: "/guide/draft/",
+    output_path: "guide/draft/index.html",
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: {
@@ -472,7 +518,9 @@ test "site page navigation metadata falls back on empty title and strict hidden 
       extra: { "nav_hidden": "TRUE" },
     },
     layout_override: None,
+    resolved_title: "",
     sort_key: "guide/draft.md",
+    is_index: false,
   }
   inspect(@cli.site_page_nav_title(empty_title_meta), content="Advanced Guide")
   inspect(@cli.site_page_nav_hidden(loose_hidden_meta), content="false")
@@ -488,6 +536,7 @@ test "build site pages derives description index flag and nav metadata" {
     meta: {
       source_path: "index.md",
       url_path: "/",
+      output_path: "index.html",
       content_kind: @core.ContentKind::Page,
       format: @core.SourceFormat::Markdown,
       frontmatter: {
@@ -497,7 +546,9 @@ test "build site pages derives description index flag and nav metadata" {
         content_type: Some("page"),
       },
       layout_override: None,
+      resolved_title: "",
       sort_key: "index.md",
+      is_index: true,
     },
   }
   let article_input : @runtime.BuildInput = {
@@ -508,6 +559,7 @@ test "build site pages derives description index flag and nav metadata" {
     meta: {
       source_path: "hello.md",
       url_path: "/hello/",
+      output_path: "hello/index.html",
       content_kind: @core.ContentKind::Article,
       format: @core.SourceFormat::Markdown,
       frontmatter: {
@@ -515,7 +567,9 @@ test "build site pages derives description index flag and nav metadata" {
         extra: { "nav_title": "Read Me", "nav_hidden": "true" },
       },
       layout_override: None,
+      resolved_title: "",
       sort_key: "hello.md",
+      is_index: false,
     },
   }
   let pages = @cli.build_site_pages([page_input, article_input])
@@ -539,6 +593,14 @@ test "parse cli command supports raw command tokens" {
   inspect(@cli.parse_cli_command(["check"]), content="Check")
   inspect(@cli.parse_cli_command(["serve"]), content="Serve")
   inspect(@cli.parse_cli_command(["onboard"]), content="Onboard")
+}
+
+///|
+test "default onboard config json includes obsidian-friendly excludes" {
+  let config_json = @cli.default_onboard_config_json("Vault")
+  inspect(config_json.contains("\".trash\""), content="true")
+  inspect(config_json.contains("\"templates\""), content="true")
+  inspect(config_json.contains("\"Templates\""), content="true")
 }
 
 ///|
@@ -1119,6 +1181,19 @@ test "runtime cli check reports invalid draft scalar as blocking" {
 }
 
 ///|
+test "runtime cli check warns when a vault has no homepage note" {
+  let outcome = @cli.run_check_command_runtime_from_config(
+    "fixtures/v2/obsidian_direct_no_home/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(outcome.message.contains("No homepage note detected"), content="true")
+  inspect(
+    outcome.message.contains("[check] summary: 0 errors, 1 warnings"),
+    content="true",
+  )
+}
+
+///|
 test "runtime cli check reports missing config" {
   let outcome = @cli.run_check_command_runtime_from_config(
     "fixtures/v2/missing_config/moonink.json",
@@ -1184,7 +1259,7 @@ test "runtime cli build renders automatic navigation for pretty routes" {
     index_html.contains("href=\"/guide/config/\">Config</a>"),
     content="false",
   )
-  inspect(index_html.contains("Hello Article"), content="false")
+  inspect(index_html.contains("Hello Article"), content="true")
   inspect(index_html.contains("data-section-title=\"Home\""), content="true")
   inspect(index_html.contains("data-section-url=\"/\""), content="true")
   inspect(
@@ -1536,6 +1611,74 @@ test "runtime cli build formats io errors when no config exists" {
 }
 
 ///|
+test "runtime cli build includes frontmatter-free article links in navigation" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/obsidian_direct_basic", "obsidian-nav-articles",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(index_html.contains("data-layout-kind=\"index\""), content="true")
+  inspect(index_html.contains("data-kind=\"index\""), content="true")
+  inspect(
+    index_html.contains("data-section-title=\"Vault Home\""),
+    content="true",
+  )
+  inspect(index_html.contains("data-section-url=\"/\""), content="true")
+  inspect(index_html.contains("href=\"/notes/project/\""), content="true")
+  inspect(index_html.contains(">Project Overview<"), content="true")
+}
+
+///|
+test "runtime cli build copies vault assets from the content tree" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/obsidian_direct_basic", "obsidian-vault-assets-build",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/Attachments/diagram.png"),
+    content="true",
+  )
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(
+    index_html.contains("src=\"/Attachments/diagram.png\""),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli build fails when a vault asset collides with a reserved output artifact" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/obsidian_direct_basic", "obsidian-output-collision",
+  )
+  @runtime.io_write_string(fixture_root + "/search-index.json", "shadow") catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("search-index.json"), content="true")
+  inspect(
+    outcome.message.contains("vault asset output path conflict"),
+    content="true",
+  )
+}
+
+///|
 test "runtime cli build respects direct route layout" {
   let fixture_root = "fixtures/v2/direct_route"
   let stale_path = fixture_root + "/dist/stale.txt"
@@ -1577,7 +1720,8 @@ test "runtime cli build respects direct route layout" {
   }
   inspect(hello_html.contains("Hello World"), content="true")
   inspect(about_html.contains("This is a static HTML page."), content="true")
-  inspect(search_index.contains("\"url\":\"/index.html\""), content="true")
+  inspect(search_index.contains("\"url\":\"/\""), content="true")
+  inspect(search_index.contains("\"url\":\"/index.html\""), content="false")
   inspect(search_index.contains("\"url\":\"/hello.html\""), content="true")
   inspect(search_index.contains("\"url\":\"/about.html\""), content="true")
 }
@@ -1743,7 +1887,7 @@ test "runtime cli build uses theme v2 page kind layouts" {
   inspect(index_html.contains("data-page-kind=\"index\""), content="true")
   inspect(
     index_html.contains(
-      "<header class=\"theme-header\" data-nav-count=\"2\">Theme V2 Basic</header>",
+      "<header class=\"theme-header\" data-nav-count=\"3\">Theme V2 Basic</header>",
     ),
     content="true",
   )
@@ -2186,10 +2330,7 @@ test "runtime cli build renders automatic navigation for direct routes" {
   )
   inspect(index_html.contains("Direct Hello Article"), content="false")
   inspect(index_html.contains("data-section-title=\"Home\""), content="true")
-  inspect(
-    index_html.contains("data-section-url=\"/index.html\""),
-    content="true",
-  )
+  inspect(index_html.contains("data-section-url=\"/\""), content="true")
   inspect(
     index_html.contains(
       "<nav data-moonink-breadcrumb=\"auto\" aria-label=\"Breadcrumb\"><span aria-current=\"page\">Home</span></nav>",
@@ -2315,7 +2456,7 @@ test "runtime cli build applies configured template file with direct routes" {
   inspect(hello_html.contains("data-url=\"/hello.html\""), content="true")
   inspect(hello_html.contains("Hello Direct Template"), content="true")
   inspect(hello_html.contains("<nav class=\"template-nav\">"), content="true")
-  inspect(hello_html.contains("href=\"/index.html\">Home</a>"), content="true")
+  inspect(hello_html.contains("href=\"/\">Home</a>"), content="true")
   inspect(
     hello_html.contains("data-page-header-title=\"Hello\""),
     content="true",
@@ -2348,7 +2489,7 @@ test "runtime cli build applies configured template file with direct routes" {
   )
   inspect(about_html.contains("About Direct Template"), content="true")
   inspect(about_html.contains("data-url=\"/about.html\""), content="true")
-  inspect(about_html.contains("href=\"/index.html\">Home</a>"), content="true")
+  inspect(about_html.contains("href=\"/\">Home</a>"), content="true")
   inspect(about_html.contains("data-section-title=\"\""), content="true")
   inspect(about_html.contains("data-section-url=\"\""), content="true")
 }
@@ -2455,7 +2596,7 @@ test "runtime cli build resolves wikilinks for direct routes" {
   }
   inspect(hello_html.contains("href=\"/about.html\""), content="true")
   inspect(hello_html.contains(">about<"), content="true")
-  inspect(hello_html.contains("href=\"/index.html\""), content="true")
+  inspect(hello_html.contains("href=\"/\""), content="true")
   inspect(hello_html.contains(">Home<"), content="true")
 }
 

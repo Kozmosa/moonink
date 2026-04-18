@@ -49,6 +49,7 @@ pub(all) enum CheckCategory {
   Frontmatter
   Wikilinks
   Routes
+  Site
 } derive(Debug, Eq)
 
 ///|
@@ -314,6 +315,67 @@ fn write_build_output(
 }
 
 ///|
+fn reserved_output_paths() -> Array[String] {
+  ["search-index.json", "assets/theme-vars.css"]
+}
+
+///|
+fn validate_static_asset_output_conflicts(
+  inventory : @core.ContentInventory,
+  inputs : Array[@runtime.BuildInput],
+) -> Unit raise BuildCommandError {
+  let output_paths = collect_output_path_sources(inputs)
+  for asset in inventory.asset_files {
+    if output_paths.get(asset.relative_path) is Some(_) {
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "build",
+          asset.relative_path,
+          "vault asset output path conflict with generated html",
+        ),
+      )
+    }
+    if reserved_output_paths().search_by(fn(path) {
+        path == asset.relative_path
+      })
+      is Some(_) {
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "build",
+          asset.relative_path,
+          "vault asset output path conflict with generated artifact",
+        ),
+      )
+    }
+  }
+}
+
+///|
+fn copy_content_tree_assets(
+  config : @core.MooninkConfig,
+  inventory : @core.ContentInventory,
+) -> Unit raise BuildCommandError {
+  for asset in inventory.asset_files {
+    let target = @core.join_relative_path(
+      output_root(config),
+      asset.relative_path,
+    ) catch {
+      err =>
+        raise BuildCommandError::ProjectIO(
+          @core.project_io_error(
+            "copy_vault_asset",
+            asset.relative_path,
+            @core.format_path_policy_error(err),
+          ),
+        )
+    }
+    @runtime.io_copy_file(asset.path, target) catch {
+      err => raise BuildCommandError::ProjectIO(err)
+    }
+  }
+}
+
+///|
 fn strip_link_target_extension(path : String) -> String {
   if path.has_suffix(".md") {
     path[:path.length() - 3].to_string()
@@ -439,6 +501,36 @@ pub fn build_wikilinker(
 }
 
 ///|
+pub fn build_wikilinker_with_assets(
+  inputs : Array[@runtime.BuildInput],
+  asset_files : Array[@core.StaticAssetFile],
+) -> @docflow.WikiLinker {
+  let note_linker = build_wikilinker(inputs)
+  let asset_basenames : Array[String] = []
+  for asset in asset_files {
+    asset_basenames.push(basename_without_extension(asset.relative_path))
+  }
+  let duplicate_asset_basenames = collect_duplicate_keys(asset_basenames)
+  let resource_targets = note_linker.resource_targets.copy()
+  let ambiguous_resource_targets = note_linker.ambiguous_resource_targets.copy()
+  for asset in asset_files {
+    let url = "/" + asset.relative_path
+    register_exact_target(resource_targets, asset.relative_path, url)
+    let basename = basename_without_extension(asset.relative_path)
+    if duplicate_asset_basenames.get(basename) is Some(_) {
+      let urls = match ambiguous_resource_targets.get(basename) {
+        Some(urls) => urls
+        None => []
+      }
+      ambiguous_resource_targets[basename] = urls + [url]
+    } else {
+      register_exact_target(resource_targets, basename, url)
+    }
+  }
+  { ..note_linker, resource_targets, ambiguous_resource_targets }
+}
+
+///|
 pub fn build_backlink_index(
   inputs : Array[@runtime.BuildInput],
   wikilinker : @docflow.WikiLinker,
@@ -479,14 +571,10 @@ pub fn build_backlink_index(
 ///|
 fn collect_output_path_sources(
   inputs : Array[@runtime.BuildInput],
-  route_style : @core.RouteStyle,
 ) -> Map[String, Array[String]] {
   let output_paths : Map[String, Array[String]] = {}
   for input in inputs {
-    let output_path = @core.output_html_path(
-      input.meta.source_path,
-      route_style,
-    )
+    let output_path = input.meta.output_path
     let existing = match output_paths.get(output_path) {
       Some(paths) => paths
       None => []
@@ -499,11 +587,11 @@ fn collect_output_path_sources(
 ///|
 fn append_route_conflicts(
   inputs : Array[@runtime.BuildInput],
-  route_style : @core.RouteStyle,
+  _route_style : @core.RouteStyle,
   report : CheckReport,
 ) -> CheckReport {
   let mut next_report = report
-  let output_paths = collect_output_path_sources(inputs, route_style)
+  let output_paths = collect_output_path_sources(inputs)
   for entry in output_paths {
     let (output_path, sources) = entry
     if sources.length() > 1 {
@@ -661,22 +749,31 @@ fn theme_object_value(
 }
 
 ///|
+fn site_page_kind(page : @core.SitePage) -> String {
+  if page.is_index {
+    return "index"
+  }
+  match page.content_kind {
+    @core.ContentKind::Article => "article"
+    @core.ContentKind::Page => "page"
+  }
+}
+
+///|
 fn theme_navigation_kind(item : @core.NavigationItem) -> String {
+  if item.is_index {
+    return "index"
+  }
   match item.content_kind {
     @core.ContentKind::Article => "article"
-    @core.ContentKind::Page => if item.is_index { "index" } else { "page" }
+    @core.ContentKind::Page => "page"
   }
 }
 
 ///|
 fn theme_site_page_value(page : @core.SitePage) -> @core.ThemeConfigValue {
   let value : Map[String, @core.ThemeConfigValue] = {}
-  value["kind"] = theme_string_value(
-    match page.content_kind {
-      @core.ContentKind::Article => "article"
-      @core.ContentKind::Page => if page.is_index { "index" } else { "page" }
-    },
-  )
+  value["kind"] = theme_string_value(site_page_kind(page))
   value["title"] = theme_string_value(page.title)
   value["nav_title"] = theme_string_value(page.nav_title)
   value["description"] = theme_string_value(page.description)
@@ -888,21 +985,12 @@ fn validate_build_theme_overrides(
 }
 
 ///|
-fn page_body_class(kind : @core.ContentKind) -> String {
-  match kind {
-    @core.ContentKind::Article => "moonink-article"
-    @core.ContentKind::Page => "moonink-page"
+fn page_body_class(meta : @core.PageMeta) -> String {
+  if @core.theme_page_kind(meta) == "article" {
+    "moonink-article"
+  } else {
+    "moonink-page"
   }
-}
-
-///|
-fn is_index_source_path(path : String) -> Bool {
-  path == "index.md" ||
-  path == "index.html" ||
-  path == "index.htm" ||
-  path.has_suffix("/index.md") ||
-  path.has_suffix("/index.html") ||
-  path.has_suffix("/index.htm")
 }
 
 ///|
@@ -941,7 +1029,8 @@ fn navigation_parent_key(page : @core.SitePage) -> String? {
 
 ///|
 fn navigation_sort_key(page : @core.SitePage) -> String {
-  if page.is_index {
+  let basename = basename_without_extension(page.source_path)
+  if page.is_index || basename == "README" {
     page.source_path
   } else {
     "zzz/" + page.source_path
@@ -987,12 +1076,22 @@ fn build_navigation_item(
 }
 
 ///|
+fn has_navigation_node_key(pages : Array[@core.SitePage], key : String) -> Bool {
+  for page in pages {
+    if navigation_node_key(page) == key {
+      return true
+    }
+  }
+  false
+}
+
+///|
 pub fn build_navigation_model(
   pages : Array[@core.SitePage],
 ) -> @core.NavigationModel {
   let nav_pages : Array[@core.SitePage] = []
   for page in pages {
-    if page.content_kind == @core.ContentKind::Page && !page.nav_hidden {
+    if !page.nav_hidden {
       nav_pages.push(page)
     }
   }
@@ -1004,13 +1103,15 @@ pub fn build_navigation_model(
     match navigation_parent_key(page) {
       None => items.push(build_navigation_item(nav_pages, page))
       Some("") => items.push(build_navigation_item(nav_pages, page))
+      Some(parent) if !has_navigation_node_key(nav_pages, parent) =>
+        items.push(build_navigation_item(nav_pages, page))
       _ => ()
     }
   }
   {
     items,
     total_items: nav_pages.length(),
-    note: "Navigation model groups page content by source path hierarchy.",
+    note: "Navigation model groups page and article content by source path hierarchy.",
   }
 }
 
@@ -1124,9 +1225,7 @@ fn find_section_page_by_key(
   key : String,
 ) -> @core.SitePage? {
   for page in pages {
-    if page.content_kind == @core.ContentKind::Page &&
-      page.is_index &&
-      navigation_node_key(page) == key {
+    if page.is_index && navigation_node_key(page) == key {
       return Some(page)
     }
   }
@@ -1150,10 +1249,10 @@ fn source_directory_segments(source_path : String) -> Array[String] {
 ///|
 fn find_current_section_page(
   pages : Array[@core.SitePage],
-  source_path : String,
+  meta : @core.PageMeta,
 ) -> @core.SitePage? {
-  let directories = source_directory_segments(source_path)
-  if is_index_source_path(source_path) {
+  let directories = source_directory_segments(meta.source_path)
+  if meta.is_index {
     let self_key = if directories.is_empty() {
       ""
     } else {
@@ -1201,10 +1300,13 @@ fn build_page_header_html(
 
 ///|
 pub fn site_page_title(meta : @core.PageMeta) -> String {
+  if meta.resolved_title != "" {
+    return meta.resolved_title
+  }
   match meta.frontmatter.title {
     Some(title) => title
     None =>
-      if is_index_source_path(meta.source_path) {
+      if meta.is_index {
         "Home"
       } else {
         basename_without_extension(meta.source_path)
@@ -1246,7 +1348,7 @@ fn build_site_page(input : @runtime.BuildInput) -> @core.SitePage {
     source_path: input.meta.source_path,
     url_path: input.meta.url_path,
     content_kind: input.meta.content_kind,
-    is_index: is_index_source_path(input.meta.source_path),
+    is_index: input.meta.is_index,
   }
 }
 
@@ -1327,10 +1429,7 @@ fn build_template_context(
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
 ) -> @docflow.TemplateContext {
-  let current_section = find_current_section_page(
-    assembly.pages,
-    input.meta.source_path,
-  )
+  let current_section = find_current_section_page(assembly.pages, input.meta)
   let current_section_title = match current_section {
     Some(section) => section.nav_title
     None => ""
@@ -1352,7 +1451,7 @@ fn build_template_context(
     content_kind: template_content_kind(input.meta.content_kind),
     theme_name: theme_name(active_theme),
     theme_asset_root: theme_asset_root(active_theme),
-    page_body_class: page_body_class(input.meta.content_kind),
+    page_body_class: page_body_class(input.meta),
     navigation_html: render_navigation_html(
       assembly.navigation,
       input.meta.url_path,
@@ -1546,10 +1645,7 @@ fn build_theme_render_context(
   rendered : @docflow.RenderedDocument,
 ) -> @docflow.ThemeRenderContext {
   let page_model = @core.page_view_model_from_meta(input.meta)
-  let current_section = find_current_section_page(
-    assembly.pages,
-    input.meta.source_path,
-  )
+  let current_section = find_current_section_page(assembly.pages, input.meta)
   let current_section_title = match current_section {
     Some(section) => section.nav_title
     None => ""
@@ -1622,9 +1718,7 @@ fn build_theme_render_context(
   page["url"] = theme_string_value(input.meta.url_path)
   page["url_path"] = theme_string_value(input.meta.url_path)
   page["source_path"] = theme_string_value(input.meta.source_path)
-  page["body_class"] = theme_string_value(
-    page_body_class(input.meta.content_kind),
-  )
+  page["body_class"] = theme_string_value(page_body_class(input.meta))
   page["body_html"] = theme_string_value(rendered.html)
   page["theme_meta"] = theme_object_value(page_model.theme_meta)
   page["navigation_html"] = theme_string_value(navigation_html)
@@ -1832,10 +1926,16 @@ fn build_site_result(
     }
     None => ()
   }
+  validate_static_asset_output_conflicts(inventory, inputs) catch {
+    err => return Err(err)
+  }
   prepare_output_dir(config) catch {
     err => return Err(err)
   }
   copy_public_assets(config) catch {
+    err => return Err(err)
+  }
+  copy_content_tree_assets(config, inventory) catch {
     err => return Err(err)
   }
   match theme_bundle {
@@ -1861,7 +1961,7 @@ fn build_site_result(
   let mut article_count = 0
   let mut page_count = 0
   let diagnostics : Array[BuildDiagnostic] = []
-  let wikilinker = build_wikilinker(inputs)
+  let wikilinker = build_wikilinker_with_assets(inputs, inventory.asset_files)
   let backlinks = build_backlink_index(inputs, wikilinker)
   for input in inputs {
     let parser = match parser_for_format(input.meta.format) {
@@ -1911,10 +2011,7 @@ fn build_site_result(
         )
       }
     }
-    let output_path = @core.output_html_path(
-      input.meta.source_path,
-      config.route_style,
-    )
+    let output_path = input.meta.output_path
     write_build_output(config, output_path, templated.html) catch {
       err => return Err(err)
     }
@@ -2098,12 +2195,33 @@ fn validate_frontmatter_for_check(
 }
 
 ///|
+fn append_homepage_warning(
+  inputs : Array[@runtime.BuildInput],
+  report : CheckReport,
+) -> CheckReport {
+  if inputs.search_by(fn(input) { input.meta.is_index }) is Some(_) {
+    return report
+  }
+  report_with_entry(report, {
+    category: CheckCategory::Site,
+    severity: CheckSeverity::Warning,
+    source_path: None,
+    message: "No homepage note detected",
+    hint: Some(
+      "Add root index.md or README.md to make the vault landing page explicit.",
+    ),
+    line: None,
+  })
+}
+
+///|
 fn check_category_label(category : CheckCategory) -> String {
   match category {
     CheckCategory::ThemeTemplate => "theme/template"
     CheckCategory::Frontmatter => "frontmatter"
     CheckCategory::Wikilinks => "wikilinks"
     CheckCategory::Routes => "routes"
+    CheckCategory::Site => "site"
   }
 }
 
@@ -2260,9 +2378,10 @@ fn check_site_result(
     Err(err) => return Err(CheckCommandError::ContentDiscovery(err))
   }
   let mut report = empty_check_report()
+  report = append_homepage_warning(inputs, report)
   report = validate_check_active_theme_layout(config, inputs, report)
   report = append_route_conflicts(inputs, config.route_style, report)
-  let wikilinker = build_wikilinker(inputs)
+  let wikilinker = build_wikilinker_with_assets(inputs, inventory.asset_files)
   let mut article_count = 0
   let mut page_count = 0
   for input in inputs {

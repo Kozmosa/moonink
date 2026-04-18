@@ -16,7 +16,12 @@ pub fn generate_route(source_path : String, style : RouteStyle) -> String {
       } else {
         "/\{stripped}/"
       }
-    RouteStyle::Direct => "/\{stripped}.html"
+    RouteStyle::Direct =>
+      if stripped == "index" {
+        "/"
+      } else {
+        "/\{stripped}.html"
+      }
   }
 }
 

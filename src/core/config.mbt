@@ -164,8 +164,10 @@ pub fn normalize_config_path_or_error(
 }
 
 ///|
-fn default_exclude() -> Array[String] {
-  [".obsidian", "dist", ".git", "node_modules"]
+pub fn default_exclude() -> Array[String] {
+  [
+    ".obsidian", "dist", ".git", "node_modules", ".trash", "templates", "Templates",
+  ]
 }
 
 ///|
@@ -193,6 +195,17 @@ fn extract_json_string_array(
       result
     }
     _ => []
+  }
+}
+
+///|
+fn extract_optional_json_string_array(
+  obj : Map[String, Json],
+  key : String,
+) -> Array[String]? {
+  match obj.get(key) {
+    Some(Array(_)) => Some(extract_json_string_array(obj, key))
+    _ => None
   }
 }
 
@@ -299,11 +312,9 @@ pub fn parse_config_json(
       Some(normalize_config_path_or_error(path) catch { err => raise err })
     None => None
   }
-  let exclude_raw = extract_json_string_array(obj, "exclude")
-  let exclude = if exclude_raw.is_empty() {
-    default_exclude()
-  } else {
-    exclude_raw
+  let exclude = match extract_optional_json_string_array(obj, "exclude") {
+    Some(values) => values
+    None => default_exclude()
   }
   let route_style = match extract_json_string(obj, "route_style") {
     Some("direct") => RouteStyle::Direct

@@ -137,6 +137,64 @@ test "discover_content_result ignores root helper directories" {
 }
 
 ///|
+test "discover_content_result collects vault assets and skips helper directories by default" {
+  let config = match
+    @runtime.load_config_result(
+      "fixtures/v2/obsidian_direct_basic/moonink.json",
+    ) {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let inventory = match @runtime.discover_content_result(config) {
+    Ok(inventory) => inventory
+    Err(_) => panic()
+  }
+  inspect(inventory.files.length(), content="2")
+  inspect(inventory.asset_files.length(), content="1")
+  inspect(
+    inventory.asset_files[0].relative_path,
+    content="Attachments/diagram.png",
+  )
+  inspect(inventory.total_assets, content="1")
+}
+
+///|
+test "discover_content_result honors explicit empty excludes in obsidian fixture" {
+  let scratch_root = "fixtures/v2/_test_runs/runtime-empty-exclude-obsidian"
+  let config_json =
+    #|{
+    #|  "site_name": "Vault Fixture",
+    #|  "exclude": []
+    #|}
+  let _ = try? @runtime.io_remove_dir_all(scratch_root)
+  @runtime.io_copy_dir_recursive(
+    "fixtures/v2/obsidian_direct_basic", scratch_root,
+  ) catch {
+    _ => panic()
+  }
+  @runtime.io_write_string(scratch_root + "/moonink.json", config_json) catch {
+    _ => panic()
+  }
+  let config = match
+    @runtime.load_config_result(scratch_root + "/moonink.json") {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let inventory = match @runtime.discover_content_result(config) {
+    Ok(inventory) => inventory
+    Err(_) => panic()
+  }
+  inspect(inventory.files.length(), content="3")
+  inspect(
+    inventory.files.search_by(fn(file) {
+      file.path.has_suffix("Templates/daily.md")
+    })
+    is Some(_),
+    content="true",
+  )
+}
+
+///|
 test "discover_content_result ignores configured theme directory" {
   let config_json =
     #|{
@@ -573,6 +631,65 @@ test "discover_content_build inputs read frontmatter-aware metadata" {
   inspect(by_path.get("about.html").unwrap().meta.url_path, content="/about/")
   inspect(by_path.get("hello.md").unwrap().meta.url_path, content="/hello/")
   inspect(by_path.get("index.md").unwrap().meta.url_path, content="/")
+}
+
+///|
+test "load_build_inputs_result promotes root README to homepage when index is absent" {
+  let config = match
+    @runtime.load_config_result(
+      "fixtures/v2/obsidian_direct_basic/moonink.json",
+    ) {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let inventory = match @runtime.discover_content_result(config) {
+    Ok(inventory) => inventory
+    Err(_) => panic()
+  }
+  let inputs = match @runtime.load_build_inputs_result(config, inventory) {
+    Ok(inputs) => inputs
+    Err(_) => panic()
+  }
+  let by_path : Map[String, @runtime.BuildInput] = {}
+  for input in inputs {
+    by_path[input.meta.source_path] = input
+  }
+  let readme = by_path.get("README.md").unwrap()
+  inspect(readme.meta.url_path, content="/")
+  inspect(readme.meta.output_path, content="index.html")
+  inspect(readme.meta.content_kind, content="Page")
+  inspect(readme.meta.is_index, content="true")
+}
+
+///|
+test "load_build_inputs_result prefers first markdown heading as resolved title" {
+  let config = match
+    @runtime.load_config_result(
+      "fixtures/v2/obsidian_direct_basic/moonink.json",
+    ) {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let inventory = match @runtime.discover_content_result(config) {
+    Ok(inventory) => inventory
+    Err(_) => panic()
+  }
+  let inputs = match @runtime.load_build_inputs_result(config, inventory) {
+    Ok(inputs) => inputs
+    Err(_) => panic()
+  }
+  let by_path : Map[String, @runtime.BuildInput] = {}
+  for input in inputs {
+    by_path[input.meta.source_path] = input
+  }
+  inspect(
+    by_path.get("README.md").unwrap().meta.resolved_title,
+    content="Vault Home",
+  )
+  inspect(
+    by_path.get("notes/project.md").unwrap().meta.resolved_title,
+    content="Project Overview",
+  )
 }
 
 ///|

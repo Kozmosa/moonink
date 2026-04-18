@@ -5,6 +5,7 @@
 - `moonink help`
 - `moonink onboard`
 - `moonink build`
+- `moonink check`
 - `moonink serve`
 
 ## 2. Command Responsibilities
@@ -14,9 +15,9 @@
 First-time setup inside an existing Markdown folder or Obsidian vault:
 
 1. Checks if `moonink.json` already exists.
-2. If not: infers `site_name` from the current directory name, emits a default `moonink.json`.
-3. Scans all `.md` files; injects minimal frontmatter (`title`, `type: article`) into files that have none.
-4. Reports a summary of what was created and modified.
+2. If not: emits a default `moonink.json` with `content_dir: "."`, `output_dir: "dist"`, and vault-friendly excludes for `.obsidian`, `.trash`, `templates`, and related helper directories.
+3. Does not rewrite note files or inject frontmatter.
+4. Reports whether config generation succeeded or was aborted to avoid overwriting an existing config.
 
 Replaces the earlier `new` command. The key difference: `onboard` works non-destructively inside an existing content folder rather than creating a fresh project skeleton.
 
@@ -32,6 +33,26 @@ Runs the static generation pipeline:
 6. Emit HTML to `output_dir` (default `dist/`).
 
 Current implementation includes the real parser/render/template/site-assembly flow, route-aware pretty/direct output layout, build-time wikilink rewriting based on discovered page routes, project-root `public/` asset copying, and a Theme MVP that resolves layouts in this order: `theme/layout.html`, then `template_file`, then the built-in default theme; selected theme assets are copied into `dist/assets/` when present.
+
+Obsidian-direct output support extends the same build path:
+
+- content discovery keeps non-content vault files as passthrough assets;
+- build-input loading infers homepage metadata from root `index.*` or fallback `README.md`;
+- page titles can be resolved from the first Markdown H1 when frontmatter is absent;
+- build-time wikilinking resolves both note targets and vault resource targets;
+- discovered content-tree assets are copied into `dist/` and preflight-checked against generated/reserved output paths.
+
+### `check`
+
+Validation-only pass over the same config/discovery/build-input pipeline used by `build`.
+
+Current implementation:
+
+1. Loads config and discovers content without writing output.
+2. Reuses homepage inference, title resolution, and route collision checks.
+3. Resolves note and resource wikilinks and reports unresolved or ambiguous targets as diagnostics.
+4. Adds a non-blocking site warning when no homepage note can be inferred.
+5. Returns exit code `0` for warnings-only runs and `1` for blocking errors.
 
 ### `serve`
 

@@ -8,12 +8,13 @@ package boundaries change materially.
 
 **Last updated:** 2026-04-18 — reflects the current `help` / `onboard` /
 `build` / `check` / `serve` surface, Theme System V2 bundle rendering,
-compatibility fallback rules, and the current build-time theme context contract.
+Obsidian direct-output defaults, content-tree asset handling, homepage
+inference, and the current build-time theme context contract.
 
 ## Current CLI Surface
 
 - `moonink help`
-- `moonink onboard` — first-time setup: generates `moonink.json`, injects default frontmatter into `.md` files that lack it
+- `moonink onboard` — first-time setup: generates `moonink.json` with vault-friendly defaults and never rewrites note files
 - `moonink build` — real static-site build into `dist/`
 - `moonink check` — validation-only pass over discovered content; reports diagnostics without writing output
 - `moonink serve` — runtime preview orchestration: builds first, validates preview launch, and reports preview address/output root
@@ -77,9 +78,9 @@ Returns static help text.
 ### onboard
 
 1. Checks if `moonink.json` already exists.
-2. If not: inspects current directory name to infer `site_name`, emits a default `moonink.json`.
-3. Scans all `.md` files; for those missing a frontmatter block, injects minimal frontmatter (`title` inferred from filename or first heading, `type: article`).
-4. Reports a summary of what was created and modified.
+2. If not: emits a default `moonink.json` configured for `content_dir: "."`, `output_dir: "dist"`, and vault-friendly exclude defaults.
+3. Does not scan content files or inject frontmatter.
+4. Reports whether config generation succeeded or was aborted to avoid overwriting an existing config.
 
 ### build
 
@@ -116,6 +117,15 @@ Current real behavior:
 17. Emits HTML files using `core.output_html_path(...)`, respecting configured `route_style` (`pretty` or `direct`).
 18. Emits `dist/search-index.json` as part of the standard build artifact set.
 19. Reports processed source counts plus page/article breakdown.
+
+Obsidian direct-output extensions on top of that baseline:
+
+- content discovery now keeps non-content files as passthrough assets instead of dropping them;
+- build-input loading infers homepage metadata from root `index.*` or fallback `README.md`;
+- title resolution can use the first Markdown H1 when frontmatter is absent;
+- the build preflight rejects passthrough-asset collisions against generated HTML or reserved artifacts;
+- content-tree assets are copied into the output root alongside `public/` and theme assets;
+- WikiLink rewriting now resolves both note targets and vault resource targets.
 
 Current build pipeline:
 
@@ -159,10 +169,11 @@ Current behavior:
    - obvious frontmatter type mismatches, including invalid boolean-like `draft` values;
    - final emitted output path conflicts.
 7. Parses each document through format-appropriate parser adapters.
-8. Applies WikiLink resolution and records unresolved or ambiguous WikiLink diagnostics as warning-only `wikilinks` diagnostics.
-9. Renders non-empty diagnostic groups in the fixed order `theme/template`, `frontmatter`, `routes`, `wikilinks`, then prints summary counts plus pass/fail status.
-10. Returns exit code `0` when only warnings or no diagnostics are present, and `1` when blocking errors are present.
-11. Does not clear `dist/`, write HTML, or copy assets.
+8. Applies WikiLink resolution and records unresolved or ambiguous WikiLink diagnostics as warning-only document diagnostics.
+9. Adds a non-blocking site warning when no homepage note can be inferred.
+10. Reports processed counts plus grouped error/warning summaries.
+11. Returns exit code `0` when only warnings or no diagnostics are present, and `1` when blocking errors are present.
+12. Does not clear `dist/`, write HTML, or copy assets.
 
 ### serve
 
@@ -192,6 +203,7 @@ Dual-track classification (no separate directories required):
 | `.html` | Page |
 | `.md` with `type: page` in frontmatter | Page |
 | other `.md` | Article |
+| other discovered files under `content_dir` | Static asset copied into output |
 
 Theme V2 additionally derives a page-kind layout key:
 
@@ -200,7 +212,7 @@ Theme V2 additionally derives a page-kind layout key:
 - articles -> `article`
 - explicit frontmatter `layout` overrides the derived key
 
-Default exclude patterns: `.obsidian`, `.git`, `node_modules`, `dist`, any hidden directory.
+Default exclude patterns now include `.obsidian`, `.git`, `node_modules`, `dist`, `.trash`, `templates`, `Templates`, plus any hidden directory.
 
 ## Configuration
 
