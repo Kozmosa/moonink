@@ -84,6 +84,8 @@ pub(all) struct WikiLinker {
   note : String
   exact_targets : Map[String, String]
   ambiguous_targets : Map[String, Array[String]]
+  resource_targets : Map[String, String]
+  ambiguous_resource_targets : Map[String, Array[String]]
 } derive(Debug, Eq)
 
 ///|
@@ -317,15 +319,31 @@ pub fn noop_wikilinker(
   name? : String = "noop-wikilinker",
   note? : String = "No-op semantic stage for early document-flow testing.",
 ) -> WikiLinker {
-  { name, note, exact_targets: {}, ambiguous_targets: {} }
+  {
+    name,
+    note,
+    exact_targets: {},
+    ambiguous_targets: {},
+    resource_targets: {},
+    ambiguous_resource_targets: {},
+  }
 }
 
 ///|
 pub fn indexed_wikilinker(
   exact_targets : Map[String, String],
   ambiguous_targets : Map[String, Array[String]],
+  resource_targets? : Map[String, String] = {},
+  ambiguous_resource_targets? : Map[String, Array[String]] = {},
   name? : String = "indexed-wikilinker",
   note? : String = "Semantic post-parse stage with precomputed route-aware wikilink targets.",
 ) -> WikiLinker {
-  { name, note, exact_targets, ambiguous_targets }
+  {
+    name,
+    note,
+    exact_targets,
+    ambiguous_targets,
+    resource_targets,
+    ambiguous_resource_targets,
+  }
 }

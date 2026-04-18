@@ -76,6 +76,45 @@ fn resolve_wikilink(
 }
 
 ///|
+fn find_embed_open(payload : String, cursor : Int) -> Bool {
+  cursor + 2 < payload.length() &&
+  payload[cursor:cursor + 3].to_string() == "![["
+}
+
+///|
+fn is_image_resource_target(target : String) -> Bool {
+  target.has_suffix(".png") ||
+  target.has_suffix(".jpg") ||
+  target.has_suffix(".jpeg") ||
+  target.has_suffix(".gif") ||
+  target.has_suffix(".svg") ||
+  target.has_suffix(".webp")
+}
+
+///|
+fn resolve_resource_target(
+  linker : WikiLinker,
+  target : String,
+) -> Result[String, String?] {
+  match linker.resource_targets.get(target) {
+    Some(url) => Ok(url)
+    None =>
+      match linker.ambiguous_resource_targets.get(target) {
+        Some(candidates) => {
+          let joined = candidates.iter().join(", ")
+          Err(Some("Ambiguous resource target with candidates: \{joined}"))
+        }
+        None => Err(None)
+      }
+  }
+}
+
+///|
+fn looks_like_resource_target(target : String) -> Bool {
+  target.contains(".")
+}
+
+///|
 fn rewrite_markdown_wikilinks(
   linker : WikiLinker,
   parsed : ParsedDocument,
@@ -85,7 +124,57 @@ fn rewrite_markdown_wikilinks(
   let mut cursor = 0
   let mut linked = parsed
   while cursor < payload.length() {
-    if cursor + 1 < payload.length() &&
+    if find_embed_open(payload, cursor) {
+      let close = find_wikilink_close(payload, cursor + 3)
+      match close {
+        Some(close_cursor) => {
+          let inner = payload[cursor + 3:close_cursor].to_string()
+          let raw = "![[\{inner}]]"
+          let (target, label) = parse_wikilink_inner(inner)
+          if target == "" {
+            result.write_string(raw)
+          } else {
+            match resolve_resource_target(linker, target) {
+              Ok(url) =>
+                if is_image_resource_target(target) {
+                  result.write_string("<img src=\"")
+                  result.write_string(url)
+                  result.write_string("\" alt=\"")
+                  result.write_string(label)
+                  result.write_string("\">")
+                } else {
+                  result.write_string("[")
+                  result.write_string(label)
+                  result.write_string("](")
+                  result.write_string(url)
+                  result.write_string(")")
+                }
+              Err(Some(hint)) => {
+                result.write_string(raw)
+                linked = append_wikilink_diagnostic(
+                  linked,
+                  "Ambiguous resource target: \{target}",
+                  Some(hint),
+                )
+              }
+              Err(None) => {
+                result.write_string(raw)
+                linked = append_wikilink_diagnostic(
+                  linked,
+                  "Unresolved resource target: \{target}",
+                  None,
+                )
+              }
+            }
+          }
+          cursor = close_cursor + 2
+        }
+        None => {
+          result.write_string(payload[cursor:].to_string())
+          cursor = payload.length()
+        }
+      }
+    } else if cursor + 1 < payload.length() &&
       payload[cursor:cursor + 2].to_string() == "[[" {
       let close = find_wikilink_close(payload, cursor + 2)
       match close {
@@ -98,20 +187,37 @@ fn rewrite_markdown_wikilinks(
           } else {
             match resolve_wikilink(linker, target) {
               Ok(url) => result.write_string("[\{label}](\{url})")
+              Err(None) => {
+                match resolve_resource_target(linker, target) {
+                  Ok(url) => result.write_string("[\{label}](\{url})")
+                  Err(Some(hint)) => {
+                    result.write_string(raw)
+                    linked = append_wikilink_diagnostic(
+                      linked,
+                      "Ambiguous resource target: \{target}",
+                      Some(hint),
+                    )
+                  }
+                  Err(None) => {
+                    result.write_string(raw)
+                    linked = append_wikilink_diagnostic(
+                      linked,
+                      if looks_like_resource_target(target) {
+                        "Unresolved resource target: \{target}"
+                      } else {
+                        "Unresolved wikilink target: \{target}"
+                      },
+                      None,
+                    )
+                  }
+                }
+              }
               Err(Some(hint)) => {
                 result.write_string(raw)
                 linked = append_wikilink_diagnostic(
                   linked,
                   "Ambiguous wikilink target: \{target}",
                   Some(hint),
-                )
-              }
-              Err(None) => {
-                result.write_string(raw)
-                linked = append_wikilink_diagnostic(
-                  linked,
-                  "Unresolved wikilink target: \{target}",
-                  None,
                 )
               }
             }

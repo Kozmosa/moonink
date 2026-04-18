@@ -439,6 +439,40 @@ pub fn build_wikilinker(
 }
 
 ///|
+pub fn build_wikilinker_with_assets(
+  inputs : Array[@runtime.BuildInput],
+  asset_files : Array[@core.StaticAssetFile],
+) -> @docflow.WikiLinker {
+  let note_linker = build_wikilinker(inputs)
+  let asset_basenames : Array[String] = []
+  for asset in asset_files {
+    asset_basenames.push(basename_without_extension(asset.relative_path))
+  }
+  let duplicate_asset_basenames = collect_duplicate_keys(asset_basenames)
+  let resource_targets = note_linker.resource_targets.copy()
+  let ambiguous_resource_targets = note_linker.ambiguous_resource_targets.copy()
+  for asset in asset_files {
+    let url = "/" + asset.relative_path
+    register_exact_target(resource_targets, asset.relative_path, url)
+    let basename = basename_without_extension(asset.relative_path)
+    if duplicate_asset_basenames.get(basename) is Some(_) {
+      let urls = match ambiguous_resource_targets.get(basename) {
+        Some(urls) => urls
+        None => []
+      }
+      ambiguous_resource_targets[basename] = urls + [url]
+    } else {
+      register_exact_target(resource_targets, basename, url)
+    }
+  }
+  {
+    ..note_linker,
+    resource_targets,
+    ambiguous_resource_targets,
+  }
+}
+
+///|
 pub fn build_backlink_index(
   inputs : Array[@runtime.BuildInput],
   wikilinker : @docflow.WikiLinker,
@@ -1866,7 +1900,7 @@ fn build_site_result(
   let mut article_count = 0
   let mut page_count = 0
   let diagnostics : Array[BuildDiagnostic] = []
-  let wikilinker = build_wikilinker(inputs)
+  let wikilinker = build_wikilinker_with_assets(inputs, inventory.asset_files)
   let backlinks = build_backlink_index(inputs, wikilinker)
   for input in inputs {
     let parser = match parser_for_format(input.meta.format) {
@@ -2211,7 +2245,7 @@ fn check_site_result(
   let mut report = empty_check_report()
   report = validate_check_active_theme_layout(config, inputs, report)
   report = append_route_conflicts(inputs, config.route_style, report)
-  let wikilinker = build_wikilinker(inputs)
+  let wikilinker = build_wikilinker_with_assets(inputs, inventory.asset_files)
   let mut article_count = 0
   let mut page_count = 0
   for input in inputs {
