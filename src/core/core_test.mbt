@@ -495,6 +495,24 @@ test "page_view_model_from_meta falls back to kind for layout" {
 }
 
 ///|
+test "theme_page_kind prioritizes index flag over article content kind" {
+  let meta : @core.PageMeta = {
+    source_path: "README.md",
+    url_path: "/",
+    output_path: "index.html",
+    content_kind: @core.ContentKind::Article,
+    format: @core.SourceFormat::Markdown,
+    frontmatter: @core.Frontmatter::default(),
+    layout_override: None,
+    resolved_title: "Vault Home",
+    sort_key: "README.md",
+    is_index: true,
+  }
+  inspect(@core.theme_page_kind(meta), content="index")
+  inspect(@core.page_view_model_from_meta(meta).layout, content="index")
+}
+
+///|
 test "parse_frontmatter_from_source handles full document" {
   let source = "---\ntitle: Hello\ntype: page\n---\n\n# Body content"
   let (fm, body) = @core.parse_frontmatter_from_source(source)

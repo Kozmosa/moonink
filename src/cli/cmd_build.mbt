@@ -749,22 +749,31 @@ fn theme_object_value(
 }
 
 ///|
+fn site_page_kind(page : @core.SitePage) -> String {
+  if page.is_index {
+    return "index"
+  }
+  match page.content_kind {
+    @core.ContentKind::Article => "article"
+    @core.ContentKind::Page => "page"
+  }
+}
+
+///|
 fn theme_navigation_kind(item : @core.NavigationItem) -> String {
+  if item.is_index {
+    return "index"
+  }
   match item.content_kind {
     @core.ContentKind::Article => "article"
-    @core.ContentKind::Page => if item.is_index { "index" } else { "page" }
+    @core.ContentKind::Page => "page"
   }
 }
 
 ///|
 fn theme_site_page_value(page : @core.SitePage) -> @core.ThemeConfigValue {
   let value : Map[String, @core.ThemeConfigValue] = {}
-  value["kind"] = theme_string_value(
-    match page.content_kind {
-      @core.ContentKind::Article => "article"
-      @core.ContentKind::Page => if page.is_index { "index" } else { "page" }
-    },
-  )
+  value["kind"] = theme_string_value(site_page_kind(page))
   value["title"] = theme_string_value(page.title)
   value["nav_title"] = theme_string_value(page.nav_title)
   value["description"] = theme_string_value(page.description)
@@ -976,10 +985,11 @@ fn validate_build_theme_overrides(
 }
 
 ///|
-fn page_body_class(kind : @core.ContentKind) -> String {
-  match kind {
-    @core.ContentKind::Article => "moonink-article"
-    @core.ContentKind::Page => "moonink-page"
+fn page_body_class(meta : @core.PageMeta) -> String {
+  if @core.theme_page_kind(meta) == "article" {
+    "moonink-article"
+  } else {
+    "moonink-page"
   }
 }
 
@@ -1215,9 +1225,7 @@ fn find_section_page_by_key(
   key : String,
 ) -> @core.SitePage? {
   for page in pages {
-    if page.content_kind == @core.ContentKind::Page &&
-      page.is_index &&
-      navigation_node_key(page) == key {
+    if page.is_index && navigation_node_key(page) == key {
       return Some(page)
     }
   }
@@ -1443,7 +1451,7 @@ fn build_template_context(
     content_kind: template_content_kind(input.meta.content_kind),
     theme_name: theme_name(active_theme),
     theme_asset_root: theme_asset_root(active_theme),
-    page_body_class: page_body_class(input.meta.content_kind),
+    page_body_class: page_body_class(input.meta),
     navigation_html: render_navigation_html(
       assembly.navigation,
       input.meta.url_path,
@@ -1710,9 +1718,7 @@ fn build_theme_render_context(
   page["url"] = theme_string_value(input.meta.url_path)
   page["url_path"] = theme_string_value(input.meta.url_path)
   page["source_path"] = theme_string_value(input.meta.source_path)
-  page["body_class"] = theme_string_value(
-    page_body_class(input.meta.content_kind),
-  )
+  page["body_class"] = theme_string_value(page_body_class(input.meta))
   page["body_html"] = theme_string_value(rendered.html)
   page["theme_meta"] = theme_object_value(page_model.theme_meta)
   page["navigation_html"] = theme_string_value(navigation_html)
