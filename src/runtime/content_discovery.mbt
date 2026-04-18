@@ -198,7 +198,7 @@ pub fn load_build_inputs_result(
       meta,
     })
   }
-  Ok(inputs)
+  Ok(apply_homepage_override(inputs))
 }
 
 ///|
@@ -279,6 +279,38 @@ fn collect_content_tree(
   content.sort_by(fn(a, b) { a.path.compare(b.path) })
   assets.sort_by(fn(a, b) { a.relative_path.compare(b.relative_path) })
   (content, assets)
+}
+
+///|
+fn pick_home_source_path(inputs : Array[BuildInput]) -> String? {
+  for input in inputs {
+    if input.meta.source_path == "index.md" ||
+      input.meta.source_path == "index.html" ||
+      input.meta.source_path == "index.htm" {
+      return Some(input.meta.source_path)
+    }
+  }
+  for input in inputs {
+    if input.meta.source_path == "README.md" {
+      return Some(input.meta.source_path)
+    }
+  }
+  None
+}
+
+///|
+fn apply_homepage_override(inputs : Array[BuildInput]) -> Array[BuildInput] {
+  let home_source = pick_home_source_path(inputs)
+  let normalized : Array[BuildInput] = []
+  for input in inputs {
+    let meta = match home_source {
+      Some(source_path) if input.meta.source_path == source_path =>
+        @core.page_meta_as_home(input.meta)
+      _ => input.meta
+    }
+    normalized.push({ ..input, meta })
+  }
+  normalized
 }
 
 ///|

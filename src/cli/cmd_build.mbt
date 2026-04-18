@@ -479,14 +479,10 @@ pub fn build_backlink_index(
 ///|
 fn collect_output_path_sources(
   inputs : Array[@runtime.BuildInput],
-  route_style : @core.RouteStyle,
 ) -> Map[String, Array[String]] {
   let output_paths : Map[String, Array[String]] = {}
   for input in inputs {
-    let output_path = @core.output_html_path(
-      input.meta.source_path,
-      route_style,
-    )
+    let output_path = input.meta.output_path
     let existing = match output_paths.get(output_path) {
       Some(paths) => paths
       None => []
@@ -499,11 +495,11 @@ fn collect_output_path_sources(
 ///|
 fn append_route_conflicts(
   inputs : Array[@runtime.BuildInput],
-  route_style : @core.RouteStyle,
+  _route_style : @core.RouteStyle,
   report : CheckReport,
 ) -> CheckReport {
   let mut next_report = report
-  let output_paths = collect_output_path_sources(inputs, route_style)
+  let output_paths = collect_output_path_sources(inputs)
   for entry in output_paths {
     let (output_path, sources) = entry
     if sources.length() > 1 {
@@ -896,16 +892,6 @@ fn page_body_class(kind : @core.ContentKind) -> String {
 }
 
 ///|
-fn is_index_source_path(path : String) -> Bool {
-  path == "index.md" ||
-  path == "index.html" ||
-  path == "index.htm" ||
-  path.has_suffix("/index.md") ||
-  path.has_suffix("/index.html") ||
-  path.has_suffix("/index.htm")
-}
-
-///|
 fn parent_navigation_key(path : String) -> String? {
   let stripped = strip_link_target_extension(path)
   let segments = stripped.split("/").map(StringView::to_string).collect()
@@ -1150,10 +1136,10 @@ fn source_directory_segments(source_path : String) -> Array[String] {
 ///|
 fn find_current_section_page(
   pages : Array[@core.SitePage],
-  source_path : String,
+  meta : @core.PageMeta,
 ) -> @core.SitePage? {
-  let directories = source_directory_segments(source_path)
-  if is_index_source_path(source_path) {
+  let directories = source_directory_segments(meta.source_path)
+  if meta.is_index {
     let self_key = if directories.is_empty() {
       ""
     } else {
@@ -1201,10 +1187,13 @@ fn build_page_header_html(
 
 ///|
 pub fn site_page_title(meta : @core.PageMeta) -> String {
+  if meta.resolved_title != "" {
+    return meta.resolved_title
+  }
   match meta.frontmatter.title {
     Some(title) => title
     None =>
-      if is_index_source_path(meta.source_path) {
+      if meta.is_index {
         "Home"
       } else {
         basename_without_extension(meta.source_path)
@@ -1246,7 +1235,7 @@ fn build_site_page(input : @runtime.BuildInput) -> @core.SitePage {
     source_path: input.meta.source_path,
     url_path: input.meta.url_path,
     content_kind: input.meta.content_kind,
-    is_index: is_index_source_path(input.meta.source_path),
+    is_index: input.meta.is_index,
   }
 }
 
@@ -1329,7 +1318,7 @@ fn build_template_context(
 ) -> @docflow.TemplateContext {
   let current_section = find_current_section_page(
     assembly.pages,
-    input.meta.source_path,
+    input.meta,
   )
   let current_section_title = match current_section {
     Some(section) => section.nav_title
@@ -1548,7 +1537,7 @@ fn build_theme_render_context(
   let page_model = @core.page_view_model_from_meta(input.meta)
   let current_section = find_current_section_page(
     assembly.pages,
-    input.meta.source_path,
+    input.meta,
   )
   let current_section_title = match current_section {
     Some(section) => section.nav_title
@@ -1911,10 +1900,7 @@ fn build_site_result(
         )
       }
     }
-    let output_path = @core.output_html_path(
-      input.meta.source_path,
-      config.route_style,
-    )
+    let output_path = input.meta.output_path
     write_build_output(config, output_path, templated.html) catch {
       err => return Err(err)
     }

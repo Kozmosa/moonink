@@ -596,6 +596,31 @@ test "discover_content_build inputs read frontmatter-aware metadata" {
 }
 
 ///|
+test "load_build_inputs_result promotes root README to homepage when index is absent" {
+  let config = match
+    @runtime.load_config_result("fixtures/v2/obsidian_direct_basic/moonink.json") {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let inventory = match @runtime.discover_content_result(config) {
+    Ok(inventory) => inventory
+    Err(_) => panic()
+  }
+  let inputs = match @runtime.load_build_inputs_result(config, inventory) {
+    Ok(inputs) => inputs
+    Err(_) => panic()
+  }
+  let by_path : Map[String, @runtime.BuildInput] = {}
+  for input in inputs {
+    by_path[input.meta.source_path] = input
+  }
+  let readme = by_path.get("README.md").unwrap()
+  inspect(readme.meta.url_path, content="/")
+  inspect(readme.meta.output_path, content="index.html")
+  inspect(readme.meta.is_index, content="true")
+}
+
+///|
 test "native runtime adapter exposes explicit runtime identity" {
   let adapter = @runtime.native_runtime_adapter()
   inspect(adapter.name, content="native-runtime-adapter")

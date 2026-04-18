@@ -32,6 +32,7 @@ test "build site assembly model combines pages and navigation" {
       meta: {
         source_path: "index.md",
         url_path: "/",
+        output_path: "index.html",
         content_kind: @core.ContentKind::Page,
         format: @core.SourceFormat::Markdown,
         frontmatter: {
@@ -40,7 +41,9 @@ test "build site assembly model combines pages and navigation" {
           content_type: Some("page"),
         },
         layout_override: None,
+        resolved_title: "",
         sort_key: "index.md",
+        is_index: true,
       },
     },
     {
@@ -51,11 +54,14 @@ test "build site assembly model combines pages and navigation" {
       meta: {
         source_path: "about.html",
         url_path: "/about/",
+        output_path: "about/index.html",
         content_kind: @core.ContentKind::Page,
         format: @core.SourceFormat::Html,
         frontmatter: @core.Frontmatter::default(),
         layout_override: None,
+        resolved_title: "",
         sort_key: "about.html",
+        is_index: false,
       },
     },
     {
@@ -66,11 +72,14 @@ test "build site assembly model combines pages and navigation" {
       meta: {
         source_path: "hello.md",
         url_path: "/hello/",
+        output_path: "hello/index.html",
         content_kind: @core.ContentKind::Article,
         format: @core.SourceFormat::Markdown,
         frontmatter: @core.Frontmatter::default(),
         layout_override: None,
+        resolved_title: "",
         sort_key: "hello.md",
+        is_index: false,
       },
     },
   ]
@@ -93,6 +102,7 @@ test "build backlink index records markdown source urls once per page" {
       meta: {
         source_path: "index.md",
         url_path: "/",
+        output_path: "index.html",
         content_kind: @core.ContentKind::Page,
         format: @core.SourceFormat::Markdown,
         frontmatter: {
@@ -100,7 +110,9 @@ test "build backlink index records markdown source urls once per page" {
           content_type: Some("page"),
         },
         layout_override: None,
+        resolved_title: "",
         sort_key: "index.md",
+        is_index: true,
       },
     },
     {
@@ -111,11 +123,14 @@ test "build backlink index records markdown source urls once per page" {
       meta: {
         source_path: "hello.md",
         url_path: "/hello/",
+        output_path: "hello/index.html",
         content_kind: @core.ContentKind::Article,
         format: @core.SourceFormat::Markdown,
         frontmatter: @core.Frontmatter::default(),
         layout_override: None,
+        resolved_title: "",
         sort_key: "hello.md",
+        is_index: false,
       },
     },
   ]
@@ -137,6 +152,7 @@ test "build backlink index ignores unresolved and ambiguous wikilinks" {
       meta: {
         source_path: "index.md",
         url_path: "/",
+        output_path: "index.html",
         content_kind: @core.ContentKind::Page,
         format: @core.SourceFormat::Markdown,
         frontmatter: {
@@ -144,7 +160,9 @@ test "build backlink index ignores unresolved and ambiguous wikilinks" {
           content_type: Some("page"),
         },
         layout_override: None,
+        resolved_title: "",
         sort_key: "index.md",
+        is_index: true,
       },
     },
     {
@@ -155,11 +173,14 @@ test "build backlink index ignores unresolved and ambiguous wikilinks" {
       meta: {
         source_path: "guide/intro.md",
         url_path: "/guide/intro/",
+        output_path: "guide/intro/index.html",
         content_kind: @core.ContentKind::Article,
         format: @core.SourceFormat::Markdown,
         frontmatter: @core.Frontmatter::default(),
         layout_override: None,
+        resolved_title: "",
         sort_key: "guide/intro.md",
+        is_index: false,
       },
     },
     {
@@ -170,11 +191,14 @@ test "build backlink index ignores unresolved and ambiguous wikilinks" {
       meta: {
         source_path: "reference/intro.md",
         url_path: "/reference/intro/",
+        output_path: "reference/intro/index.html",
         content_kind: @core.ContentKind::Article,
         format: @core.SourceFormat::Markdown,
         frontmatter: @core.Frontmatter::default(),
         layout_override: None,
+        resolved_title: "",
         sort_key: "reference/intro.md",
+        is_index: false,
       },
     },
   ]
@@ -371,6 +395,7 @@ test "site page title derives from frontmatter basename and root index" {
   let titled_meta : @core.PageMeta = {
     source_path: "guide/install.md",
     url_path: "/guide/install/",
+    output_path: "guide/install/index.html",
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: {
@@ -378,25 +403,33 @@ test "site page title derives from frontmatter basename and root index" {
       title: Some("Install Guide"),
     },
     layout_override: None,
+    resolved_title: "",
     sort_key: "guide/install.md",
+    is_index: false,
   }
   let untitled_meta : @core.PageMeta = {
     source_path: "guide/config.md",
     url_path: "/guide/config/",
+    output_path: "guide/config/index.html",
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: @core.Frontmatter::default(),
     layout_override: None,
+    resolved_title: "",
     sort_key: "guide/config.md",
+    is_index: false,
   }
   let index_meta : @core.PageMeta = {
     source_path: "index.md",
     url_path: "/",
+    output_path: "index.html",
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: @core.Frontmatter::default(),
     layout_override: None,
+    resolved_title: "",
     sort_key: "index.md",
+    is_index: true,
   }
   inspect(@cli.site_page_title(titled_meta), content="Install Guide")
   inspect(@cli.site_page_title(untitled_meta), content="config")
@@ -408,6 +441,7 @@ test "site page navigation metadata derives from frontmatter extra" {
   let nav_meta : @core.PageMeta = {
     source_path: "guide/install.md",
     url_path: "/guide/install/",
+    output_path: "guide/install/index.html",
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: {
@@ -416,16 +450,21 @@ test "site page navigation metadata derives from frontmatter extra" {
       extra: { "nav_title": "Quick Start", "nav_hidden": "true" },
     },
     layout_override: None,
+    resolved_title: "",
     sort_key: "guide/install.md",
+    is_index: false,
   }
   let default_meta : @core.PageMeta = {
     source_path: "guide/config.md",
     url_path: "/guide/config/",
+    output_path: "guide/config/index.html",
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: @core.Frontmatter::default(),
     layout_override: None,
+    resolved_title: "",
     sort_key: "guide/config.md",
+    is_index: false,
   }
   inspect(@cli.site_page_nav_title(nav_meta), content="Quick Start")
   inspect(@cli.site_page_nav_hidden(nav_meta), content="true")
@@ -438,6 +477,7 @@ test "site page navigation metadata falls back on empty title and strict hidden 
   let empty_title_meta : @core.PageMeta = {
     source_path: "guide/advanced.md",
     url_path: "/guide/advanced/",
+    output_path: "guide/advanced/index.html",
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: {
@@ -446,11 +486,14 @@ test "site page navigation metadata falls back on empty title and strict hidden 
       extra: { "nav_title": "" },
     },
     layout_override: None,
+    resolved_title: "",
     sort_key: "guide/advanced.md",
+    is_index: false,
   }
   let loose_hidden_meta : @core.PageMeta = {
     source_path: "guide/draft.md",
     url_path: "/guide/draft/",
+    output_path: "guide/draft/index.html",
     content_kind: @core.ContentKind::Page,
     format: @core.SourceFormat::Markdown,
     frontmatter: {
@@ -458,7 +501,9 @@ test "site page navigation metadata falls back on empty title and strict hidden 
       extra: { "nav_hidden": "TRUE" },
     },
     layout_override: None,
+    resolved_title: "",
     sort_key: "guide/draft.md",
+    is_index: false,
   }
   inspect(@cli.site_page_nav_title(empty_title_meta), content="Advanced Guide")
   inspect(@cli.site_page_nav_hidden(loose_hidden_meta), content="false")
@@ -474,6 +519,7 @@ test "build site pages derives description index flag and nav metadata" {
     meta: {
       source_path: "index.md",
       url_path: "/",
+      output_path: "index.html",
       content_kind: @core.ContentKind::Page,
       format: @core.SourceFormat::Markdown,
       frontmatter: {
@@ -483,7 +529,9 @@ test "build site pages derives description index flag and nav metadata" {
         content_type: Some("page"),
       },
       layout_override: None,
+      resolved_title: "",
       sort_key: "index.md",
+      is_index: true,
     },
   }
   let article_input : @runtime.BuildInput = {
@@ -494,6 +542,7 @@ test "build site pages derives description index flag and nav metadata" {
     meta: {
       source_path: "hello.md",
       url_path: "/hello/",
+      output_path: "hello/index.html",
       content_kind: @core.ContentKind::Article,
       format: @core.SourceFormat::Markdown,
       frontmatter: {
@@ -501,7 +550,9 @@ test "build site pages derives description index flag and nav metadata" {
         extra: { "nav_title": "Read Me", "nav_hidden": "true" },
       },
       layout_override: None,
+      resolved_title: "",
       sort_key: "hello.md",
+      is_index: false,
     },
   }
   let pages = @cli.build_site_pages([page_input, article_input])
@@ -1528,7 +1579,8 @@ test "runtime cli build respects direct route layout" {
   }
   inspect(hello_html.contains("Hello World"), content="true")
   inspect(about_html.contains("This is a static HTML page."), content="true")
-  inspect(search_index.contains("\"url\":\"/index.html\""), content="true")
+  inspect(search_index.contains("\"url\":\"/\""), content="true")
+  inspect(search_index.contains("\"url\":\"/index.html\""), content="false")
   inspect(search_index.contains("\"url\":\"/hello.html\""), content="true")
   inspect(search_index.contains("\"url\":\"/about.html\""), content="true")
 }
@@ -2138,7 +2190,7 @@ test "runtime cli build renders automatic navigation for direct routes" {
   inspect(index_html.contains("Direct Hello Article"), content="false")
   inspect(index_html.contains("data-section-title=\"Home\""), content="true")
   inspect(
-    index_html.contains("data-section-url=\"/index.html\""),
+    index_html.contains("data-section-url=\"/\""),
     content="true",
   )
   inspect(
@@ -2266,7 +2318,7 @@ test "runtime cli build applies configured template file with direct routes" {
   inspect(hello_html.contains("data-url=\"/hello.html\""), content="true")
   inspect(hello_html.contains("Hello Direct Template"), content="true")
   inspect(hello_html.contains("<nav class=\"template-nav\">"), content="true")
-  inspect(hello_html.contains("href=\"/index.html\">Home</a>"), content="true")
+  inspect(hello_html.contains("href=\"/\">Home</a>"), content="true")
   inspect(
     hello_html.contains("data-page-header-title=\"Hello\""),
     content="true",
@@ -2299,7 +2351,7 @@ test "runtime cli build applies configured template file with direct routes" {
   )
   inspect(about_html.contains("About Direct Template"), content="true")
   inspect(about_html.contains("data-url=\"/about.html\""), content="true")
-  inspect(about_html.contains("href=\"/index.html\">Home</a>"), content="true")
+  inspect(about_html.contains("href=\"/\">Home</a>"), content="true")
   inspect(about_html.contains("data-section-title=\"\""), content="true")
   inspect(about_html.contains("data-section-url=\"\""), content="true")
 }
@@ -2406,7 +2458,7 @@ test "runtime cli build resolves wikilinks for direct routes" {
   }
   inspect(hello_html.contains("href=\"/about.html\""), content="true")
   inspect(hello_html.contains(">about<"), content="true")
-  inspect(hello_html.contains("href=\"/index.html\""), content="true")
+  inspect(hello_html.contains("href=\"/\""), content="true")
   inspect(hello_html.contains(">Home<"), content="true")
 }
 

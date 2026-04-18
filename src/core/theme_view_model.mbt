@@ -1,19 +1,9 @@
 ///|
-fn is_index_source_path(path : String) -> Bool {
-  path == "index.md" ||
-  path == "index.html" ||
-  path == "index.htm" ||
-  path.has_suffix("/index.md") ||
-  path.has_suffix("/index.html") ||
-  path.has_suffix("/index.htm")
-}
-
-///|
 pub fn theme_page_kind(meta : PageMeta) -> String {
   match meta.content_kind {
     ContentKind::Article => "article"
     ContentKind::Page =>
-      if is_index_source_path(meta.source_path) {
+      if meta.is_index {
         "index"
       } else {
         "page"

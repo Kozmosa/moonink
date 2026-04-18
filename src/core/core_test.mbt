@@ -649,7 +649,7 @@ test "generate_route direct style" {
   )
   inspect(
     @core.generate_route("index.md", @core.RouteStyle::Direct),
-    content="/index.html",
+    content="/",
   )
 }
 
