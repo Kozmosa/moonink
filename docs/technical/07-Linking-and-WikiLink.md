@@ -8,7 +8,9 @@ Knowledge-oriented publishing needs stronger internal linking than plain Markdow
 
 - relative Markdown links;
 - anchor links;
-- `[[WikiLink]]` syntax.
+- `[[WikiLink]]` note syntax;
+- resource-style WikiLinks such as `[[Attachments/diagram.png]]`;
+- Obsidian-style embeds such as `![[diagram.png]]`.
 
 ## 3. Validation Goals
 
@@ -21,13 +23,12 @@ MoonInk V1 should validate:
 
 ## 4. WikiLink Resolution Strategy
 
-WikiLinks should resolve through page identity rules in this priority order:
+MoonInk resolves note links from the discovered page inventory using exact source paths, extensionless paths, basenames, and index aliases. If note resolution fails, the linker falls back to discovered static assets from the content tree.
 
-1. exact `id`
-2. exact title match
-3. canonical slug match
-
-If resolution remains ambiguous, the build should report a clear diagnostic.
+- ambiguous note targets warn with the candidate page URLs;
+- ambiguous resource targets warn with the candidate asset URLs;
+- unresolved note and resource targets remain in source form and emit diagnostics;
+- backlinks are still computed only from resolved note-to-note links.
 
 ## 5. Current Output Support
 
@@ -36,6 +37,9 @@ MoonInk now resolves supported WikiLinks during build and exposes backlinks in t
 - built-in/default theme output renders a backlinks block only when backlinks exist;
 - the backlinks block lists pages or articles that linked to the current page;
 - the minimal fixture renders a backlink on the generated hello page pointing back to Home.
+- resource-style WikiLinks rewrite to ordinary Markdown links;
+- image embeds rewrite to Markdown image syntax so the final renderer emits `<img>` output;
+- non-image embeds degrade to ordinary links that preserve the resolved asset URL.
 
 ## 6. Future Evolution
 
