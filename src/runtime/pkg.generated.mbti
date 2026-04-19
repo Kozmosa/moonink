@@ -21,6 +21,8 @@ pub fn discover_content_task(@core.MooninkConfig) -> RuntimeIOTask[Result[@core.
 
 pub fn dry_run_preview_runner() -> PreviewRunner
 
+pub fn exec_native_serve_delegate(String) -> Unit raise @core.ProjectIOError
+
 pub fn flatten_theme_config_values(Map[String, @core.ThemeConfigValue]) -> Map[String, String]
 
 pub fn io_copy_dir_recursive(String, String) -> Unit raise @core.ProjectIOError
@@ -70,6 +72,8 @@ pub fn merge_theme_tokens(Array[@core.ThemeTokenDeclaration], Map[String, @core.
 pub fn native_mocket_preview_runner() -> PreviewRunner
 
 pub fn native_runtime_adapter() -> NativeRuntimeAdapter
+
+pub fn native_serve_delegate_command_result(String, String, Int) -> Result[String, @core.ProjectIOError]
 
 pub fn prepare_preview_launch(String, String, Int, note? : String) -> PreviewLaunch
 

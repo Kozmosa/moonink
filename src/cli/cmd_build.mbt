@@ -2996,6 +2996,7 @@ fn check_output_categories() -> Array[CheckCategory] {
     CheckCategory::ThemeTemplate,
     CheckCategory::Frontmatter,
     CheckCategory::Routes,
+    CheckCategory::Site,
     CheckCategory::Wikilinks,
     CheckCategory::Site,
   ]

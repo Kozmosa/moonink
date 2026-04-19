@@ -64,10 +64,10 @@ Main workspace behavior:
 2. Reuse the build pipeline to regenerate `output_dir`.
 3. If build finishes with warnings, print them and continue.
 4. If build fails fatally, stop before preview startup.
-5. Validate the preview root and prepare the preview launch using the requested `--host` / `--port` values.
-6. Return a runtime status message that distinguishes build-stage and preview-startup outcomes.
+5. Delegate the built preview root plus `--host` / `--port` to the native-only preview backend.
+6. Let the delegated native backend report runtime-ready or preview-startup failure output.
 
-The preview runner is isolated behind [src/runtime/serve.mbt](src/runtime/serve.mbt). The standard wasm-gc test suite exercises the build-orchestration and dry-run preview validation path, while the standalone native server remains responsible for the actual HTTP listener.
+The preview runner is still isolated behind [src/runtime/serve.mbt](src/runtime/serve.mbt). The standard wasm-gc test suite exercises the build-orchestration and dry-run validation helpers, while the standalone native server remains responsible for the actual HTTP listener.
 
 ### Native preview server
 
@@ -76,10 +76,11 @@ Real HTTP preview serving is implemented in the standalone [native-serve/](nativ
 Responsibilities of the native entry:
 
 1. Parse CLI argv using the same normalization pattern as the main binary.
-2. Reuse `username/moonink/cli.prepare_serve_runtime_session(...)` to load config, discover content, and rebuild the site into a staged preview session.
-3. Reuse `username/moonink/cli.start_prepared_serve_session_result(...)` to validate preview startup before handing off to the real server.
-4. Print the shared build-stage message plus the runtime-ready message with a native-server note.
-5. Start a real `oboard/mocket` static file server rooted at the generated preview directory.
+2. Support direct `serve` for standalone native use, including build + preview startup.
+3. Support an internal `serve-prebuilt` handoff used by the main workspace CLI after a successful build.
+4. Reuse `kozmosa/moonink/cli.start_prepared_serve_session_result(...)` to validate preview startup before handing off to the real server.
+5. Print the runtime-ready message with a native-server note.
+6. Start a real `oboard/mocket` static file server rooted at the generated preview directory.
 
 Example launch from the repository root:
 
@@ -90,9 +91,10 @@ moon run --manifest-path native-serve/moon.mod.json native-serve/src/cmd/main --
 Design constraints:
 
 - `oboard/mocket` must stay out of the main workspace `src/` dependency graph so `moon test` and wasm-gc build plans remain clean.
-- The main workspace `moonink serve` is the dry-run/orchestration contract.
+- The main workspace `moonink serve` is the canonical build-once-then-preview command.
 - The native subproject is the only place that owns the real preview server dependency.
 - The native entry accepts an explicit config path so it can be launched from the repo root or other working directories.
+- Main-workspace `serve` delegates to `native-serve` through an internal prebuilt-preview handoff instead of rebuilding twice.
 
 ## 3. CLI Output Style
 
