@@ -7,6 +7,18 @@ import {
 }
 
 // Values
+pub fn built_in_theme_asset_file_sources() -> Map[String, String]
+
+pub fn built_in_theme_asset_source(String) -> String?
+
+pub fn built_in_theme_layout_file_sources() -> Map[String, String]
+
+pub fn built_in_theme_legacy_layout_source() -> String
+
+pub fn built_in_theme_manifest_source() -> String
+
+pub fn built_in_theme_partial_file_sources() -> Map[String, String]
+
 pub fn current_utc_iso8601_second() -> String
 
 pub fn declared_slot_values(Array[String], Map[String, @core.ThemeConfigValue]) -> Map[String, String]
