@@ -1,57 +1,119 @@
-# kozmosa/moonink
+Read this in Chinese: [README-zh.md](./README-zh.md)
 
-## MoonInk CLI Scaffold
+<div align="center">
+  <h1>MoonInk</h1>
+  <p><strong>A static site generator for existing Markdown folders and Obsidian-style vaults.</strong></p>
+  <p>
+    <a href="https://github.com/Kozmosa/moonink/actions/workflows/publish-moonink-docs.yml"><img src="https://github.com/Kozmosa/moonink/actions/workflows/publish-moonink-docs.yml/badge.svg" alt="Docs publish status" /></a>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License: Apache 2.0" /></a>
+  </p>
+  <p>
+    <a href="https://kozmosa.github.io/moonink/"><strong>Documentation and Live Demo</strong></a>
+    ·
+    <a href="./README-zh.md"><strong>中文说明</strong></a>
+  </p>
+</div>
 
-This repository implements the MoonInk static site generator.
+MoonInk turns an existing Markdown folder into a static site without forcing a CMS-style rewrite. It fits well with Obsidian-style vaults, wiki links, frontmatter, and a docs-first writing workflow.
 
-Implemented pieces:
+## Quickstart
 
-- `moonink help`
-- `moonink onboard`
-- `moonink build`
-- `moonink serve`
+### Use MoonInk in an existing Markdown folder
 
-Current status:
-
-- command parsing is wired through the root package;
-- `cmd/main` reads real runtime argv;
-- `onboard` creates starter config in-place and does not rewrite note files;
-- `build` loads config, discovers content, parses frontmatter, classifies `.html` plus `type: page` markdown as pages, rewrites wikilinks, renders through templates, and emits pretty/direct route-aware HTML output;
-- runtime config loading now treats `--config` as a host path, resolves it from cwd-relative or absolute input, and derives an absolute project root from that config file;
-- site assembly now derives automatic page-only navigation, `nav_title`, and `nav_hidden` metadata for templates and default layout rendering;
-- template rendering now resolves layouts in this order: project `theme/layout.html`, then configured `template_file`, then the embedded built-in default theme; theme builds also copy the selected theme assets into `dist/assets/` when available;
-- Theme V2 bundle fallback is now embedded into the main binary rather than loaded from repository paths at runtime;
-- `serve` in the main workspace now builds once and then starts the real native preview server in-process from the main binary, keeping build-stage and serve-stage failures distinct;
-- `native-serve/` remains in the repository only as a migration shim and is no longer a runtime dependency of the main binary;
-- Theme MVP now prefers `theme/layout.html` over `template_file`, copies `theme/assets/` into `dist/assets/`, and exposes `theme_name`, `theme_asset_root`, and `page_body_class` to theme templates.
-
-### Native preview entry
-
-The standard preview entry is now the main workspace CLI:
+Initialize a config in the current content directory:
 
 ```bash
-moon run src/cmd/main --target native -- serve <config-path>
+moonink onboard
 ```
 
-Notes:
+Create a minimal home page:
 
-- the main workspace `moonink serve` is the canonical build-once-then-preview entry;
-- the main binary now embeds the built-in default theme plus the native preview-serving capability;
-- `serve` is intentionally scoped to native preview use; JS/Wasm tests continue to exercise dry-run helpers in `src/cli/cmd_serve.mbt`;
-- `native-serve/` remains in the repository for migration/debugging, but detached runtime execution no longer depends on it.
-- detached single-binary release build and smoke validation are automated under `scripts/`, including `scripts/build_single_binary_release.sh` and `scripts/validate_detached_release.sh`.
+```md
+---
+title: Home
+type: page
+---
 
-### Theme MVP
+# Hello MoonInk
 
-Theme support currently uses a simple directory convention:
+This site is built from an existing Markdown folder.
+```
 
-- `theme/layout.html` — preferred over `template_file`
-- `theme/assets/**` — copied to `dist/assets/**`
+Check before building:
 
-Theme templates can use these additional variables:
+```bash
+moonink check
+```
 
-- `{{ theme_name }}`
-- `{{ theme_asset_root }}`
-- `{{ page_body_class }}`
+Build the site:
 
-The embedded built-in default theme now renders page/article-aware content shells and keeps using the existing automatic navigation and breadcrumb context.
+```bash
+moonink build
+```
+
+Start a local preview server:
+
+```bash
+moonink serve
+```
+
+`serve` is for native preview. If you are working from source, use the native-target command shown below.
+
+### Run from source in this repository
+
+```bash
+moon run src/cmd/main -- onboard
+moon run src/cmd/main -- check
+moon run src/cmd/main -- build
+moon run src/cmd/main --target native -- serve
+```
+
+Use `--config <path>` when you want to target a specific vault or fixture directory.
+
+## Documentation and Demo
+
+The full documentation lives at [kozmosa.github.io/moonink](https://kozmosa.github.io/moonink/). That site is also a live demo built with MoonInk itself, so it shows the product in the same form users will actually ship.
+
+Start there for installation, first-site setup, configuration, linking, themes, and CLI reference details.
+
+## Features
+
+- Build a static site from an existing Markdown folder.
+- Work well with Obsidian-style vault structure and wiki links.
+- Classify content as pages or articles through frontmatter and file shape.
+- Render through built-in templates or project themes.
+- Copy public assets and content-local assets into the generated site.
+- Generate static HTML output for direct hosting.
+- Preview locally with the native `serve` workflow.
+
+## Repository Guide
+
+Project layout:
+
+```text
+src/core       Pure data types and shared logic
+src/docflow    Parser and rendering pipeline
+src/runtime    Filesystem, config loading, and site construction
+src/cli        Command entry points
+src/cmd/main   Binary entry point
+docs/moonink   Public documentation source used for the live demo site
+```
+
+Common developer commands:
+
+```bash
+moon check
+moon test
+moon fmt
+moon info
+```
+
+Use `moon test --update` when a snapshot-backed test is intentionally changed.
+
+## Contributing
+
+Issues and pull requests are welcome. If you are changing behavior, follow the existing package boundaries in `src/`, keep fixtures representative, and update the project worklog under `docs/agent-working/worklog/` for completed change sets.
+
+## License
+
+MoonInk is licensed under [Apache License 2.0](./LICENSE).
