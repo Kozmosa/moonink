@@ -1,5 +1,5 @@
 <!doctype html>
-<html data-theme-v2="default" data-layout-kind="{{ page.kind }}">
+<html data-theme-v2="default" data-layout-kind="{{ page.layout }}">
   <head>
     <meta charset="utf-8">
     <title>{{ page.title }}</title>
@@ -9,18 +9,22 @@
   </head>
   <body class="{{ page.body_class }}" data-kind="{{ page.kind }}" data-url="{{ page.url_path }}" data-theme="{{ site.theme_name }}">
     {% include "header" %}
-    <div class="site-shell" data-content-layout="{{ page.kind }}">
+    <div class="site-shell" data-content-layout="{{ page.layout }}">
       {% include "sidebar" %}
-      <div class="content-shell content-shell-page">
+      <div class="content-shell content-shell-collection">
         <div class="content-shell-inner">
-          <header class="content-header" data-content-layout="{{ page.kind }}">
-            <p class="content-kind-label">{{ page.kind_label }}</p>
+          <header class="content-header content-header-collection" data-content-layout="{{ page.layout }}">
+            <p class="content-kind-label">Collection</p>
             <h1 class="content-title">{{ page.title }}</h1>
             {% if page.summary %}<p class="article-summary">{{ page.summary }}</p>{% endif %}
-            <div class="content-context" data-section-title="{{ page.current_section_title }}" data-section-url="{{ page.current_section_url }}">{{ page.page_header_html }}</div>
+            <div class="surface-links">
+              <a href="{{ site.search_url }}">Search</a>
+              <a href="{{ site.tags_url }}">Tags</a>
+              <a href="{{ site.series_url }}">Series</a>
+              <a href="{{ site.archive_url }}">Archive</a>
+            </div>
           </header>
-          <main data-source="{{ page.source_path }}">{{ page.body_html }}</main>
-          {{ slots.backlinks_html }}
+          <main class="surface-body" data-source="{{ page.source_path }}">{{ page.body_html }}</main>
         </div>
       </div>
     </div>

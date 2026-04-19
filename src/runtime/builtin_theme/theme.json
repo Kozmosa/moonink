@@ -3,7 +3,10 @@
   "layouts": {
     "index": "layouts/index.html",
     "page": "layouts/page.html",
-    "article": "layouts/article.html"
+    "article": "layouts/article.html",
+    "search": "layouts/search.html",
+    "collection": "layouts/collection.html",
+    "archive": "layouts/archive.html"
   },
   "tokens": [
     { "name": "color.bg", "default": "#f3ede2" },
@@ -19,5 +22,6 @@
     { "name": "radius.card", "default": "1.35rem" },
     { "name": "shadow.card", "default": "0 22px 60px rgba(61, 38, 18, 0.12)" }
   ],
+  "page_overrides": ["layout"],
   "slots": ["head", "scripts"]
 }

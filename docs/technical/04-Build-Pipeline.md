@@ -16,7 +16,8 @@ MoonInk V1 build flow is intentionally explicit.
 8. pass templated outputs into `SiteConstructor`
 9. normalize routes and identifiers
 10. build navigation and site model
-11. emit HTML, static assets, and search index
+11. generate reserved public surfaces such as `/search/`, `/tags/`, `/series/`, and `/archive/`
+12. emit HTML, static assets, search index, and RSS
 
 ## 2. Why Staged Processing Matters
 
@@ -42,6 +43,7 @@ A minimal progression is:
 - rendered HTML fragment
 - templated page output
 - site-construction input
+- generated public surface descriptor
 
 ## 4. Parser And Render Boundaries
 
@@ -58,3 +60,25 @@ This separation makes later evolution easier:
 The build should stop on structural failures such as invalid config, missing required backends, or unrecoverable route conflicts.
 
 Content diagnostics such as parser warnings, unsupported syntax notes, or future WikiLink issues should be preserved and reported clearly. The parser layer should prefer best-effort behavior where meaningful output can still be produced.
+
+## 6. Generated Surfaces And Reserved Roots
+
+MoonInk M2 adds build-owned public surfaces that are emitted beside source-backed pages:
+
+- `/search/`
+- `/tags/`
+- `/series/`
+- `/archive/`
+
+These roots are reserved for generated output. Source content placed under `search/`,
+`tags/`, `series/`, or `archive/` is treated as a blocking build conflict rather than
+being merged with generated pages.
+
+The build also reserves non-page artifacts such as:
+
+- `search-index.json`
+- `rss.xml`
+- `assets/theme-vars.css`
+
+Passthrough assets that collide with source-backed HTML outputs or these generated
+artifacts fail the build before output cleanup.

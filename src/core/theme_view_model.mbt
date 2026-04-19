@@ -10,6 +10,18 @@ pub fn theme_page_kind(meta : PageMeta) -> String {
 }
 
 ///|
+pub fn normalize_frontmatter_layout_key(layout : String) -> String? {
+  let normalized = layout.trim().to_string()
+  match normalized {
+    "" => None
+    "article" => Some("article")
+    "page" => Some("page")
+    "home" => Some("index")
+    _ => None
+  }
+}
+
+///|
 pub(all) struct ThemePageViewModel {
   kind : String
   layout : String

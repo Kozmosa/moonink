@@ -2,9 +2,6 @@
 let serve_watch_poll_millis : Int = 400
 
 ///|
-let serve_watch_max_mention_entries : Int = 5
-
-///|
 let serve_watch_max_diagnostic_lines : Int = 6
 
 ///|
@@ -617,6 +614,39 @@ fn validate_preview_artifact_output_conflicts(
 }
 
 ///|
+fn generated_preview_output_path(
+  config : @core.MooninkConfig,
+  output_path : String,
+) -> String raise @core.ProjectIOError {
+  @core.join_relative_path(output_root(config), output_path) catch {
+    err =>
+      raise @core.project_io_error(
+        "serve_preview_output",
+        output_path,
+        @core.format_path_policy_error(err),
+      )
+  }
+}
+
+///|
+fn ensure_generated_preview_scripts(
+  config : @core.MooninkConfig,
+  pages : Array[@core.GeneratedPage],
+) -> Unit raise BuildCommandError {
+  for page in pages {
+    let full_path = generated_preview_output_path(config, page.output_path) catch {
+      err => raise BuildCommandError::ProjectIO(err)
+    }
+    let html = @runtime.io_read_file_to_string(full_path) catch {
+      err => raise BuildCommandError::ProjectIO(err)
+    }
+    @runtime.io_write_string(full_path, ensure_preview_script_in_html(html)) catch {
+      err => raise BuildCommandError::ProjectIO(err)
+    }
+  }
+}
+
+///|
 fn build_serve_preview_result(
   config : @core.MooninkConfig,
   inventory : @core.ContentInventory,
@@ -627,6 +657,7 @@ fn build_serve_preview_result(
     Ok(inputs) => inputs
     Err(err) => return Err(BuildCommandError::ContentDiscovery(err))
   }
+  let published_inputs = published_build_inputs(inputs)
   let theme_bundle = match resolve_active_theme_bundle(config) {
     Ok(theme_bundle) => theme_bundle
     Err(err) => return Err(err)
@@ -641,10 +672,10 @@ fn build_serve_preview_result(
   }
   match theme_bundle {
     Some(bundle) => {
-      validate_build_theme_overrides(inputs, bundle) catch {
+      validate_build_theme_overrides(published_inputs, bundle) catch {
         err => return Err(err)
       }
-      for input in inputs {
+      for input in published_inputs {
         let _ = select_theme_layout(bundle, input) catch {
           err => return Err(err)
         }
@@ -652,7 +683,31 @@ fn build_serve_preview_result(
     }
     None => ()
   }
-  validate_static_asset_output_conflicts(inventory, inputs) catch {
+  validate_reserved_generated_roots(inputs) catch {
+    err => return Err(err)
+  }
+  let assembly = build_site_assembly_model(config, published_inputs, inventory)
+  let generated_pages = build_generated_pages(config, assembly.pages)
+  match theme_bundle {
+    Some(bundle) =>
+      for page in generated_pages {
+        if generated_theme_layout_source(bundle, page) is None {
+          return Err(
+            BuildCommandError::ProjectIO(
+              @core.project_io_error(
+                "build",
+                page.source_path,
+                missing_theme_layout_message(page.layout_key),
+              ),
+            ),
+          )
+        }
+      }
+    None => ()
+  }
+  let output_targets = build_input_output_targets(published_inputs) +
+    generated_page_output_targets(generated_pages)
+  validate_static_asset_output_conflicts(inventory, output_targets) catch {
     err => return Err(err)
   }
   validate_preview_artifact_output_conflicts(inventory) catch {
@@ -700,14 +755,21 @@ fn build_serve_preview_result(
         None => ()
       }
   }
-  let assembly = build_site_assembly_model(config, inputs, inventory)
-  let wikilinker = build_wikilinker_with_assets(inputs, inventory.asset_files)
+  ensure_surface_search_asset(staging_config) catch {
+    err => return Err(err)
+  }
+  let wikilinker = build_wikilinker_with_assets(
+    published_inputs,
+    inventory.asset_files,
+  )
   let experience = build_article_experience_model(
-    inputs,
+    published_inputs,
     assembly.pages,
     wikilinker,
   )
-  let target_signature = build_link_target_signature(inputs, inventory)
+  let target_signature = build_link_target_signature(
+    published_inputs, inventory,
+  )
   let mut emitted_html_files = 0
   let mut article_count = 0
   let mut page_count = 0
@@ -716,7 +778,7 @@ fn build_serve_preview_result(
   let next_parsed : Map[String, @docflow.ParsedDocument] = {}
   let next_linked : Map[String, @docflow.ParsedDocument] = {}
   let next_rendered : Map[String, @docflow.RenderedDocument] = {}
-  for input in inputs {
+  for input in published_inputs {
     let parser = match parser_for_format(input.meta.format) {
       Ok(parser) => parser
       Err(err) => return Err(err)
@@ -824,7 +886,19 @@ fn build_serve_preview_result(
       @core.ContentKind::Page => page_count += 1
     }
   }
-  write_search_index_output(staging_config, inputs) catch {
+  let generated_emitted = write_generated_surface_pages(
+    staging_config, active_theme, theme_bundle, assembly,
+  ) catch {
+    err => return Err(err)
+  }
+  ensure_generated_preview_scripts(staging_config, generated_pages) catch {
+    err => return Err(err)
+  }
+  emitted_html_files += generated_emitted
+  write_search_index_output(staging_config, published_inputs) catch {
+    err => return Err(err)
+  }
+  write_rss_output(staging_config, assembly.pages) catch {
     err => return Err(err)
   }
   let result : BuildWithDiagnostics = {
@@ -1028,8 +1102,7 @@ fn preview_process_still_running_result(
       )
     Err(err) =>
       Err(
-        "[serve] watch loop interrupted\n" +
-        @core.format_project_io_error(err),
+        "[serve] watch loop interrupted\n" + @core.format_project_io_error(err),
       )
   }
 }

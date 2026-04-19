@@ -194,6 +194,8 @@ pub struct MainServeLaunch {
   port : Int
 } derive(Eq, @debug.Debug)
 
+type OutputTarget derive(Eq, @debug.Debug)
+
 pub(all) enum ParsedCliRequest {
   Help
   Onboard

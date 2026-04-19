@@ -327,15 +327,27 @@ fn write_build_output(
 
 ///|
 fn reserved_output_paths() -> Array[String] {
-  ["search-index.json", "assets/theme-vars.css"]
+  ["search-index.json", "assets/theme-vars.css", "rss.xml"]
 }
 
 ///|
 fn validate_static_asset_output_conflicts(
   inventory : @core.ContentInventory,
-  inputs : Array[@runtime.BuildInput],
+  output_targets : Array[OutputTarget],
 ) -> Unit raise BuildCommandError {
-  let output_paths = collect_output_path_sources(inputs)
+  let output_paths = collect_output_path_sources(output_targets)
+  for entry in output_paths {
+    let (output_path, sources) = entry
+    if sources.length() > 1 {
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "build",
+          output_path,
+          "final output path conflict: " + sources.iter().join(", "),
+        ),
+      )
+    }
+  }
   for asset in inventory.asset_files {
     if output_paths.get(asset.relative_path) is Some(_) {
       raise BuildCommandError::ProjectIO(
@@ -581,28 +593,27 @@ pub fn build_backlink_index(
 
 ///|
 fn collect_output_path_sources(
-  inputs : Array[@runtime.BuildInput],
+  targets : Array[OutputTarget],
 ) -> Map[String, Array[String]] {
   let output_paths : Map[String, Array[String]] = {}
-  for input in inputs {
-    let output_path = input.meta.output_path
+  for target in targets {
+    let output_path = target.output_path
     let existing = match output_paths.get(output_path) {
       Some(paths) => paths
       None => []
     }
-    output_paths[output_path] = existing + [input.meta.source_path]
+    output_paths[output_path] = existing + [target.source_path]
   }
   output_paths
 }
 
 ///|
-fn append_route_conflicts(
-  inputs : Array[@runtime.BuildInput],
-  _route_style : @core.RouteStyle,
+fn append_output_target_conflicts(
+  targets : Array[OutputTarget],
   report : CheckReport,
 ) -> CheckReport {
   let mut next_report = report
-  let output_paths = collect_output_path_sources(inputs)
+  let output_paths = collect_output_path_sources(targets)
   for entry in output_paths {
     let (output_path, sources) = entry
     if sources.length() > 1 {
@@ -688,6 +699,106 @@ fn theme_bundle_asset_root(bundle : @runtime.ActiveThemeBundle) -> String {
 }
 
 ///|
+fn configured_site_url(config : @core.MooninkConfig) -> String {
+  match config.site_url {
+    Some(site_url) => site_url
+    None => "/"
+  }
+}
+
+///|
+fn assign_public_surface_site_urls(
+  site : Map[String, @core.ThemeConfigValue],
+  config : @core.MooninkConfig,
+) -> Unit {
+  site["search_url"] = theme_string_value(
+    generated_surface_route(config, "search"),
+  )
+  site["tags_url"] = theme_string_value(generated_surface_route(config, "tags"))
+  site["series_url"] = theme_string_value(
+    generated_surface_route(config, "series"),
+  )
+  site["archive_url"] = theme_string_value(
+    generated_surface_route(config, "archive"),
+  )
+}
+
+///|
+fn slot_text_value(
+  slots : Map[String, @core.ThemeConfigValue],
+  slot_name : String,
+) -> String {
+  match slots.get(slot_name) {
+    Some(@core.ThemeConfigValue::StringValue(value)) => value
+    _ => ""
+  }
+}
+
+///|
+fn assign_slot_html(
+  slots : Map[String, @core.ThemeConfigValue],
+  slot_name : String,
+  html : String,
+) -> Unit {
+  slots[slot_name] = theme_string_value(html)
+}
+
+///|
+fn append_slot_html(
+  slots : Map[String, @core.ThemeConfigValue],
+  slot_name : String,
+  html : String,
+) -> Unit {
+  if html == "" {
+    return
+  }
+  let existing = slot_text_value(slots, slot_name)
+  if existing == "" {
+    assign_slot_html(slots, slot_name, html)
+  } else {
+    assign_slot_html(slots, slot_name, existing + html)
+  }
+}
+
+///|
+fn apply_declared_slot_values(
+  slots : Map[String, @core.ThemeConfigValue],
+  bundle : @runtime.ActiveThemeBundle,
+  config : @core.MooninkConfig,
+) -> Unit {
+  for
+    entry in @runtime.declared_slot_values(
+      bundle.manifest.slots,
+      config.theme_config,
+    ) {
+    let (slot_name, slot_value) = entry
+    if slot_name == "head" || slot_name == "scripts" {
+      append_slot_html(slots, slot_name, slot_value)
+    } else if slots.get(slot_name) is None {
+      slots[slot_name] = theme_string_value(slot_value)
+    }
+  }
+}
+
+///|
+fn page_head_description(page : @core.SitePage) -> String {
+  if page.summary != "" {
+    page.summary
+  } else {
+    page.description
+  }
+}
+
+///|
+fn content_og_type(kind : @core.ContentKind) -> String {
+  if kind == @core.ContentKind::Article {
+    "article"
+  } else {
+    "website"
+  }
+}
+
+///|
 fn theme_token_css_name(token_name : String) -> String {
   let parts : Array[String] = []
   for part_view in token_name.split(".") {
@@ -728,6 +839,53 @@ fn write_theme_vars_output(
   }
   lines.push("}")
   write_build_output(config, "assets/theme-vars.css", lines.iter().join("\n")) catch {
+    err => raise err
+  }
+}
+
+///|
+fn ensure_surface_search_asset(
+  config : @core.MooninkConfig,
+) -> Unit raise BuildCommandError {
+  let assets_dir = @core.join_relative_path(output_root(config), "assets") catch {
+    err =>
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "copy_theme_assets",
+          output_root(config),
+          @core.format_path_policy_error(err),
+        ),
+      )
+  }
+  @runtime.io_ensure_dir(assets_dir) catch {
+    err => raise BuildCommandError::ProjectIO(err)
+  }
+  let target_path = @core.join_relative_path(assets_dir, "moonink-search.js") catch {
+    err =>
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "copy_theme_assets",
+          assets_dir,
+          @core.format_path_policy_error(err),
+        ),
+      )
+  }
+  if @runtime.io_path_exists(target_path) {
+    return
+  }
+  let source_path = @runtime.built_in_default_theme_root() +
+    "/assets/moonink-search.js"
+  @runtime.io_copy_file(source_path, target_path) catch {
+    err => raise BuildCommandError::ProjectIO(err)
+  }
+}
+
+///|
+fn write_rss_output(
+  config : @core.MooninkConfig,
+  pages : Array[@core.SitePage],
+) -> Unit raise BuildCommandError {
+  write_build_output(config, "rss.xml", render_rss_xml(config, pages)) catch {
     err => raise err
   }
 }
@@ -779,6 +937,89 @@ fn theme_object_value(
 }
 
 ///|
+fn theme_author_profile_link_value(
+  link : @core.AuthorProfileLink,
+) -> @core.ThemeConfigValue {
+  let value : Map[String, @core.ThemeConfigValue] = {}
+  value["label"] = theme_string_value(link.label)
+  value["url"] = theme_string_value(link.url)
+  theme_object_value(value)
+}
+
+///|
+fn theme_author_profile_value(
+  profile : @core.AuthorProfile,
+) -> @core.ThemeConfigValue {
+  let links : Array[@core.ThemeConfigValue] = []
+  for link in profile.links {
+    links.push(theme_author_profile_link_value(link))
+  }
+  let value : Map[String, @core.ThemeConfigValue] = {}
+  value["name"] = theme_optional_string_value(profile.name)
+  value["bio"] = theme_optional_string_value(profile.bio)
+  value["avatar"] = theme_optional_string_value(profile.avatar)
+  value["homepage_text"] = theme_optional_string_value(profile.homepage_text)
+  value["links"] = theme_collection_items_value(links)
+  theme_object_value(value)
+}
+
+///|
+fn theme_site_card_value(card : @core.SiteCard) -> @core.ThemeConfigValue {
+  let value : Map[String, @core.ThemeConfigValue] = {}
+  value["title"] = theme_string_value(card.title)
+  value["url"] = theme_string_value(card.url_path)
+  value["url_path"] = theme_string_value(card.url_path)
+  value["source_path"] = theme_string_value(card.source_path)
+  value["summary"] = theme_string_value(card.summary)
+  value["display_date"] = theme_optional_string_value(card.display_date)
+  value["published_at"] = theme_optional_string_value(card.published_at)
+  value["freshness_at"] = theme_optional_string_value(card.freshness_at)
+  value["tags"] = theme_string_array_value(card.tags)
+  value["series"] = theme_optional_string_value(card.series)
+  value["cover"] = theme_optional_string_value(card.cover)
+  value["author"] = theme_optional_string_value(card.author)
+  value["featured"] = theme_bool_value(card.featured)
+  value["pinned"] = theme_bool_value(card.pinned)
+  value["density"] = theme_string_value(
+    surface_card_density_class(card.density),
+  )
+  theme_object_value(value)
+}
+
+///|
+fn theme_named_card_collection_value(
+  collection : @core.NamedCardCollection,
+) -> @core.ThemeConfigValue {
+  let cards : Array[@core.ThemeConfigValue] = []
+  for card in collection.cards {
+    cards.push(theme_site_card_value(card))
+  }
+  let value : Map[String, @core.ThemeConfigValue] = {}
+  value["name"] = theme_string_value(collection.name)
+  value["slug"] = theme_string_value(collection.slug)
+  value["url"] = theme_string_value(collection.url_path)
+  value["url_path"] = theme_string_value(collection.url_path)
+  value["items"] = theme_collection_items_value(cards)
+  theme_object_value(value)
+}
+
+///|
+fn theme_archive_month_value(
+  month : @core.ArchiveMonth,
+) -> @core.ThemeConfigValue {
+  let cards : Array[@core.ThemeConfigValue] = []
+  for card in month.cards {
+    cards.push(theme_site_card_value(card))
+  }
+  let value : Map[String, @core.ThemeConfigValue] = {}
+  value["year"] = theme_string_value(month.year)
+  value["month"] = theme_string_value(month.month)
+  value["label"] = theme_string_value(month.label)
+  value["items"] = theme_collection_items_value(cards)
+  theme_object_value(value)
+}
+
+///|
 fn site_page_kind(page : @core.SitePage) -> String {
   if page.is_index {
     return "index"
@@ -815,6 +1056,15 @@ fn theme_site_page_value(page : @core.SitePage) -> @core.ThemeConfigValue {
   value["cover"] = theme_optional_string_value(page.cover)
   value["author"] = theme_optional_string_value(page.author)
   value["column"] = theme_optional_string_value(page.column)
+  value["featured"] = theme_bool_value(page.featured)
+  value["pinned"] = theme_bool_value(page.pinned)
+  value["search"] = theme_bool_value(page.search)
+  value["toc"] = match page.toc {
+    Some(value) => theme_bool_value(value)
+    None => @core.ThemeConfigValue::NullValue
+  }
+  value["published_at"] = theme_optional_string_value(page.published_at)
+  value["freshness_at"] = theme_optional_string_value(page.freshness_at)
   value["reading_time"] = theme_number_value(page.reading_time_minutes)
   value["url"] = theme_string_value(page.url_path)
   value["url_path"] = theme_string_value(page.url_path)
@@ -1069,6 +1319,21 @@ fn missing_theme_layout_message(layout_key : String) -> String {
 }
 
 ///|
+fn resolve_theme_layout_source_for_key(
+  bundle : @runtime.ActiveThemeBundle,
+  layout_key : String,
+) -> Result[String, String] {
+  match bundle.layouts.get(layout_key) {
+    Some(layout) => Ok(layout)
+    None =>
+      match bundle.layouts.get("page") {
+        Some(layout) => Ok(layout)
+        None => Err(layout_key)
+      }
+  }
+}
+
+///|
 fn resolve_theme_layout_source(
   bundle : @runtime.ActiveThemeBundle,
   input : @runtime.BuildInput,
@@ -1081,6 +1346,18 @@ fn resolve_theme_layout_source(
 }
 
 ///|
+fn has_invalid_frontmatter_layout(frontmatter : @core.Frontmatter) -> Bool {
+  match frontmatter.field_shapes.get("layout") {
+    Some(@core.FrontmatterFieldShape::Scalar) =>
+      match frontmatter.layout {
+        Some(layout) => @core.normalize_frontmatter_layout_key(layout) is None
+        None => false
+      }
+    _ => false
+  }
+}
+
+///|
 fn validate_check_theme_layouts(
   inputs : Array[@runtime.BuildInput],
   bundle : @runtime.ActiveThemeBundle,
@@ -1089,6 +1366,9 @@ fn validate_check_theme_layouts(
   let allowed = bundle.manifest.page_overrides
   let mut next_report = report
   for input in inputs {
+    if has_invalid_frontmatter_layout(input.meta.frontmatter) {
+      continue
+    }
     if !invalid_theme_override_keys(input.meta, allowed).is_empty() {
       continue
     }
@@ -1288,26 +1568,26 @@ pub fn build_navigation_model(
 
 ///|
 fn escape_html_text(value : String) -> String {
+  let builder = StringBuilder::new()
   let mut cursor = 0
-  let mut output = ""
   while cursor < value.length() {
     let char = value[cursor:cursor + 1].to_string()
     if char == "&" {
-      output = output + "&amp;"
+      builder.write_string("&amp;")
     } else if char == "<" {
-      output = output + "&lt;"
+      builder.write_string("&lt;")
     } else if char == ">" {
-      output = output + "&gt;"
+      builder.write_string("&gt;")
     } else if char == "\"" {
-      output = output + "&quot;"
+      builder.write_string("&quot;")
     } else if char == "'" {
-      output = output + "&#39;"
+      builder.write_string("&#39;")
     } else {
-      output = output + char
+      builder.write_string(char)
     }
     cursor = cursor + 1
   }
-  output
+  builder.to_string()
 }
 
 ///|
@@ -1340,7 +1620,8 @@ fn render_navigation_items(
   items : Array[@core.NavigationItem],
   current_url : String,
 ) -> String {
-  let mut html = "<ul>"
+  let builder = StringBuilder::new()
+  builder.write_string("<ul>")
   for item in items {
     let is_active = item.url_path == current_url
     let is_ancestor = !is_active && navigation_contains_url(item, current_url)
@@ -1356,28 +1637,28 @@ fn render_navigation_items(
     let ancestor_attr = navigation_bool_attr(is_ancestor)
     let index_attr = navigation_bool_attr(item.is_index)
     let expanded_attr = navigation_bool_attr(is_expanded)
-    html = html +
-      "<li data-active=\"" +
-      active_attr +
-      "\" data-ancestor=\"" +
-      ancestor_attr +
-      "\" data-index=\"" +
-      index_attr +
-      "\" data-expanded=\"" +
-      expanded_attr +
-      "\" data-current=\"" +
-      current_attr +
-      "\"><a href=\"" +
-      escape_html_text(item.url_path) +
-      "\">" +
-      escape_html_text(item.title) +
-      "</a>"
+    builder.write_string("<li data-active=\"")
+    builder.write_string(active_attr)
+    builder.write_string("\" data-ancestor=\"")
+    builder.write_string(ancestor_attr)
+    builder.write_string("\" data-index=\"")
+    builder.write_string(index_attr)
+    builder.write_string("\" data-expanded=\"")
+    builder.write_string(expanded_attr)
+    builder.write_string("\" data-current=\"")
+    builder.write_string(current_attr)
+    builder.write_string("\"><a href=\"")
+    builder.write_string(escape_html_text(item.url_path))
+    builder.write_string("\">")
+    builder.write_string(escape_html_text(item.title))
+    builder.write_string("</a>")
     if !item.children.is_empty() {
-      html = html + render_navigation_items(item.children, current_url)
+      builder.write_string(render_navigation_items(item.children, current_url))
     }
-    html = html + "</li>"
+    builder.write_string("</li>")
   }
-  html + "</ul>"
+  builder.write_string("</ul>")
+  builder.to_string()
 }
 
 ///|
@@ -1593,25 +1874,45 @@ fn normalized_cover_url(value : String?) -> String? {
 }
 
 ///|
+fn published_at_value(frontmatter : @core.Frontmatter) -> String? {
+  normalized_optional_text(frontmatter.date)
+}
+
+///|
+fn freshness_at_value(frontmatter : @core.Frontmatter) -> String? {
+  match normalized_optional_text(frontmatter.updated) {
+    Some(updated) => Some(updated)
+    None => published_at_value(frontmatter)
+  }
+}
+
+///|
 fn site_page_link(page : @core.SitePage) -> @core.PageLink {
   { title: page.title, url_path: page.url_path, source_path: page.source_path }
 }
 
 ///|
 fn build_site_page(input : @runtime.BuildInput) -> @core.SitePage {
+  let frontmatter = input.meta.frontmatter
   {
     title: site_page_title(input.meta),
     nav_title: site_page_nav_title(input.meta),
     nav_hidden: site_page_nav_hidden(input.meta),
     description: site_page_description(input.meta),
     summary: site_page_summary(input),
-    date: normalized_optional_text(input.meta.frontmatter.date),
-    updated: normalized_optional_text(input.meta.frontmatter.updated),
-    tags: input.meta.frontmatter.tags,
-    series: normalized_optional_text(input.meta.frontmatter.series),
-    cover: normalized_cover_url(input.meta.frontmatter.cover),
-    author: normalized_optional_text(input.meta.frontmatter.author),
-    column: normalized_optional_text(input.meta.frontmatter.column),
+    date: published_at_value(frontmatter),
+    updated: normalized_optional_text(frontmatter.updated),
+    tags: frontmatter.tags,
+    series: normalized_optional_text(frontmatter.series),
+    cover: normalized_cover_url(frontmatter.cover),
+    author: normalized_optional_text(frontmatter.author),
+    column: normalized_optional_text(frontmatter.column),
+    featured: frontmatter.featured,
+    pinned: frontmatter.pinned,
+    search: frontmatter.search,
+    toc: frontmatter.toc,
+    published_at: published_at_value(frontmatter),
+    freshness_at: freshness_at_value(frontmatter),
     reading_time_minutes: @core.estimate_reading_time_minutes(
       input.docflow_content,
       input.meta.format,
@@ -1637,17 +1938,27 @@ pub fn build_site_pages(
 
 ///|
 pub fn build_site_assembly_model(
-  _config : @core.MooninkConfig,
+  config : @core.MooninkConfig,
   inputs : Array[@runtime.BuildInput],
-  inventory : @core.ContentInventory,
+  _inventory : @core.ContentInventory,
 ) -> @core.SiteAssemblyModel {
   let pages = build_site_pages(inputs)
   let navigation = build_navigation_model(pages)
+  let collections = build_site_collections(config, pages)
+  let mut page_count = 0
+  let mut article_count = 0
+  for input in inputs {
+    match input.meta.content_kind {
+      @core.ContentKind::Article => article_count = article_count + 1
+      @core.ContentKind::Page => page_count = page_count + 1
+    }
+  }
   {
     pages,
     navigation,
-    page_count: inventory.total_pages,
-    article_count: inventory.total_articles,
+    collections,
+    page_count,
+    article_count,
     navigation_items: navigation.total_items,
     note: "Site assembly combines page metadata and navigation before templating.",
   }
@@ -2133,6 +2444,7 @@ fn build_article_experience_model(
 
 ///|
 fn build_search_index_item(
+  config : @core.MooninkConfig,
   input : @runtime.BuildInput,
 ) -> @core.SearchIndexItem {
   let frontmatter = input.meta.frontmatter
@@ -2143,23 +2455,70 @@ fn build_search_index_item(
   {
     title: site_page_title(input.meta),
     url: input.meta.url_path,
+    kind: if input.meta.is_index {
+      "index"
+    } else {
+      template_content_kind(input.meta.content_kind)
+    },
+    summary: normalized_optional_text(frontmatter.summary),
     excerpt: @core.search_index_excerpt(
       excerpt,
       input.docflow_content,
       input.meta.format,
     ),
     tags: frontmatter.tags,
-    date: frontmatter.date,
+    date: normalized_optional_text(frontmatter.date),
+    published_at: published_at_value(frontmatter),
+    freshness_at: freshness_at_value(frontmatter),
+    series: normalized_optional_text(frontmatter.series),
+    cover: normalized_cover_url(frontmatter.cover),
+    author: Some(
+      match normalized_optional_text(frontmatter.author) {
+        Some(author) => author
+        None =>
+          match config.author_profile.name {
+            Some(author) => author
+            None => config.site_name
+          }
+      },
+    ),
+    featured: frontmatter.featured,
+    pinned: frontmatter.pinned,
+    source_path: input.meta.source_path,
   }
 }
 
 ///|
 fn build_search_index_document(
+  config : @core.MooninkConfig,
   inputs : Array[@runtime.BuildInput],
 ) -> @core.SearchIndexDocument {
-  let items : Array[@core.SearchIndexItem] = []
+  let sorted_inputs : Array[@runtime.BuildInput] = []
   for input in inputs {
-    items.push(build_search_index_item(input))
+    if input.meta.frontmatter.search {
+      sorted_inputs.push(input)
+    }
+  }
+  sorted_inputs.sort_by(fn(left, right) {
+    let pinned_compare = compare_bool_desc(
+      left.meta.frontmatter.pinned,
+      right.meta.frontmatter.pinned,
+    )
+    if pinned_compare != 0 {
+      return pinned_compare
+    }
+    let freshness_compare = compare_optional_dates_desc(
+      freshness_at_value(left.meta.frontmatter),
+      freshness_at_value(right.meta.frontmatter),
+    )
+    if freshness_compare != 0 {
+      return freshness_compare
+    }
+    left.meta.source_path.compare(right.meta.source_path)
+  })
+  let items : Array[@core.SearchIndexItem] = []
+  for input in sorted_inputs {
+    items.push(build_search_index_item(config, input))
   }
   { version: 1, generated_at: @runtime.current_utc_iso8601_second(), items }
 }
@@ -2169,7 +2528,7 @@ fn write_search_index_output(
   config : @core.MooninkConfig,
   inputs : Array[@runtime.BuildInput],
 ) -> Unit raise BuildCommandError {
-  let document = build_search_index_document(inputs)
+  let document = build_search_index_document(config, inputs)
   let json = @core.search_index_document_to_json(document)
   write_build_output(config, "search-index.json", json)
 }
@@ -2237,6 +2596,28 @@ fn reading_time_label(minutes : Int) -> String {
 }
 
 ///|
+fn page_kind_label(kind : String) -> String {
+  match kind {
+    "index" => "Homepage"
+    "article" => "Article"
+    "search" => "Search"
+    "tag" => "Tag"
+    "series" => "Series"
+    "archive" => "Archive"
+    _ => "Page"
+  }
+}
+
+///|
+fn homepage_surface_html_for_url(
+  _config : @core.MooninkConfig,
+  _assembly : @core.SiteAssemblyModel,
+  _url_path : String,
+) -> String {
+  ""
+}
+
+///|
 fn build_template_context(
   config : @core.MooninkConfig,
   active_theme : @runtime.ActiveThemeLayout,
@@ -2247,6 +2628,11 @@ fn build_template_context(
 ) -> @docflow.TemplateContext {
   let backlinks = experience_backlinks_for_url(experience, input.meta.url_path)
   let current_section = find_current_section_page(assembly.pages, input.meta)
+  let surface_html = homepage_surface_html_for_url(
+    config,
+    assembly,
+    input.meta.url_path,
+  )
   let current_section_title = match current_section {
     Some(section) => section.nav_title
     None => ""
@@ -2283,7 +2669,7 @@ fn build_template_context(
       input,
     ),
     backlinks_html: render_backlinks_html(backlinks),
-    body_html: rendered.html,
+    body_html: surface_html + rendered.html,
   }
 }
 
@@ -2457,7 +2843,7 @@ fn build_theme_render_context(
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
   extra_slots : Map[String, @core.ThemeConfigValue],
-) -> @docflow.ThemeRenderContext {
+) -> @docflow.ThemeRenderContext raise BuildCommandError {
   let page_model = @core.page_view_model_from_meta(input.meta)
   let current_page = match
     find_page_by_url(assembly.pages, input.meta.url_path) {
@@ -2497,7 +2883,47 @@ fn build_theme_render_context(
   )
   let toc_entries = experience_toc_for_url(experience, input.meta.url_path)
   let backlinks_html = render_backlinks_html(backlink_entries)
-
+  let surface_html = homepage_surface_html_for_url(
+    config,
+    assembly,
+    input.meta.url_path,
+  )
+  let show_toc = match current_page.toc {
+    Some(false) => false
+    _ => !toc_entries.is_empty()
+  }
+  let author_display = match current_page.author {
+    Some(author) => author
+    None =>
+      match config.author_profile.name {
+        Some(author) => author
+        None => config.site_name
+      }
+  }
+  let homepage_featured_cards : Array[@core.ThemeConfigValue] = []
+  for card in assembly.collections.homepage_featured {
+    homepage_featured_cards.push(theme_site_card_value(card))
+  }
+  let homepage_recent_cards : Array[@core.ThemeConfigValue] = []
+  for card in assembly.collections.homepage_recent {
+    homepage_recent_cards.push(theme_site_card_value(card))
+  }
+  let search_cards : Array[@core.ThemeConfigValue] = []
+  for card in assembly.collections.search {
+    search_cards.push(theme_site_card_value(card))
+  }
+  let tag_pages : Array[@core.ThemeConfigValue] = []
+  for collection in assembly.collections.tags {
+    tag_pages.push(theme_named_card_collection_value(collection))
+  }
+  let series_pages : Array[@core.ThemeConfigValue] = []
+  for collection in assembly.collections.series {
+    series_pages.push(theme_named_card_collection_value(collection))
+  }
+  let archive_months : Array[@core.ThemeConfigValue] = []
+  for month in assembly.collections.archive {
+    archive_months.push(theme_archive_month_value(month))
+  }
   let nav_items : Array[@core.ThemeConfigValue] = []
   for item in assembly.navigation.items {
     nav_items.push(theme_navigation_item_value(item, input.meta.url_path))
@@ -2551,6 +2977,23 @@ fn build_theme_render_context(
   let previous_link = experience.previous.get(input.meta.url_path)
   let next_link = experience.next.get(input.meta.url_path)
   let series_nav = experience.series.get(input.meta.url_path)
+  let homepage_modules_html = if input.meta.url_path == "/" {
+    render_homepage_modules_html(config, assembly.pages) catch {
+      err => raise err
+    }
+  } else {
+    ""
+  }
+  let homepage_title = if input.meta.url_path == "/" {
+    homepage_hero_title(config, current_page)
+  } else {
+    current_page.title
+  }
+  let homepage_summary = if input.meta.url_path == "/" {
+    homepage_hero_summary(config, current_page)
+  } else {
+    current_page.summary
+  }
   let series_items : Array[@core.ThemeConfigValue] = []
   match series_nav {
     Some(nav) =>
@@ -2562,18 +3005,16 @@ fn build_theme_render_context(
 
   let site : Map[String, @core.ThemeConfigValue] = {}
   site["name"] = theme_string_value(config.site_name)
-  site["url"] = theme_string_value(
-    match config.site_url {
-      Some(site_url) => site_url
-      None => ""
-    },
-  )
+  site["url"] = theme_string_value(configured_site_url(config))
   site["theme_name"] = theme_string_value(bundle.manifest.name)
   site["theme_asset_root"] = theme_string_value(theme_bundle_asset_root(bundle))
   site["theme_config"] = theme_object_value(config.theme_config)
+  assign_public_surface_site_urls(site, config)
+  site["author"] = theme_author_profile_value(config.author_profile)
 
   let page : Map[String, @core.ThemeConfigValue] = {}
   page["kind"] = theme_string_value(page_model.kind)
+  page["kind_label"] = theme_string_value(page_kind_label(page_model.kind))
   page["layout"] = theme_string_value(page_model.layout)
   page["title"] = theme_string_value(current_page.title)
   page["nav_title"] = theme_string_value(current_page.nav_title)
@@ -2581,18 +3022,18 @@ fn build_theme_render_context(
   page["summary"] = theme_string_value(current_page.summary)
   page["date"] = theme_optional_string_value(current_page.date)
   page["updated"] = theme_optional_string_value(current_page.updated)
+  page["published_at"] = theme_optional_string_value(current_page.published_at)
+  page["freshness_at"] = theme_optional_string_value(current_page.freshness_at)
   page["tags"] = theme_string_array_value(current_page.tags)
   page["series"] = theme_optional_string_value(current_page.series)
   page["cover"] = theme_optional_string_value(current_page.cover)
   page["cover_url"] = theme_optional_string_value(current_page.cover)
   page["author"] = theme_optional_string_value(current_page.author)
-  page["author_display"] = theme_string_value(
-    match current_page.author {
-      Some(author) => author
-      None => config.site_name
-    },
-  )
+  page["author_display"] = theme_string_value(author_display)
   page["column"] = theme_optional_string_value(current_page.column)
+  page["featured"] = theme_bool_value(current_page.featured)
+  page["pinned"] = theme_bool_value(current_page.pinned)
+  page["search"] = theme_bool_value(current_page.search)
   page["reading_time"] = theme_number_value(current_page.reading_time_minutes)
   page["reading_time_label"] = theme_string_value(
     reading_time_label(current_page.reading_time_minutes),
@@ -2611,6 +3052,8 @@ fn build_theme_render_context(
   page["current_section_url"] = theme_string_value(current_section_url)
   page["page_header_html"] = theme_string_value(page_header_html)
   page["backlinks_html"] = theme_string_value(backlinks_html)
+  page["surface_html"] = theme_string_value(surface_html)
+  page["has_surface"] = theme_bool_value(!surface_html.is_empty())
   page["has_backlinks"] = theme_bool_value(!backlink_entries.is_empty())
   page["has_relationships"] = theme_bool_value(
     !mentioned_entries.is_empty() ||
@@ -2627,13 +3070,15 @@ fn build_theme_render_context(
     !related_entries.is_empty(),
   )
   page["has_related"] = theme_bool_value(!related_entries.is_empty())
-  page["has_toc"] = theme_bool_value(!toc_entries.is_empty())
+  page["has_toc"] = theme_bool_value(show_toc)
   page["previous"] = theme_page_link_value(previous_link)
   page["next"] = theme_page_link_value(next_link)
   page["has_neighbors"] = theme_bool_value(
     previous_link is Some(_) || next_link is Some(_),
   )
   page["series_nav"] = theme_series_nav_value(series_nav)
+  page["homepage_hero_title"] = theme_string_value(homepage_title)
+  page["homepage_hero_summary"] = theme_string_value(homepage_summary)
 
   let collections : Map[String, @core.ThemeConfigValue] = {}
   collections["nav"] = theme_collection_items_value(nav_items)
@@ -2646,22 +3091,35 @@ fn build_theme_render_context(
   collections["toc"] = theme_collection_items_value(toc_items)
   collections["series"] = theme_collection_items_value(series_items)
   collections["sections"] = theme_collection_items_value(section_items)
+  collections["homepage_featured"] = theme_collection_items_value(
+    homepage_featured_cards,
+  )
+  collections["homepage_recent"] = theme_collection_items_value(
+    homepage_recent_cards,
+  )
+  collections["search_cards"] = theme_collection_items_value(search_cards)
+  collections["tag_pages"] = theme_collection_items_value(tag_pages)
+  collections["series_pages"] = theme_collection_items_value(series_pages)
+  collections["archive_months"] = theme_collection_items_value(archive_months)
 
   let slots : Map[String, @core.ThemeConfigValue] = {}
   slots["body_html"] = theme_string_value(rendered.html)
   slots["navigation_html"] = theme_string_value(navigation_html)
   slots["page_header_html"] = theme_string_value(page_header_html)
   slots["backlinks_html"] = theme_string_value(backlinks_html)
-  for
-    entry in @runtime.declared_slot_values(
-      bundle.manifest.slots,
-      config.theme_config,
-    ) {
-    let (slot_name, slot_value) = entry
-    if slots.get(slot_name) is None {
-      slots[slot_name] = theme_string_value(slot_value)
-    }
-  }
+  slots["homepage_modules_html"] = theme_string_value(homepage_modules_html)
+  assign_slot_html(
+    slots,
+    "head",
+    render_head_meta_html(
+      config,
+      current_page.title,
+      page_head_description(current_page),
+      input.meta.url_path,
+      content_og_type(input.meta.content_kind),
+    ),
+  )
+  apply_declared_slot_values(slots, bundle, config)
   for entry in extra_slots {
     let (slot_name, slot_value) = entry
     slots[slot_name] = merge_slot_value(slots.get(slot_name), slot_value)
@@ -2685,7 +3143,9 @@ fn apply_build_theme_template(
   }
   let context = build_theme_render_context(
     config, bundle, assembly, experience, input, rendered, extra_slots,
-  )
+  ) catch {
+    err => raise err
+  }
   {
     route: input.meta.url_path,
     source_path: rendered.source_path,
@@ -2697,6 +3157,282 @@ fn apply_build_theme_template(
     ),
     note: "theme v2 templater renders the selected layout with structured site and page context",
   }
+}
+
+///|
+fn build_generated_template_context(
+  config : @core.MooninkConfig,
+  active_theme : @runtime.ActiveThemeLayout,
+  assembly : @core.SiteAssemblyModel,
+  page : @core.GeneratedPage,
+) -> @docflow.TemplateContext {
+  {
+    site_name: config.site_name,
+    site_url: match config.site_url {
+      Some(site_url) => site_url
+      None => ""
+    },
+    page_title: page.title,
+    page_description: page.summary,
+    url_path: page.url_path,
+    source_path: page.source_path,
+    content_kind: "page",
+    theme_name: theme_name(active_theme),
+    theme_asset_root: theme_asset_root(active_theme),
+    page_body_class: "page page-system page-" + page.kind,
+    navigation_html: render_navigation_html(assembly.navigation, page.url_path),
+    backlink_urls: [],
+    current_section_title: "",
+    current_section_url: "",
+    page_header_title: page.title,
+    page_header_html: "",
+    backlinks_html: "",
+    body_html: page.body_html,
+  }
+}
+
+///|
+fn generated_theme_page_map(
+  config : @core.MooninkConfig,
+  page : @core.GeneratedPage,
+) -> Map[String, @core.ThemeConfigValue] {
+  let author_display = match config.author_profile.name {
+    Some(author) => author
+    None => config.site_name
+  }
+  let value : Map[String, @core.ThemeConfigValue] = {}
+  value["kind"] = theme_string_value(page.kind)
+  value["kind_label"] = theme_string_value(page_kind_label(page.kind))
+  value["layout"] = theme_string_value(page.layout_key)
+  value["title"] = theme_string_value(page.title)
+  value["nav_title"] = theme_string_value(page.title)
+  value["description"] = theme_string_value(page.summary)
+  value["summary"] = theme_string_value(page.summary)
+  value["date"] = theme_optional_string_value(None)
+  value["updated"] = theme_optional_string_value(None)
+  value["published_at"] = theme_optional_string_value(None)
+  value["freshness_at"] = theme_optional_string_value(None)
+  value["tags"] = theme_string_array_value([])
+  value["series"] = theme_optional_string_value(None)
+  value["cover"] = theme_optional_string_value(None)
+  value["cover_url"] = theme_optional_string_value(None)
+  value["author"] = theme_optional_string_value(None)
+  value["author_display"] = theme_string_value(author_display)
+  value["column"] = theme_optional_string_value(None)
+  value["featured"] = theme_bool_value(false)
+  value["pinned"] = theme_bool_value(false)
+  value["search"] = theme_bool_value(page.kind != "search")
+  value["reading_time"] = theme_number_value(1)
+  value["reading_time_label"] = theme_string_value(reading_time_label(1))
+  value["url"] = theme_string_value(page.url_path)
+  value["url_path"] = theme_string_value(page.url_path)
+  value["source_path"] = theme_string_value(page.source_path)
+  value["body_class"] = theme_string_value("page page-system page-" + page.kind)
+  value["body_html"] = theme_string_value(page.body_html)
+  value["source_format"] = theme_string_value("generated")
+  value["theme_meta"] = theme_object_value({})
+  value["navigation_html"] = theme_string_value("")
+  value["current_section_title"] = theme_string_value("")
+  value["current_section_url"] = theme_string_value("")
+  value["page_header_html"] = theme_string_value("")
+  value["backlinks_html"] = theme_string_value("")
+  value["surface_html"] = theme_string_value("")
+  value["has_surface"] = theme_bool_value(false)
+  value["has_backlinks"] = theme_bool_value(false)
+  value["has_related"] = theme_bool_value(false)
+  value["has_toc"] = theme_bool_value(false)
+  value["previous"] = theme_page_link_value(None)
+  value["next"] = theme_page_link_value(None)
+  value["has_neighbors"] = theme_bool_value(false)
+  value["series_nav"] = theme_series_nav_value(None)
+  value
+}
+
+///|
+fn build_generated_theme_render_context(
+  config : @core.MooninkConfig,
+  bundle : @runtime.ActiveThemeBundle,
+  assembly : @core.SiteAssemblyModel,
+  page : @core.GeneratedPage,
+) -> @docflow.ThemeRenderContext {
+  let nav_items : Array[@core.ThemeConfigValue] = []
+  for item in assembly.navigation.items {
+    nav_items.push(theme_navigation_item_value(item, page.url_path))
+  }
+  let page_items : Array[@core.ThemeConfigValue] = []
+  for site_page in assembly.pages {
+    page_items.push(theme_site_page_value(site_page))
+  }
+  let homepage_featured_cards : Array[@core.ThemeConfigValue] = []
+  for card in assembly.collections.homepage_featured {
+    homepage_featured_cards.push(theme_site_card_value(card))
+  }
+  let homepage_recent_cards : Array[@core.ThemeConfigValue] = []
+  for card in assembly.collections.homepage_recent {
+    homepage_recent_cards.push(theme_site_card_value(card))
+  }
+  let search_cards : Array[@core.ThemeConfigValue] = []
+  for card in assembly.collections.search {
+    search_cards.push(theme_site_card_value(card))
+  }
+  let tag_pages : Array[@core.ThemeConfigValue] = []
+  for collection in assembly.collections.tags {
+    tag_pages.push(theme_named_card_collection_value(collection))
+  }
+  let series_pages : Array[@core.ThemeConfigValue] = []
+  for collection in assembly.collections.series {
+    series_pages.push(theme_named_card_collection_value(collection))
+  }
+  let archive_months : Array[@core.ThemeConfigValue] = []
+  for month in assembly.collections.archive {
+    archive_months.push(theme_archive_month_value(month))
+  }
+  let site : Map[String, @core.ThemeConfigValue] = {}
+  site["name"] = theme_string_value(config.site_name)
+  site["url"] = theme_string_value(
+    match config.site_url {
+      Some(site_url) => site_url
+      None => ""
+    },
+  )
+  site["theme_name"] = theme_string_value(bundle.manifest.name)
+  site["theme_asset_root"] = theme_string_value(theme_bundle_asset_root(bundle))
+  site["theme_config"] = theme_object_value(config.theme_config)
+  site["author"] = theme_author_profile_value(config.author_profile)
+  assign_public_surface_site_urls(site, config)
+
+  let collections : Map[String, @core.ThemeConfigValue] = {}
+  collections["nav"] = theme_collection_items_value(nav_items)
+  collections["pages"] = theme_collection_items_value(page_items)
+  collections["backlinks"] = theme_collection_items_value([])
+  collections["related"] = theme_collection_items_value([])
+  collections["toc"] = theme_collection_items_value([])
+  collections["series"] = theme_collection_items_value([])
+  collections["sections"] = theme_collection_items_value([])
+  collections["homepage_featured"] = theme_collection_items_value(
+    homepage_featured_cards,
+  )
+  collections["homepage_recent"] = theme_collection_items_value(
+    homepage_recent_cards,
+  )
+  collections["search_cards"] = theme_collection_items_value(search_cards)
+  collections["tag_pages"] = theme_collection_items_value(tag_pages)
+  collections["series_pages"] = theme_collection_items_value(series_pages)
+  collections["archive_months"] = theme_collection_items_value(archive_months)
+
+  let slots : Map[String, @core.ThemeConfigValue] = {}
+  slots["body_html"] = theme_string_value(page.body_html)
+  slots["navigation_html"] = theme_string_value(
+    render_navigation_html(assembly.navigation, page.url_path),
+  )
+  slots["head"] = theme_string_value(page.head_html)
+  slots["scripts"] = theme_string_value(page.scripts_html)
+  slots["page_header_html"] = theme_string_value("")
+  slots["backlinks_html"] = theme_string_value("")
+  for
+    entry in @runtime.declared_slot_values(
+      bundle.manifest.slots,
+      config.theme_config,
+    ) {
+    let (slot_name, slot_value) = entry
+    if slots.get(slot_name) is None {
+      slots[slot_name] = theme_string_value(slot_value)
+    }
+  }
+
+  {
+    site,
+    page: generated_theme_page_map(config, page),
+    collections,
+    slots,
+    locals: {},
+  }
+}
+
+///|
+fn validate_check_generated_theme_layouts(
+  pages : Array[@core.GeneratedPage],
+  bundle : @runtime.ActiveThemeBundle,
+  report : CheckReport,
+) -> CheckReport {
+  let mut next_report = report
+  for page in pages {
+    if bundle.layouts.get(page.layout_key) is Some(_) ||
+      bundle.layouts.get("page") is Some(_) {
+      continue
+    }
+    next_report = report_with_entry(next_report, {
+      category: CheckCategory::ThemeTemplate,
+      severity: CheckSeverity::Error,
+      source_path: Some(page.source_path),
+      message: missing_theme_layout_message(page.layout_key),
+      hint: Some("Declare `" + page.layout_key + "` in the theme layout map."),
+      line: None,
+    })
+  }
+  next_report
+}
+
+///|
+fn generated_theme_layout_source(
+  bundle : @runtime.ActiveThemeBundle,
+  page : @core.GeneratedPage,
+) -> String? {
+  match bundle.layouts.get(page.layout_key) {
+    Some(layout_source) => Some(layout_source)
+    None => bundle.layouts.get("page")
+  }
+}
+
+///|
+fn write_generated_surface_pages(
+  config : @core.MooninkConfig,
+  active_theme : @runtime.ActiveThemeLayout?,
+  theme_bundle : @runtime.ActiveThemeBundle?,
+  assembly : @core.SiteAssemblyModel,
+) -> Int raise BuildCommandError {
+  let pages = build_generated_pages(config, assembly.pages)
+  let mut emitted_html_files = 0
+  for page in pages {
+    let html = match theme_bundle {
+      Some(bundle) =>
+        match generated_theme_layout_source(bundle, page) {
+          Some(layout_source) =>
+            @docflow.render_theme_template(
+              layout_source,
+              build_generated_theme_render_context(
+                config, bundle, assembly, page,
+              ),
+              bundle.partials,
+            )
+          None =>
+            raise BuildCommandError::ProjectIO(
+              @core.project_io_error(
+                "build",
+                page.source_path,
+                missing_theme_layout_message(page.layout_key),
+              ),
+            )
+        }
+      None => {
+        let resolved_active_theme = match active_theme {
+          Some(theme) => theme
+          None => panic()
+        }
+        @docflow.render_template_string(
+          resolved_active_theme.source,
+          build_generated_template_context(
+            config, resolved_active_theme, assembly, page,
+          ),
+        )
+      }
+    }
+    write_build_output(config, page.output_path, html) catch {
+      err => raise err
+    }
+    emitted_html_files = emitted_html_files + 1
+  }
+  emitted_html_files
 }
 
 ///|
@@ -2725,11 +3461,15 @@ fn resolve_active_theme_layout(
 fn validate_check_active_theme_bundle(
   config : @core.MooninkConfig,
   inputs : Array[@runtime.BuildInput],
+  generated_pages : Array[@core.GeneratedPage],
   report : CheckReport,
 ) -> CheckReport {
   match @runtime.load_active_theme_bundle_result(config) {
     Ok(bundle) => {
       let report = validate_check_theme_layouts(inputs, bundle, report)
+      let report = validate_check_generated_theme_layouts(
+        generated_pages, bundle, report,
+      )
       validate_check_theme_overrides(inputs, bundle, report)
     }
     Err(err) => {
@@ -2770,6 +3510,7 @@ fn validate_check_active_theme_path(
 fn validate_check_active_theme_layout(
   config : @core.MooninkConfig,
   inputs : Array[@runtime.BuildInput],
+  generated_pages : Array[@core.GeneratedPage],
   report : CheckReport,
 ) -> CheckReport {
   let (has_bundle, use_legacy, report) = match
@@ -2787,10 +3528,14 @@ fn validate_check_active_theme_layout(
     Err(_) => return report
   }
   if has_bundle {
-    return validate_check_active_theme_bundle(config, inputs, report)
+    return validate_check_active_theme_bundle(
+      config, inputs, generated_pages, report,
+    )
   }
   if !use_legacy {
-    return validate_check_active_theme_bundle(config, inputs, report)
+    return validate_check_active_theme_bundle(
+      config, inputs, generated_pages, report,
+    )
   }
   match @runtime.load_active_theme_layout_result(config) {
     Ok(_) => report
@@ -2820,6 +3565,7 @@ fn build_site_result(
     Ok(inputs) => inputs
     Err(err) => return Err(BuildCommandError::ContentDiscovery(err))
   }
+  let published_inputs = published_build_inputs(inputs)
   let theme_bundle = match resolve_active_theme_bundle(config) {
     Ok(theme_bundle) => theme_bundle
     Err(err) => return Err(err)
@@ -2834,10 +3580,10 @@ fn build_site_result(
   }
   match theme_bundle {
     Some(bundle) => {
-      validate_build_theme_overrides(inputs, bundle) catch {
+      validate_build_theme_overrides(published_inputs, bundle) catch {
         err => return Err(err)
       }
-      for input in inputs {
+      for input in published_inputs {
         let _ = select_theme_layout(bundle, input) catch {
           err => return Err(err)
         }
@@ -2845,7 +3591,31 @@ fn build_site_result(
     }
     None => ()
   }
-  validate_static_asset_output_conflicts(inventory, inputs) catch {
+  validate_reserved_generated_roots(inputs) catch {
+    err => return Err(err)
+  }
+  let assembly = build_site_assembly_model(config, published_inputs, inventory)
+  let generated_pages = build_generated_pages(config, assembly.pages)
+  match theme_bundle {
+    Some(bundle) =>
+      for page in generated_pages {
+        if generated_theme_layout_source(bundle, page) is None {
+          return Err(
+            BuildCommandError::ProjectIO(
+              @core.project_io_error(
+                "build",
+                page.source_path,
+                missing_theme_layout_message(page.layout_key),
+              ),
+            ),
+          )
+        }
+      }
+    None => ()
+  }
+  let output_targets = build_input_output_targets(published_inputs) +
+    generated_page_output_targets(generated_pages)
+  validate_static_asset_output_conflicts(inventory, output_targets) catch {
     err => return Err(err)
   }
   prepare_output_dir(config) catch {
@@ -2875,18 +3645,23 @@ fn build_site_result(
         None => ()
       }
   }
-  let assembly = build_site_assembly_model(config, inputs, inventory)
+  ensure_surface_search_asset(config) catch {
+    err => return Err(err)
+  }
   let mut emitted_html_files = 0
   let mut article_count = 0
   let mut page_count = 0
   let diagnostics : Array[BuildDiagnostic] = []
-  let wikilinker = build_wikilinker_with_assets(inputs, inventory.asset_files)
+  let wikilinker = build_wikilinker_with_assets(
+    published_inputs,
+    inventory.asset_files,
+  )
   let experience = build_article_experience_model(
-    inputs,
+    published_inputs,
     assembly.pages,
     wikilinker,
   )
-  for input in inputs {
+  for input in published_inputs {
     let parser = match parser_for_format(input.meta.format) {
       Ok(parser) => parser
       Err(err) => return Err(err)
@@ -2944,13 +3719,92 @@ fn build_site_result(
       @core.ContentKind::Page => page_count = page_count + 1
     }
   }
-  write_search_index_output(config, inputs) catch {
+  emitted_html_files += write_generated_surface_pages(
+    config, active_theme, theme_bundle, assembly,
+  ) catch {
     err => return Err(err)
+  }
+  write_search_index_output(config, published_inputs) catch {
+    err => return Err(err)
+  }
+  write_rss_output(config, assembly.pages) catch {
+    err => return Err(err)
+  }
+  for generated_page in generated_pages {
+    let html = match theme_bundle {
+      Some(bundle) => {
+        let layout_source = match
+          resolve_theme_layout_source_for_key(bundle, generated_page.layout_key) {
+          Ok(layout_source) => layout_source
+          Err(layout_key) =>
+            return Err(
+              BuildCommandError::ProjectIO(
+                @core.project_io_error(
+                  "load_theme_layout",
+                  generated_page.layout_key,
+                  missing_theme_layout_message(layout_key),
+                ),
+              ),
+            )
+        }
+        let context = build_generated_theme_render_context(
+          config, bundle, assembly, generated_page,
+        )
+        @docflow.render_theme_template(layout_source, context, bundle.partials)
+      }
+      None => {
+        let active_theme = match active_theme {
+          Some(active_theme) => active_theme
+          None => panic()
+        }
+        let generated_input : @runtime.BuildInput = {
+          absolute_source_path: generated_page.source_path,
+          relative_source_path: generated_page.source_path,
+          source_content: generated_page.body_html,
+          docflow_content: generated_page.body_html,
+          meta: {
+            source_path: generated_page.source_path,
+            url_path: generated_page.url_path,
+            output_path: generated_page.output_path,
+            content_kind: @core.ContentKind::Page,
+            format: @core.SourceFormat::Html,
+            frontmatter: {
+              ..@core.Frontmatter::default(),
+              layout: Some(generated_page.layout_key),
+            },
+            layout_override: Some(generated_page.layout_key),
+            resolved_title: generated_page.title,
+            sort_key: generated_page.source_path,
+            is_index: false,
+          },
+        }
+        let generated_rendered : @docflow.RenderedDocument = {
+          backend_name: "generated-page",
+          source_path: generated_page.source_path,
+          source_uuid: generated_page.source_path,
+          html: generated_page.body_html,
+          note: "generated page html",
+        }
+        apply_build_template(
+          config,
+          active_theme,
+          assembly,
+          experience,
+          generated_input,
+          generated_rendered,
+          active_theme.source,
+        ).html
+      }
+    }
+    write_build_output(config, generated_page.output_path, html) catch {
+      err => return Err(err)
+    }
+    emitted_html_files = emitted_html_files + 1
   }
   Ok({
     summary: {
       output_dir: config.output_dir,
-      processed_sources: inputs.length(),
+      processed_sources: published_inputs.length(),
       emitted_html_files,
       article_count,
       page_count,
@@ -3030,6 +3884,7 @@ fn validate_frontmatter_for_check(
   report : CheckReport,
 ) -> CheckReport {
   let mut next_report = report
+  let bool_scalar_keys = ["draft", "featured", "pinned", "search", "toc"]
   match frontmatter.field_shapes.get("title") {
     Some(@core.FrontmatterFieldShape::List) =>
       next_report = report_with_entry(next_report, {
@@ -3088,6 +3943,31 @@ fn validate_frontmatter_for_check(
         hint: None,
         line: None,
       })
+    Some(@core.FrontmatterFieldShape::Scalar) =>
+      match frontmatter.layout {
+        Some(layout) if @core.normalize_frontmatter_layout_key(layout) is None =>
+          next_report = report_with_entry(next_report, {
+            category: CheckCategory::Frontmatter,
+            severity: CheckSeverity::Error,
+            source_path: Some(source_path),
+            message: "Frontmatter field `layout` must be one of `article`, `page`, or `home`",
+            hint: None,
+            line: None,
+          })
+        _ => ()
+      }
+    _ => ()
+  }
+  match frontmatter.field_shapes.get("search") {
+    Some(@core.FrontmatterFieldShape::List) =>
+      next_report = report_with_entry(next_report, {
+        category: CheckCategory::Frontmatter,
+        severity: CheckSeverity::Error,
+        source_path: Some(source_path),
+        message: "Frontmatter field `search` must be a boolean",
+        hint: None,
+        line: None,
+      })
     _ => ()
   }
   match frontmatter.field_shapes.get("tags") {
@@ -3102,13 +3982,39 @@ fn validate_frontmatter_for_check(
       })
     _ => ()
   }
-  match frontmatter.invalid_scalar_fields.get("draft") {
+  for key in bool_scalar_keys {
+    match frontmatter.field_shapes.get(key) {
+      Some(@core.FrontmatterFieldShape::List) =>
+        next_report = report_with_entry(next_report, {
+          category: CheckCategory::Frontmatter,
+          severity: CheckSeverity::Error,
+          source_path: Some(source_path),
+          message: "Frontmatter field `" + key + "` must be a boolean",
+          hint: None,
+          line: None,
+        })
+      _ => ()
+    }
+    match frontmatter.invalid_scalar_fields.get(key) {
+      Some(true) =>
+        next_report = report_with_entry(next_report, {
+          category: CheckCategory::Frontmatter,
+          severity: CheckSeverity::Error,
+          source_path: Some(source_path),
+          message: "Frontmatter field `" + key + "` must be a boolean",
+          hint: None,
+          line: None,
+        })
+      _ => ()
+    }
+  }
+  match frontmatter.invalid_scalar_fields.get("search") {
     Some(true) =>
       next_report = report_with_entry(next_report, {
         category: CheckCategory::Frontmatter,
         severity: CheckSeverity::Error,
         source_path: Some(source_path),
-        message: "Frontmatter field `draft` must be a boolean",
+        message: "Frontmatter field `search` must be a boolean",
         hint: None,
         line: None,
       })
@@ -3302,11 +4208,12 @@ fn check_site_result(
     Ok(inputs) => inputs
     Err(err) => return Err(CheckCommandError::ContentDiscovery(err))
   }
+  let published_inputs = published_build_inputs(inputs)
+  let wikilinker = build_wikilinker_with_assets(
+    published_inputs,
+    inventory.asset_files,
+  )
   let mut report = empty_check_report()
-  report = append_homepage_warning(inputs, report)
-  report = validate_check_active_theme_layout(config, inputs, report)
-  report = append_route_conflicts(inputs, config.route_style, report)
-  let wikilinker = build_wikilinker_with_assets(inputs, inventory.asset_files)
   let mut article_count = 0
   let mut page_count = 0
   for input in inputs {
@@ -3342,6 +4249,17 @@ fn check_site_result(
       @core.ContentKind::Page => page_count = page_count + 1
     }
   }
+  let assembly = build_site_assembly_model(config, published_inputs, inventory)
+  let generated_pages = build_generated_pages(config, assembly.pages)
+  report = append_homepage_warning(published_inputs, report)
+  report = validate_check_active_theme_layout(
+    config, published_inputs, generated_pages, report,
+  )
+  report = append_output_target_conflicts(
+    build_input_output_targets(published_inputs) +
+    generated_page_output_targets(generated_pages),
+    report,
+  )
   Ok({ processed_sources: inputs.length(), article_count, page_count, report })
 }
 

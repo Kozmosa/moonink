@@ -40,6 +40,8 @@ pub fn join_relative_path(String, String) -> String raise PathPolicyError
 
 pub fn normalize_config_path_or_error(String) -> String raise ConfigError
 
+pub fn normalize_frontmatter_layout_key(String) -> String?
+
 pub fn normalize_inline_text(String) -> String
 
 pub fn normalize_output_dir_or_error(String) -> String raise ConfigError
@@ -114,6 +116,27 @@ pub(all) suberror ThemeManifestError {
 pub impl Show for ThemeManifestError
 
 // Types and methods
+pub(all) struct ArchiveMonth {
+  year : String
+  month : String
+  label : String
+  cards : Array[SiteCard]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct AuthorProfile {
+  name : String?
+  bio : String?
+  avatar : String?
+  links : Array[AuthorProfileLink]
+  homepage_text : String?
+} derive(Eq, @debug.Debug)
+pub fn AuthorProfile::default() -> Self
+
+pub(all) struct AuthorProfileLink {
+  label : String
+  url : String
+} derive(Eq, @debug.Debug)
+
 pub(all) struct BacklinkEntry {
   page : PageLink
   snippet : String
@@ -126,6 +149,13 @@ pub(all) struct BuildContext {
   pages : Array[PageMeta]
   inventory : ContentInventory
 } derive(Eq, @debug.Debug)
+
+pub(all) enum CardDensity {
+  Hero
+  Standard
+  Compact
+} derive(Eq, @debug.Debug)
+pub impl Show for CardDensity
 
 pub(all) struct ContentFile {
   path : String
@@ -162,6 +192,10 @@ pub(all) struct Frontmatter {
   column : String?
   tags : Array[String]
   draft : Bool
+  featured : Bool
+  pinned : Bool
+  search : Bool
+  toc : Bool?
   layout : String?
   theme_meta : Map[String, ThemeConfigValue]
   extra : Map[String, String]
@@ -175,6 +209,20 @@ pub(all) enum FrontmatterFieldShape {
   List
 } derive(Eq, @debug.Debug)
 pub impl Show for FrontmatterFieldShape
+
+pub(all) struct GeneratedPage {
+  kind : String
+  title : String
+  summary : String
+  description : String
+  source_path : String
+  url_path : String
+  output_path : String
+  layout_key : String
+  body_html : String
+  head_html : String
+  scripts_html : String
+} derive(Eq, @debug.Debug)
 
 pub(all) struct HeadingEntry {
   level : Int
@@ -195,8 +243,16 @@ pub(all) struct MooninkConfig {
   text_encoding : String
   theme : String?
   theme_config : Map[String, ThemeConfigValue]
+  author_profile : AuthorProfile
 } derive(Eq, @debug.Debug)
 pub impl Show for MooninkConfig
+
+pub(all) struct NamedCardCollection {
+  name : String
+  slug : String
+  url_path : String
+  cards : Array[SiteCard]
+} derive(Eq, @debug.Debug)
 
 pub(all) struct NavigationItem {
   title : String
@@ -266,9 +322,19 @@ pub(all) struct SearchIndexDocument {
 pub(all) struct SearchIndexItem {
   title : String
   url : String
+  kind : String
+  summary : String?
   excerpt : String
   tags : Array[String]
   date : String?
+  published_at : String?
+  freshness_at : String?
+  series : String?
+  cover : String?
+  author : String?
+  featured : Bool
+  pinned : Bool
+  source_path : String
 } derive(Eq, @debug.Debug)
 
 pub(all) struct SeriesNav {
@@ -281,11 +347,39 @@ pub(all) struct SeriesNav {
 pub(all) struct SiteAssemblyModel {
   pages : Array[SitePage]
   navigation : NavigationModel
+  collections : SiteCollections
   page_count : Int
   article_count : Int
   navigation_items : Int
   note : String
 } derive(Eq, @debug.Debug)
+
+pub(all) struct SiteCard {
+  title : String
+  url_path : String
+  source_path : String
+  summary : String
+  display_date : String?
+  published_at : String?
+  freshness_at : String?
+  tags : Array[String]
+  series : String?
+  cover : String?
+  author : String?
+  featured : Bool
+  pinned : Bool
+  density : CardDensity
+} derive(Eq, @debug.Debug)
+
+pub(all) struct SiteCollections {
+  homepage_featured : Array[SiteCard]
+  homepage_recent : Array[SiteCard]
+  search : Array[SiteCard]
+  tags : Array[NamedCardCollection]
+  series : Array[NamedCardCollection]
+  archive : Array[ArchiveMonth]
+} derive(Eq, @debug.Debug)
+pub fn SiteCollections::empty() -> Self
 
 pub(all) struct SitePage {
   title : String
@@ -300,6 +394,12 @@ pub(all) struct SitePage {
   cover : String?
   author : String?
   column : String?
+  featured : Bool
+  pinned : Bool
+  search : Bool
+  toc : Bool?
+  published_at : String?
+  freshness_at : String?
   reading_time_minutes : Int
   source_format : SourceFormat
   source_path : String

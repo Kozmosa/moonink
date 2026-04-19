@@ -13,13 +13,20 @@
       {% include "sidebar" %}
       <div class="content-shell content-shell-index">
         <div class="content-shell-inner">
-          <header class="content-header" data-content-layout="{{ page.kind }}">
+          <header class="home-hero" data-content-layout="{{ page.kind }}">
             <p class="content-kind-label">Homepage</p>
-            <h1 class="content-title">{{ page.title }}</h1>
-            {% if page.summary %}<p class="article-summary">{{ page.summary }}</p>{% endif %}
+            <h1 class="content-title">{{ page.homepage_hero_title }}</h1>
+            {% if page.homepage_hero_summary %}<p class="article-summary">{{ page.homepage_hero_summary }}</p>{% endif %}
+            <div class="home-hero-links">
+              <a href="{{ site.search_url }}">Search</a>
+              <a href="{{ site.tags_url }}">Tags</a>
+              <a href="{{ site.series_url }}">Series</a>
+              <a href="{{ site.archive_url }}">Archive</a>
+            </div>
             <div class="content-context" data-section-title="{{ page.current_section_title }}" data-section-url="{{ page.current_section_url }}">{{ page.page_header_html }}</div>
           </header>
           <main data-source="{{ page.source_path }}">{{ page.body_html }}</main>
+          {{ slots.homepage_modules_html }}
           {{ slots.backlinks_html }}
         </div>
       </div>

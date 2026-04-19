@@ -13,7 +13,8 @@ For the current implementation track:
 
 ## 2. Frontmatter Role
 
-Frontmatter supplies page metadata used in rendering, routing, navigation, and search.
+Frontmatter supplies page metadata used in rendering, routing, navigation, search,
+homepage curation, collection surfaces, and publication semantics.
 
 Frontmatter parsing should stay independent from content parser backends. Its job is to:
 
@@ -22,13 +23,39 @@ Frontmatter parsing should stay independent from content parser backends. Its jo
 - assign or preserve source identity such as UUID;
 - produce the clean parser-facing input object.
 
-## 3. Supported Metadata In V1
+## 3. Supported Metadata
+
+Core identity and content metadata:
 
 - `title`
-- `id`
-- `author`
-- `tags`
+- `description`
+- `type`
 - `date`
+- `updated`
+- `summary`
+- `tags`
+- `series`
+- `cover`
+- `author`
+- `column`
+
+M3 behavior metadata:
+
+- `draft`
+- `featured`
+- `pinned`
+- `search`
+- `toc`
+- `layout`
+
+Behavior contract summary:
+
+- `draft: true` removes the document from the standard published build and all public aggregate surfaces;
+- `search: false` keeps the page publishable but excludes it from search artifacts and search results;
+- `featured` drives homepage featured modules;
+- `pinned` is the cross-surface priority signal for list ordering;
+- `toc` is tri-state: unset uses the default heuristic, `true` forces show when heading data exists, `false` forces hide;
+- `layout` is closed to the author-facing set `article`, `page`, and `home`.
 
 ## 4. Parsing Responsibilities
 
@@ -81,6 +108,13 @@ The initial strategy is therefore:
 ## 8. Error Handling
 
 Malformed frontmatter should produce actionable diagnostics with file path context.
+
+`moonink check` treats obvious contract violations as blocking diagnostics,
+especially:
+
+- non-boolean scalar values for `draft`, `featured`, `pinned`, `search`, and `toc`;
+- list-vs-scalar mismatches for behavior fields;
+- invalid `layout` values.
 
 Parser backends should follow a two-level policy:
 
