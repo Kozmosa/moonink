@@ -963,15 +963,6 @@ fn theme_author_profile_value(
 }
 
 ///|
-fn card_density_label(density : @core.CardDensity) -> String {
-  match density {
-    @core.CardDensity::Hero => "hero"
-    @core.CardDensity::Standard => "standard"
-    @core.CardDensity::Compact => "compact"
-  }
-}
-
-///|
 fn theme_site_card_value(card : @core.SiteCard) -> @core.ThemeConfigValue {
   let value : Map[String, @core.ThemeConfigValue] = {}
   value["title"] = theme_string_value(card.title)
@@ -988,7 +979,9 @@ fn theme_site_card_value(card : @core.SiteCard) -> @core.ThemeConfigValue {
   value["author"] = theme_optional_string_value(card.author)
   value["featured"] = theme_bool_value(card.featured)
   value["pinned"] = theme_bool_value(card.pinned)
-  value["density"] = theme_string_value(card_density_label(card.density))
+  value["density"] = theme_string_value(
+    surface_card_density_class(card.density),
+  )
   theme_object_value(value)
 }
 
@@ -1508,26 +1501,26 @@ pub fn build_navigation_model(
 
 ///|
 fn escape_html_text(value : String) -> String {
+  let builder = StringBuilder::new()
   let mut cursor = 0
-  let mut output = ""
   while cursor < value.length() {
     let char = value[cursor:cursor + 1].to_string()
     if char == "&" {
-      output = output + "&amp;"
+      builder.write_string("&amp;")
     } else if char == "<" {
-      output = output + "&lt;"
+      builder.write_string("&lt;")
     } else if char == ">" {
-      output = output + "&gt;"
+      builder.write_string("&gt;")
     } else if char == "\"" {
-      output = output + "&quot;"
+      builder.write_string("&quot;")
     } else if char == "'" {
-      output = output + "&#39;"
+      builder.write_string("&#39;")
     } else {
-      output = output + char
+      builder.write_string(char)
     }
     cursor = cursor + 1
   }
-  output
+  builder.to_string()
 }
 
 ///|
@@ -1560,7 +1553,8 @@ fn render_navigation_items(
   items : Array[@core.NavigationItem],
   current_url : String,
 ) -> String {
-  let mut html = "<ul>"
+  let builder = StringBuilder::new()
+  builder.write_string("<ul>")
   for item in items {
     let is_active = item.url_path == current_url
     let is_ancestor = !is_active && navigation_contains_url(item, current_url)
@@ -1576,28 +1570,28 @@ fn render_navigation_items(
     let ancestor_attr = navigation_bool_attr(is_ancestor)
     let index_attr = navigation_bool_attr(item.is_index)
     let expanded_attr = navigation_bool_attr(is_expanded)
-    html = html +
-      "<li data-active=\"" +
-      active_attr +
-      "\" data-ancestor=\"" +
-      ancestor_attr +
-      "\" data-index=\"" +
-      index_attr +
-      "\" data-expanded=\"" +
-      expanded_attr +
-      "\" data-current=\"" +
-      current_attr +
-      "\"><a href=\"" +
-      escape_html_text(item.url_path) +
-      "\">" +
-      escape_html_text(item.title) +
-      "</a>"
+    builder.write_string("<li data-active=\"")
+    builder.write_string(active_attr)
+    builder.write_string("\" data-ancestor=\"")
+    builder.write_string(ancestor_attr)
+    builder.write_string("\" data-index=\"")
+    builder.write_string(index_attr)
+    builder.write_string("\" data-expanded=\"")
+    builder.write_string(expanded_attr)
+    builder.write_string("\" data-current=\"")
+    builder.write_string(current_attr)
+    builder.write_string("\"><a href=\"")
+    builder.write_string(escape_html_text(item.url_path))
+    builder.write_string("\">")
+    builder.write_string(escape_html_text(item.title))
+    builder.write_string("</a>")
     if !item.children.is_empty() {
-      html = html + render_navigation_items(item.children, current_url)
+      builder.write_string(render_navigation_items(item.children, current_url))
     }
-    html = html + "</li>"
+    builder.write_string("</li>")
   }
-  html + "</ul>"
+  builder.write_string("</ul>")
+  builder.to_string()
 }
 
 ///|

@@ -49,7 +49,7 @@
                   {% if page.series_nav.previous.title %}<div class="nav-card"><p class="nav-card-label">Earlier</p><a href="{{ page.series_nav.previous.url }}">{{ page.series_nav.previous.title }}</a></div>{% endif %}
                   {% if page.series_nav.next.title %}<div class="nav-card"><p class="nav-card-label">Next</p><a href="{{ page.series_nav.next.url }}">{{ page.series_nav.next.title }}</a></div>{% endif %}
                 </div>
-                {% if collections.series %}<ol class="series-item-list">{% for item in collections.series.items %}<li class="series-item"><p class="series-item-label">Series item</p><a href="{{ item.url }}">{{ item.title }}</a></li>{% endfor %}</ol>{% endif %}
+                {% if collections.series.count %}<ol class="series-item-list">{% for item in collections.series.items %}<li class="series-item"><p class="series-item-label">Series item</p><a href="{{ item.url }}">{{ item.title }}</a></li>{% endfor %}</ol>{% endif %}
               </section>
               {% endif %}
 

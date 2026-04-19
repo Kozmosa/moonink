@@ -266,7 +266,7 @@ fn parse_author_profile_link(
   guard value is Object(obj) else {
     raise ConfigError::InvalidField(
       key="author.links",
-      detail="must contain only objects with string `label` and `url`",
+      detail="each link entry must be an object",
     )
   }
   let label = match extract_json_string(obj, "label") {
@@ -274,7 +274,7 @@ fn parse_author_profile_link(
     None =>
       raise ConfigError::InvalidField(
         key="author.links",
-        detail="must contain only objects with string `label` and `url`",
+        detail="each link entry must have a string `label` field",
       )
   }
   let url = match extract_json_string(obj, "url") {
@@ -282,7 +282,7 @@ fn parse_author_profile_link(
     None =>
       raise ConfigError::InvalidField(
         key="author.links",
-        detail="must contain only objects with string `label` and `url`",
+        detail="each link entry must have a string `url` field",
       )
   }
   { label, url }
@@ -297,7 +297,7 @@ fn parse_author_profile(
     Some(Array(values)) => {
       let result : Array[AuthorProfileLink] = []
       for value in values {
-        result.push(parse_author_profile_link(value) catch { err => raise err })
+        result.push(parse_author_profile_link(value))
       }
       result
     }
@@ -401,8 +401,7 @@ pub fn parse_config_json(
     None => "dist"
   }
   let template_file = match extract_json_string(obj, "template_file") {
-    Some(path) =>
-      Some(normalize_config_path_or_error(path) catch { err => raise err })
+    Some(path) => Some(normalize_config_path_or_error(path))
     None => None
   }
   let exclude = match extract_optional_json_string_array(obj, "exclude") {
@@ -414,8 +413,8 @@ pub fn parse_config_json(
     _ => RouteStyle::Pretty
   }
   let theme = extract_json_string(obj, "theme")
-  let theme_config = extract_theme_config(obj) catch { err => raise err }
-  let author_profile = extract_author_profile(obj) catch { err => raise err }
+  let theme_config = extract_theme_config(obj)
+  let author_profile = extract_author_profile(obj)
   {
     config_path,
     project_root,

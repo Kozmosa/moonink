@@ -316,6 +316,15 @@ fn render_homepage_recent_card(page : @core.SitePage) -> String {
 }
 
 ///|
+fn surface_card_density_class(density : @core.CardDensity) -> String {
+  match density {
+    @core.CardDensity::Hero => "hero"
+    @core.CardDensity::Standard => "standard"
+    @core.CardDensity::Compact => "compact"
+  }
+}
+
+///|
 fn homepage_hero_title(
   config : @core.MooninkConfig,
   page : @core.SitePage,
