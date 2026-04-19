@@ -229,7 +229,7 @@ test "parse_config_json rejects malformed author links" {
     #|}
   inspect(
     try? @core.parse_config_json("moonink.json", json),
-    content="Err(InvalidField(key=\"author.links\", detail=\"must contain only objects with string `label` and `url`\"))",
+    content="Err(InvalidField(key=\"author.links\", detail=\"each link entry must be an object\"))",
   )
 }
 

@@ -3124,15 +3124,32 @@ test "runtime cli build renders m3 surfaces and exclusions" {
     fixture_root + "/moonink.json",
   )
   inspect(outcome.exit_code, content="0")
-  inspect(@runtime.io_path_exists(fixture_root + "/dist/search/index.html"), content="true")
-  inspect(@runtime.io_path_exists(fixture_root + "/dist/archive/index.html"), content="true")
-  inspect(@runtime.io_path_exists(fixture_root + "/dist/tags/quiet/index.html"), content="true")
   inspect(
-    @runtime.io_path_exists(fixture_root + "/dist/series/river-notes/index.html"),
+    @runtime.io_path_exists(fixture_root + "/dist/search/index.html"),
     content="true",
   )
-  inspect(@runtime.io_path_exists(fixture_root + "/dist/quiet/index.html"), content="true")
-  inspect(@runtime.io_path_exists(fixture_root + "/dist/draft-note/index.html"), content="false")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/archive/index.html"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/tags/quiet/index.html"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(
+      fixture_root + "/dist/series/river-notes/index.html",
+    ),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/quiet/index.html"),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/draft-note/index.html"),
+    content="false",
+  )
   let index_html = @runtime.io_read_file_to_string(
     fixture_root + "/dist/index.html",
   ) catch {
@@ -3171,7 +3188,10 @@ test "runtime cli build renders m3 surfaces and exclusions" {
   inspect(index_html.contains("Building intentional surfaces."), content="true")
   inspect(index_html.contains("Quiet Note"), content="true")
   inspect(search_html.contains("data-source=\"quiet.md\""), content="false")
-  inspect(search_html.contains("data-source=\"draft-note.md\""), content="false")
+  inspect(
+    search_html.contains("data-source=\"draft-note.md\""),
+    content="false",
+  )
   inspect(quiet_tag_html.contains("Quiet Note"), content="true")
   inspect(quiet_tag_html.contains("Draft Note"), content="false")
   inspect(guide_html.contains("Guest Writer"), content="true")
@@ -3245,7 +3265,10 @@ test "runtime cli check reports m3 frontmatter contract failures" {
     ),
     content="true",
   )
-  inspect(outcome.message.contains("missing theme layout `landing`"), content="false")
+  inspect(
+    outcome.message.contains("missing theme layout `landing`"),
+    content="false",
+  )
 }
 
 ///|

@@ -1355,7 +1355,10 @@ fn generated_page_output_targets(
 ) -> Array[OutputTarget] {
   let targets : Array[OutputTarget] = []
   for page in pages {
-    targets.push({ output_path: page.output_path, source_path: page.source_path })
+    targets.push({
+      output_path: page.output_path,
+      source_path: page.source_path,
+    })
   }
   targets
 }

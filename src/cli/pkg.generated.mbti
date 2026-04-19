@@ -186,8 +186,6 @@ pub(all) struct CliOutcome {
   message : String
 } derive(Eq, @debug.Debug)
 
-type GeneratedSurfacePage derive(Eq, @debug.Debug)
-
 pub struct MainServeLaunch {
   build_message : String
   preview_root : String

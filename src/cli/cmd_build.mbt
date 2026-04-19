@@ -1279,6 +1279,7 @@ fn resolve_theme_layout_source(
   }
 }
 
+///|
 fn has_invalid_frontmatter_layout(frontmatter : @core.Frontmatter) -> Bool {
   match frontmatter.field_shapes.get("layout") {
     Some(@core.FrontmatterFieldShape::Scalar) =>
