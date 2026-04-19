@@ -27,6 +27,7 @@ pub(all) struct Frontmatter {
   column : String?
   tags : Array[String]
   draft : Bool
+  search_enabled : Bool
   layout : String?
   theme_meta : Map[String, ThemeConfigValue]
   extra : Map[String, String]
@@ -49,6 +50,7 @@ pub fn Frontmatter::default() -> Frontmatter {
     column: None,
     tags: [],
     draft: false,
+    search_enabled: true,
     layout: None,
     theme_meta: {},
     extra: {},
@@ -215,7 +217,9 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
           fields[key] = clean
           raw_fields[key] = value
           field_shapes[key] = FrontmatterFieldShape::Scalar
-          if key == "draft" && clean != "true" && clean != "false" {
+          if (key == "draft" || key == "search") &&
+            clean != "true" &&
+            clean != "false" {
             invalid_scalar_fields[key] = true
           }
         }
@@ -240,6 +244,10 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
   let draft = match fields.get("draft") {
     Some("true") => true
     _ => false
+  }
+  let search_enabled = match fields.get("search") {
+    Some("false") => false
+    _ => true
   }
   let layout = fields.get("layout")
   let theme_meta : Map[String, ThemeConfigValue] = {}
@@ -270,7 +278,7 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
   // Collect remaining fields into extra
   let core_keys : Array[String] = [
     "title", "description", "type", "date", "updated", "summary", "series", "cover",
-    "author", "column", "draft", "layout",
+    "author", "column", "draft", "search", "layout",
   ]
   let extra : Map[String, String] = {}
   for entry in fields {
@@ -294,6 +302,7 @@ pub fn parse_frontmatter(yaml : String) -> Frontmatter {
     column,
     tags,
     draft,
+    search_enabled,
     layout,
     theme_meta,
     extra,

@@ -6,27 +6,42 @@ MoonInk V1 should provide built-in local search without relying on external serv
 
 ## 2. Strategy
 
-Build time generates a static search index file consumed by client-side JavaScript in the generated site.
+Build time generates a static `search-index.json` file consumed by built-in client-side
+JavaScript in the generated site.
 
 ## 3. Indexed Fields
 
-Recommended indexed fields:
+Current indexed fields:
 
 - title
+- summary
+- excerpt
 - tags
-- page type
-- body text excerpt or normalized content
-- route
+- kind
+- url
+- date
 
-## 4. Constraints
+## 4. Built-In Search Behavior
+
+MoonInk M2 ships a generated `/search/` page plus a small vanilla-JS client.
+
+The current ranking order is weighted toward:
+
+1. title
+2. summary
+3. tags
+4. excerpt
+
+Documents with `search: false` are omitted from the generated index.
+
+## 5. Constraints
 
 - search output must remain lightweight;
 - index generation should be deterministic;
 - indexing should reuse parsed content rather than reparsing rendered HTML.
 
-## 5. Future Enhancements
+## 6. Future Enhancements
 
-- weighted ranking;
 - section-level indexing;
 - multilingual indexing;
 - pluggable external search backends.

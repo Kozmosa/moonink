@@ -406,6 +406,22 @@ test "load_active_theme_bundle_result reads theme v2 manifest layouts and partia
 }
 
 ///|
+test "load_active_theme_bundle_result exposes m2 surface layouts" {
+  let config = match
+    @runtime.load_config_result("fixtures/v2/minimal/moonink.json") {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let bundle = match @runtime.load_active_theme_bundle_result(config) {
+    Ok(bundle) => bundle
+    Err(_) => panic()
+  }
+  inspect(bundle.layouts.get("search") is Some(_), content="true")
+  inspect(bundle.layouts.get("collection") is Some(_), content="true")
+  inspect(bundle.layouts.get("archive") is Some(_), content="true")
+}
+
+///|
 test "load_active_theme_bundle_result uses configured theme directory" {
   let config_json =
     #|{

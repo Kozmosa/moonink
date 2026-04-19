@@ -9,8 +9,9 @@ package boundaries change materially.
 **Last updated:** 2026-04-19 — reflects the current `help` / `onboard` /
 `build` / `check` / `serve` surface, Theme System V2 bundle rendering,
 Obsidian direct-output defaults, content-tree asset handling, homepage
-inference, and the M1 article-experience contract for metadata, TOC,
-contextual backlinks, related notes, and series navigation.
+inference, the M1 article-experience contract, and the M2 search/public-shell
+contract for generated surfaces, homepage curation, collection pages, and
+public metadata outputs.
 
 ## Current CLI Surface
 
@@ -102,28 +103,32 @@ Current real behavior:
 7. Copies project-root `public/` assets into the output root.
 8. Copies active theme assets into `dist/assets/`.
 9. For Theme V2 builds, emits `dist/assets/theme-vars.css` from declared manifest tokens plus `theme_config` overrides.
-10. Builds the site assembly model from discovered pages, presentation metadata, and navigation.
-11. Builds a route-aware WikiLinker index plus article-experience signals:
+10. Ensures the generated search client asset exists at `dist/assets/moonink-search.js`, even when a custom Theme V2 bundle falls back to `page` for generated surfaces.
+11. Builds the site assembly model from discovered pages, presentation metadata, and navigation.
+12. Builds a route-aware WikiLinker index plus article-experience signals:
     - contextual backlinks from markdown wikilink mentions;
     - related-note candidates from link + tag + series overlap;
     - article previous/next navigation;
     - series navigation;
     - markdown heading outlines for TOC rendering.
-12. Parses each source document through DocFlow adapters.
-13. Applies WikiLink rewriting and collects rendered HTML.
-14. For markdown renders, injects stable heading `id` attributes so TOC links can target real anchors.
-15. For Theme V2 builds, computes the selected layout key as:
+13. Parses each source document through DocFlow adapters.
+14. Applies WikiLink rewriting and collects rendered HTML.
+15. For markdown renders, injects stable heading `id` attributes so TOC links can target real anchors.
+16. For Theme V2 builds, computes the selected layout key as:
     - `layout` frontmatter override when present;
     - otherwise page kind `index`, `page`, or `article`.
-16. For Theme V2 builds, assembles a structured render context with:
+17. For Theme V2 builds, assembles a structured render context with:
     - `site` metadata including `theme_name`, `theme_asset_root`, and full `theme_config`;
-    - `page` metadata including kind, layout key, summary/date/updated/tags/series/cover/author/column/reading-time, section context, rendered body, and page-level theme metadata;
+    - generated-surface URLs for `search`, `tags`, `series`, and `archive`;
+    - `page` metadata including kind, layout key, summary/date/updated/tags/series/cover/author/column/reading-time, homepage hero fields, section context, rendered body, and page-level theme metadata;
     - `collections.nav`, `collections.pages`, `collections.backlinks`, `collections.related`, `collections.toc`, `collections.series`, and `collections.sections`;
     - built-in and manifest-declared `slots`.
-17. Renders Theme V2 templates through `docflow.render_theme_template(...)`, including `{% if %}`, `{% for %}`, and partial includes.
-18. Emits HTML files using `core.output_html_path(...)`, respecting configured `route_style` (`pretty` or `direct`).
-19. Emits `dist/search-index.json` as part of the standard build artifact set.
-20. Reports processed source counts plus page/article breakdown.
+18. Renders Theme V2 templates through `docflow.render_theme_template(...)`, including `{% if %}`, `{% for %}`, and partial includes.
+19. Emits source-backed HTML files using `core.output_html_path(...)`, respecting configured `route_style` (`pretty` or `direct`).
+20. Emits generated public surfaces for `/search/`, `/tags/`, `/series/`, and `/archive/`, using dedicated Theme V2 layouts when available and `page` as the fallback for custom bundles.
+21. Emits `dist/search-index.json` and `dist/rss.xml` as standard build artifacts.
+22. Injects canonical, Open Graph, and RSS `<head>` metadata through Theme V2 `head` slots.
+23. Reports processed source counts plus page/article breakdown.
 
 Obsidian direct-output extensions on top of that baseline:
 
@@ -146,11 +151,14 @@ Config load
   -> Public asset copy
   -> Theme asset copy
   -> Theme token CSS emission
+  -> Search client asset ensure
   -> Site assembly (pages + metadata + navigation)
   -> WikiLink index + article-experience signals
   -> DocFlow: ParserAdapter -> WikiLinker -> RenderAdapter
   -> Theme render context assembly
-  -> HTML + search-index emission
+  -> Source-backed HTML emission
+  -> Search-index + RSS emission
+  -> Generated search/tag/series/archive surface emission
 ```
 
 ### check
@@ -228,6 +236,7 @@ Article-experience metadata now recognized in frontmatter:
 - `cover`
 - `author`
 - `column`
+- `search`
 - derived `reading_time_minutes` from source body text
 
 Default exclude patterns now include `.obsidian`, `.git`, `node_modules`, `dist`, `.trash`, `templates`, `Templates`, plus any hidden directory.
@@ -251,6 +260,8 @@ Key fields currently exercised by the CLI include:
 
 `theme_config` is preserved as nested `ThemeConfigValue` data rather than flattened at parse time.
 Flattening only happens later for Theme V2 token emission.
+The M2 build currently reads `theme_config.homepage.hero_title`,
+`hero_summary`, `featured_paths`, and `recent_count` for homepage curation.
 
 ## Theme V2 Contract
 
@@ -277,6 +288,7 @@ Legacy compatibility guarantees:
 - `template_file` still works without a Theme V2 bundle
 - the old built-in layout loader remains available for the legacy layout API
 - build/check now prefer the built-in Theme V2 bundle when no project bundle or legacy override path exists
+- generated surfaces use Theme V2 layout keys `search`, `collection`, and `archive`, and fall back to `page` when a custom bundle omits them
 
 ## Runtime IO Direction
 
@@ -307,6 +319,10 @@ that are intentionally kept above `docflow` and `core`:
 - derive markdown heading outlines and TOC anchors
 - validate Theme V2 layout coverage and override allowlists
 - merge theme tokens and emit CSS custom properties
+- build homepage curation modules from `theme_config.homepage`
+- generate `/search/`, `/tags/`, `/series/`, and `/archive/`
+- render reusable canonical / Open Graph / RSS metadata slots
+- emit `rss.xml`
 - construct Theme V2 render context and hand it to `docflow.render_theme_template(...)`
 - decide output paths from `route_style`
 
@@ -329,14 +345,16 @@ This keeps `docflow` focused on parser/render adapter behavior plus generic them
 - Theme V2 bundles are currently project-local only; there is no inheritance or layering implementation yet
 - partial loading currently scans the `partials/` directory non-recursively
 - tokens only emit scalar string/number/bool values to CSS custom properties
-- homepage curation, collection pages, RSS/social metadata, and the broader explore layer remain out of scope for this M1 article-experience slice
+- generated collection scope is currently limited to tags, series, and archive; topics and column-root pages are still out of scope
+- `search: false` only removes pages from the search index; it is not yet a general publication-visibility control
+- homepage curation is intentionally small and config-driven rather than a general module DSL
 - related-note scoring is currently a simple heuristic over links, shared tags, and shared series rather than a richer semantic ranking model
 
 ## Next Planned Evolution
 
 1. decide whether Theme V2 should grow layered or inheritable bundle composition without breaking the current project-local contract
-2. formalize theme-author documentation for the structured `site` / `page` / `collections` / `slots` contract, including the new article-experience fields
-3. decide whether homepage curation, topic/tag/series pages, and archive/RSS/social metadata should form the next Quartz-style milestone
+2. formalize theme-author documentation for the structured `site` / `page` / `collections` / `slots` contract, including the new generated-surface and homepage-curation fields
+3. decide how M3 should promote more site behavior into stable frontmatter contracts such as draft exclusion, ordering, and richer author/profile metadata
 4. decide whether recursive partial discovery is worth standardizing or whether flat partial sets are sufficient
 5. continue strengthening `check` as the non-emitting validation path for theme and content diagnostics
 6. add structured command flags such as `--config`, `--output`, or serve host/port overrides

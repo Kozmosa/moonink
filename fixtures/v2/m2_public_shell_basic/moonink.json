@@ -1,0 +1,16 @@
+{
+  "site_name": "MoonInk Lab",
+  "site_url": "https://moonink.example",
+  "route_style": "pretty",
+  "theme_config": {
+    "homepage": {
+      "hero_title": "Notes From The Workbench",
+      "hero_summary": "Essays, field notes, and connected writing from the MoonInk lab.",
+      "featured_paths": [
+        "essays/stone-garden.md",
+        "notes/companion.md"
+      ],
+      "recent_count": 2
+    }
+  }
+}

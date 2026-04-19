@@ -265,6 +265,33 @@ test "parse_config_json preserves nested theme_config values" {
 }
 
 ///|
+test "parse_config_json preserves homepage theme config values" {
+  let json =
+    #|{"site_name": "Themed", "theme_config": {"homepage": {"hero_title": "Notes From The Workbench", "hero_summary": "Connected writing", "featured_paths": ["essays/stone-garden.md"], "recent_count": 2}}}
+  let config = @core.parse_config_json("moonink.json", json) catch {
+    _ => panic()
+  }
+  match config.theme_config.get("homepage") {
+    Some(@core.ThemeConfigValue::ObjectValue(homepage)) => {
+      inspect(
+        homepage.get("hero_title"),
+        content="Some(StringValue(\"Notes From The Workbench\"))",
+      )
+      inspect(
+        homepage.get("hero_summary"),
+        content="Some(StringValue(\"Connected writing\"))",
+      )
+      inspect(
+        homepage.get("featured_paths"),
+        content="Some(ArrayValue([StringValue(\"essays/stone-garden.md\")]))",
+      )
+      inspect(homepage.get("recent_count"), content="Some(NumberValue(\"2\"))")
+    }
+    _ => panic()
+  }
+}
+
+///|
 test "parse_config_json rejects non-object theme_config" {
   let json =
     #|{"site_name": "Themed", "theme_config": ["accent"]}
@@ -393,6 +420,20 @@ test "parse_frontmatter records invalid scalar draft value" {
   inspect(fm.draft, content="false")
   inspect(fm.field_shapes.get("draft"), content="Some(Scalar)")
   inspect(fm.invalid_scalar_fields.get("draft"), content="Some(true)")
+}
+
+///|
+test "parse_frontmatter parses search false flag" {
+  let fm = @core.parse_frontmatter("title: Hidden Note\nsearch: false\n")
+  inspect(fm.search_enabled, content="false")
+  inspect(fm.field_shapes.get("search"), content="Some(Scalar)")
+}
+
+///|
+test "parse_frontmatter records invalid scalar search value" {
+  let fm = @core.parse_frontmatter("title: Hidden Note\nsearch: maybe\n")
+  inspect(fm.search_enabled, content="true")
+  inspect(fm.invalid_scalar_fields.get("search"), content="Some(true)")
 }
 
 ///|
@@ -662,6 +703,8 @@ test "search index document serializes stable schema" {
       {
         title: "Hello",
         url: "/hello/",
+        kind: "article",
+        summary: Some("A hello summary"),
         excerpt: "A short intro",
         tags: ["intro", "demo"],
         date: Some("2026-04-01"),
@@ -669,6 +712,8 @@ test "search index document serializes stable schema" {
       {
         title: "About",
         url: "/about/",
+        kind: "page",
+        summary: None,
         excerpt: "About page",
         tags: [],
         date: None,
@@ -678,7 +723,7 @@ test "search index document serializes stable schema" {
   inspect(
     json,
     content=(
-      #|{"version":1,"generated_at":"2026-04-15T00:00:00Z","items":[{"title":"Hello","url":"/hello/","excerpt":"A short intro","tags":["intro","demo"],"date":"2026-04-01"},{"title":"About","url":"/about/","excerpt":"About page","tags":[],"date":null}]}
+      #|{"version":1,"generated_at":"2026-04-15T00:00:00Z","items":[{"title":"Hello","url":"/hello/","kind":"article","summary":"A hello summary","excerpt":"A short intro","tags":["intro","demo"],"date":"2026-04-01"},{"title":"About","url":"/about/","kind":"page","summary":null,"excerpt":"About page","tags":[],"date":null}]}
     ),
   )
 }

@@ -3,7 +3,10 @@
   "layouts": {
     "index": "layouts/index.html",
     "page": "layouts/page.html",
-    "article": "layouts/article.html"
+    "article": "layouts/article.html",
+    "search": "layouts/search.html",
+    "collection": "layouts/collection.html",
+    "archive": "layouts/archive.html"
   },
   "tokens": [
     { "name": "color.bg", "default": "#f3ede2" },

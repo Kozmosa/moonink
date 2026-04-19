@@ -3,6 +3,8 @@
 pub(all) struct SearchIndexItem {
   title : String
   url : String
+  kind : String
+  summary : String?
   excerpt : String
   tags : Array[String]
   date : String?
@@ -420,6 +422,10 @@ fn append_search_index_item_json(
   append_json_string(builder, item.title)
   builder.write_string(",\"url\":")
   append_json_string(builder, item.url)
+  builder.write_string(",\"kind\":")
+  append_json_string(builder, item.kind)
+  builder.write_string(",\"summary\":")
+  append_json_nullable_string(builder, item.summary)
   builder.write_string(",\"excerpt\":")
   append_json_string(builder, item.excerpt)
   builder.write_string(",\"tags\":")
