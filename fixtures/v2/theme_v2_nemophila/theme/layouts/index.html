@@ -1,0 +1,80 @@
+<!doctype html>
+<html data-theme-v2="moonink-nemophila" data-layout-kind="{{ page.kind }}">
+  <head>
+    <meta charset="utf-8">
+    <title>{{ page.title }}</title>
+    <link rel="stylesheet" href="{{ site.theme_asset_root }}moonink-nemophila.css">
+    <link rel="stylesheet" href="{{ site.theme_asset_root }}theme-vars.css">
+    {{ slots.head }}
+  </head>
+  <body class="nemophila-home" data-kind="{{ page.kind }}" data-url="{{ page.url_path }}">
+    {% include "header" %}
+    <main class="nemophila-home-shell">
+      <section class="nemophila-hero">
+        <div class="nemophila-hero-copy">
+          <p class="nemophila-kicker">MoonInk Theme</p>
+          <h1 class="nemophila-home-title">{{ page.homepage_hero_title }}</h1>
+          {% if page.homepage_hero_summary %}<p class="nemophila-home-summary">{{ page.homepage_hero_summary }}</p>{% endif %}
+          <div class="nemophila-home-links">
+            <a href="{{ site.search_url }}">Search</a>
+            <a href="{{ site.tags_url }}">Tags</a>
+            <a href="{{ site.series_url }}">Series</a>
+            <a href="{{ site.archive_url }}">Archive</a>
+          </div>
+        </div>
+        <aside class="nemophila-status-card">
+          {% if site.author.avatar %}<img class="nemophila-status-avatar" src="{{ site.author.avatar }}" alt="{{ site.author.name }}">{% endif %}
+          <p class="nemophila-status-label">Author</p>
+          {% if site.author.name %}<h2>{{ site.author.name }}</h2>{% endif %}
+          {% if site.author.bio %}<p>{{ site.author.bio }}</p>{% endif %}
+        </aside>
+      </section>
+
+      <section class="nemophila-home-intro">
+        <div class="nemophila-prose">{{ page.body_html }}</div>
+      </section>
+
+      {% if collections.homepage_featured.count %}
+      <section class="nemophila-module">
+        <div class="nemophila-module-head">
+          <p class="nemophila-kicker">Featured</p>
+          <h2>Selected writing</h2>
+        </div>
+        <div class="nemophila-featured-grid">
+          {% for item in collections.homepage_featured.items %}
+          <article class="nemophila-post-card nemophila-post-card-featured">
+            {% if item.cover %}<a class="nemophila-post-cover" href="{{ item.url }}"><img src="{{ item.cover }}" alt="{{ item.title }}"></a>{% endif %}
+            <div class="nemophila-post-copy">
+              {% if item.display_date %}<p class="nemophila-post-meta">{{ item.display_date }}</p>{% endif %}
+              <h3><a href="{{ item.url }}">{{ item.title }}</a></h3>
+              {% if item.summary %}<p>{{ item.summary }}</p>{% endif %}
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {% if collections.homepage_recent.count %}
+      <section class="nemophila-module">
+        <div class="nemophila-module-head">
+          <p class="nemophila-kicker">Recent</p>
+          <h2>Fresh notes</h2>
+        </div>
+        <div class="nemophila-recent-list">
+          {% for item in collections.homepage_recent.items %}
+          <article class="nemophila-post-card nemophila-post-card-compact">
+            <div class="nemophila-post-copy">
+              <h3><a href="{{ item.url }}">{{ item.title }}</a></h3>
+              {% if item.display_date %}<p class="nemophila-post-meta">{{ item.display_date }}</p>{% endif %}
+              {% if item.summary %}<p>{{ item.summary }}</p>{% endif %}
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+    </main>
+    {{ slots.scripts }}
+  </body>
+</html>

@@ -1,0 +1,14 @@
+<header class="nemophila-header">
+  <div class="nemophila-header-inner">
+    <a class="nemophila-brand" href="{{ site.url }}">{{ site.name }}</a>
+    <button class="nemophila-menu-toggle" type="button" aria-expanded="false" aria-controls="nemophila-primary-nav">Menu</button>
+    <nav id="nemophila-primary-nav" class="nemophila-nav" aria-label="Primary">
+      <a href="{{ site.search_url }}">Search</a>
+      <a href="{{ site.archive_url }}">Archive</a>
+      <a href="{{ site.tags_url }}">Tags</a>
+      {% for item in collections.nav.items %}
+      <a href="{{ item.url }}" data-active="{{ item.active }}">{{ item.title }}</a>
+      {% endfor %}
+    </nav>
+  </div>
+</header>

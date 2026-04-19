@@ -1,0 +1,25 @@
+{
+  "name": "moonink-nemophila",
+  "layouts": {
+    "index": "layouts/index.html",
+    "page": "layouts/page.html",
+    "article": "layouts/article.html"
+  },
+  "tokens": [
+    { "name": "color.base", "default": "#6c9ae4" },
+    { "name": "color.secondary", "default": "#c7d0f5" },
+    { "name": "color.canvas", "default": "#f0faff" },
+    { "name": "color.paper", "default": "#ffffff" },
+    { "name": "color.mist", "default": "#cdd8e8" },
+    { "name": "color.text", "default": "#14171f" },
+    { "name": "color.text.soft", "default": "#2f5284" },
+    { "name": "color.title", "default": "#223d78" },
+    { "name": "color.highlight", "default": "#fcf5b0" },
+    { "name": "shadow.card", "default": "0 24px 60px rgba(108, 154, 228, 0.18)" },
+    { "name": "radius.card", "default": "28px" },
+    { "name": "layout.content.width", "default": "1200px" },
+    { "name": "layout.article.width", "default": "860px" }
+  ],
+  "page_overrides": ["layout"],
+  "slots": ["head", "scripts"]
+}

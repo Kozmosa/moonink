@@ -1,0 +1,31 @@
+{
+  "site_name": "Nemophila Garden",
+  "site_url": "https://moonink.example",
+  "route_style": "pretty",
+  "theme": "theme",
+  "author": {
+    "name": "Koz",
+    "bio": "Notes, essays, and connected field writing.",
+    "avatar": "/images/avatar.png",
+    "homepage_text": "A quiet garden for linked public notes.",
+    "links": [
+      { "label": "Archive", "url": "/archive/" },
+      { "label": "Tags", "url": "/tags/" }
+    ]
+  },
+  "theme_config": {
+    "homepage": {
+      "hero_title": "Hi, Author.",
+      "hero_summary": "Essays, notes, and linked writing arranged in a light blue reading garden.",
+      "featured_paths": [
+        "essays/stone-garden.md",
+        "notes/companion-note.md"
+      ],
+      "recent_count": 3
+    },
+    "slots": {
+      "head": "<meta name=\"theme-name\" content=\"moonink-nemophila\">",
+      "scripts": "<script src=\"/assets/moonink-nemophila.js\"></script>"
+    }
+  }
+}

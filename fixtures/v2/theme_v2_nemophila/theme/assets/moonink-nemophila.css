@@ -1,0 +1,364 @@
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(199, 208, 245, 0.78), transparent 26%),
+    linear-gradient(180deg, var(--moonink-color-canvas) 0%, #ffffff 100%);
+  color: var(--moonink-color-text);
+  font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", serif;
+  line-height: 1.7;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top right, rgba(108, 154, 228, 0.14), transparent 24%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(240, 250, 255, 0));
+}
+
+body,
+a,
+button {
+  color: inherit;
+}
+
+a {
+  text-decoration: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+.nemophila-header,
+.nemophila-status-card,
+.nemophila-page-shell,
+.nemophila-article-shell,
+.nemophila-post-card,
+.nemophila-page-header {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px);
+  box-shadow: var(--moonink-shadow-card);
+  border-radius: var(--moonink-radius-card);
+}
+
+.nemophila-header {
+  position: sticky;
+  top: 18px;
+  z-index: 20;
+  width: min(calc(100% - 32px), var(--moonink-layout-content-width));
+  margin: 18px auto 0;
+  border: 1px solid rgba(199, 208, 245, 0.72);
+}
+
+.nemophila-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 22px;
+}
+
+.nemophila-brand {
+  margin-right: auto;
+  font-family: "Cormorant Garamond", "Times New Roman", serif;
+  font-size: 1.5rem;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  color: var(--moonink-color-title);
+}
+
+.nemophila-menu-toggle {
+  display: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: rgba(108, 154, 228, 0.12);
+  font: inherit;
+}
+
+.nemophila-nav {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.nemophila-nav a {
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: var(--moonink-color-text.soft);
+}
+
+.nemophila-nav a[data-active="true"] {
+  background: rgba(108, 154, 228, 0.12);
+  color: var(--moonink-color-title);
+}
+
+.nemophila-home-shell,
+.nemophila-page-shell,
+.nemophila-article-shell {
+  position: relative;
+  width: min(calc(100% - 32px), var(--moonink-layout-content-width));
+  margin: 28px auto 0;
+}
+
+.nemophila-home-shell {
+  display: grid;
+  gap: 28px;
+  padding-bottom: 48px;
+}
+
+.nemophila-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 28px;
+  align-items: stretch;
+}
+
+.nemophila-hero-copy {
+  padding: 44px 12px 18px;
+}
+
+.nemophila-kicker,
+.nemophila-status-label,
+.nemophila-post-meta {
+  margin: 0;
+  font-family: "Abhaya Libre", serif;
+  font-size: 0.82rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--moonink-color-text.soft);
+}
+
+.nemophila-home-title,
+.nemophila-page-title,
+.nemophila-cover-copy h1 {
+  margin: 10px 0 0;
+  color: var(--moonink-color-title);
+  font-family: "Abril Fatface", "Noto Serif SC", serif;
+  font-size: clamp(3.4rem, 8vw, 5.8rem);
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+}
+
+.nemophila-home-summary,
+.nemophila-page-summary,
+.nemophila-summary,
+.nemophila-post-copy p,
+.nemophila-status-card p {
+  color: var(--moonink-color-text.soft);
+}
+
+.nemophila-home-links {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.nemophila-home-links a {
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(108, 154, 228, 0.12);
+  color: var(--moonink-color-title);
+}
+
+.nemophila-status-card {
+  align-self: end;
+  padding: 24px;
+  border: 1px solid rgba(199, 208, 245, 0.7);
+}
+
+.nemophila-status-avatar {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 18px;
+  border-radius: 24px;
+  object-fit: cover;
+}
+
+.nemophila-status-card h2,
+.nemophila-module-head h2 {
+  margin: 10px 0 8px;
+  color: var(--moonink-color-title);
+  font-family: "Abhaya Libre", serif;
+  font-size: 1.7rem;
+}
+
+.nemophila-home-intro,
+.nemophila-module {
+  padding: 28px;
+  border-radius: var(--moonink-radius-card);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: var(--moonink-shadow-card);
+}
+
+.nemophila-prose {
+  max-width: var(--moonink-layout-article-width);
+}
+
+.nemophila-featured-grid,
+.nemophila-recent-list {
+  display: grid;
+  gap: 18px;
+}
+
+.nemophila-featured-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.nemophila-post-card {
+  overflow: hidden;
+  border: 1px solid rgba(199, 208, 245, 0.66);
+}
+
+.nemophila-post-cover img {
+  aspect-ratio: 1.8;
+  object-fit: cover;
+}
+
+.nemophila-post-copy {
+  padding: 20px 22px 24px;
+}
+
+.nemophila-post-copy h3 {
+  margin: 10px 0 8px;
+  color: var(--moonink-color-title);
+  font-size: 1.35rem;
+}
+
+.nemophila-page-shell,
+.nemophila-article-shell {
+  padding: 28px;
+}
+
+.nemophila-page-header {
+  margin-bottom: 24px;
+  padding: 28px;
+}
+
+.nemophila-page-title {
+  font-size: clamp(2.8rem, 7vw, 4.5rem);
+}
+
+.nemophila-cover {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  align-items: end;
+  margin-bottom: 28px;
+}
+
+.nemophila-cover-media img {
+  width: 100%;
+  min-height: 320px;
+  object-fit: cover;
+  border-radius: 32px;
+  box-shadow: 0 24px 60px rgba(108, 154, 228, 0.2);
+}
+
+.nemophila-cover-copy {
+  padding: 24px;
+  border-radius: 32px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(240, 250, 255, 0.8));
+}
+
+.nemophila-cover-copy h1 {
+  font-size: clamp(2.8rem, 7vw, 4.8rem);
+}
+
+.nemophila-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.nemophila-meta span {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(108, 154, 228, 0.1);
+  color: var(--moonink-color-title);
+  font-size: 0.92rem;
+}
+
+.nemophila-article-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 28px;
+  align-items: start;
+}
+
+.nemophila-toc,
+.nemophila-author-card {
+  padding: 22px 24px;
+  border: 1px solid rgba(199, 208, 245, 0.66);
+  border-radius: var(--moonink-radius-card);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: var(--moonink-shadow-card);
+}
+
+.nemophila-toc {
+  position: sticky;
+  top: 104px;
+}
+
+.nemophila-toc ol {
+  margin: 12px 0 0;
+  padding-left: 18px;
+}
+
+.nemophila-toc li + li {
+  margin-top: 8px;
+}
+
+.nemophila-author-card {
+  margin-top: 28px;
+}
+  .nemophila-menu-toggle {
+    display: inline-flex;
+  }
+
+  .nemophila-nav {
+    display: none;
+    width: 100%;
+    padding-top: 12px;
+  }
+
+  .nemophila-nav[data-open="true"] {
+    display: flex;
+  }
+
+  .nemophila-header-inner {
+    flex-wrap: wrap;
+  }
+
+  .nemophila-hero,
+  .nemophila-cover,
+  .nemophila-featured-grid,
+  .nemophila-article-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .nemophila-home-shell,
+  .nemophila-page-shell,
+  .nemophila-article-shell {
+    width: min(calc(100% - 20px), var(--moonink-layout-content-width));
+  }
+}
