@@ -41,6 +41,7 @@ Dependency flow:
 
 ```text
 cmd/main -> cli
+cmd/main -> runtime
 cli -> runtime
 cli -> docflow
 cli -> core
@@ -58,14 +59,15 @@ commands through the runtime boundary.
 src/cmd/main/main.mbt
   -> @env.args()
   -> normalize_runtime_argv(...)
+  -> internal serve-prebuilt dispatch when requested
   -> @cli.parse_cli_request(argv)
   -> non-serve commands: @cli.cli_exec(argv)
   -> serve command: @cli.run_main_serve_command(...)
   -> prepare_serve_watch_result(...)            [src/cli/serve_watch.mbt]
   -> staged preview build + publish             [src/cli/serve_watch.mbt]
   -> runtime/spawn_shell_command_result(...)    [src/runtime/serve_process.mbt]
-  -> native-serve/src/cmd/main -- serve-prebuilt
-  -> real mocket HTTP server
+  -> same moonink binary -- serve-prebuilt
+  -> in-process mocket HTTP server
   -> watch snapshot poll + rebuild loop         [src/cli/serve_watch.mbt]
 ```
 
@@ -99,13 +101,13 @@ Current real behavior:
    - configured project Theme V2 bundle at `<theme>/theme.json` when `moonink.json.theme` is set, otherwise `theme/theme.json`;
    - configured project legacy `<theme>/layout.html` when `moonink.json.theme` is set, otherwise `theme/layout.html`, if no project bundle exists;
    - configured `template_file` if no project bundle or legacy project layout exists;
-   - repository-owned built-in Theme V2 bundle otherwise.
+   - embedded built-in Theme V2 bundle otherwise, generated from the authoring inputs under `src/runtime/builtin_theme/`.
 6. For Theme V2 builds, validates every source-backed page and generated system surface against the manifest contract before output cleanup:
    - the selected layout key must exist;
    - page overrides must be allowlisted by `page_overrides`.
 7. Fully clears `output_dir` before rebuilding.
 8. Copies project-root `public/` assets into the output root.
-9. Copies active theme assets into `dist/assets/`.
+9. Copies active project theme assets or embedded built-in theme assets into `dist/assets/`.
 10. For Theme V2 builds, emits `dist/assets/theme-vars.css` from declared manifest tokens plus `theme_config` overrides.
 11. Ensures the generated search client asset exists at `dist/assets/moonink-search.js`, even when a custom Theme V2 bundle falls back to `page` for generated surfaces.
 12. Builds the site assembly model from published pages, shared card data, collection surfaces, and navigation.
@@ -199,7 +201,7 @@ Current behavior:
 ### serve
 
 `serve` in the main workspace is now the canonical watch-mode preview entry
-while still keeping the real HTTP listener in the native-only subproject.
+and the real HTTP listener is compiled into the same native main binary.
 
 Current main-workspace behavior:
 
@@ -215,9 +217,8 @@ Behavior split:
 
 - `src/cli/cmd_serve.mbt` still exposes dry-run preview helpers for runtime tests and non-blocking validation coverage.
 - `src/cli/serve_watch.mbt` owns watch snapshots, protected preview publishing, preview status artifacts, and incremental parse/link/render reuse.
-- `src/cmd/main/main.mbt` special-cases `serve` so the user-facing binary can enter the long-running watch-mode preview loop.
-- The standalone real preview server still lives in the separate `native-serve/` subproject, which now supports both direct `serve` and internal `serve-prebuilt` entry modes.
-- Real preview serving is intentionally native-only. The non-native stub path and its `only available on native targets` message reflect the supported-platform boundary, not an unfinished serve implementation.
+- `src/cmd/main/main.mbt` special-cases both user-facing `serve` and internal `serve-prebuilt` so the user-facing binary can enter the long-running watch-mode preview loop and also host the real preview server.
+- Real preview serving is intentionally native-only and uses `oboard/mocket` directly from the main binary. The non-native stub path and its `only available on native targets` message reflect the supported-platform boundary, not an unfinished serve implementation.
 
 ## Content Model
 
@@ -297,7 +298,7 @@ Runtime loader guarantees:
 - missing partial references fail during bundle load
 - invalid token names fail during manifest parse
 - duplicate token names are rejected
-- the built-in Theme V2 bundle under `src/runtime/builtin_theme/` is the default build/check fallback
+- the built-in Theme V2 bundle is the default build/check fallback and is embedded into the binary from the authoring inputs under `src/runtime/builtin_theme/`
 
 Legacy compatibility guarantees:
 

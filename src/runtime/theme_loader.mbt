@@ -4,6 +4,7 @@ pub(all) struct ActiveThemeBundle {
   layouts : Map[String, String]
   partials : Map[String, String]
   assets_root : String?
+  embedded_assets : Map[String, String]
   source_kind : ActiveThemeSource
 } derive(Debug, Eq)
 
@@ -126,6 +127,43 @@ fn load_theme_layout_map(
 }
 
 ///|
+fn load_embedded_theme_manifest_result() -> Result[
+  @core.ThemeManifest,
+  ThemeLoadError,
+] {
+  match @core.parse_theme_manifest_result(built_in_theme_manifest_source()) {
+    Ok(manifest) => Ok(manifest)
+    Err(err) => Err(ThemeLoadError::Manifest(err))
+  }
+}
+
+///|
+fn load_embedded_theme_layout_map(
+  manifest : @core.ThemeManifest,
+) -> Result[Map[String, String], ThemeLoadError] {
+  let sources = built_in_theme_layout_file_sources()
+  for _ in manifest.layouts {
+    let layouts : Map[String, String] = {}
+    for entry in manifest.layouts {
+      let (kind, relative_path) = entry
+      match sources.get(relative_path) {
+        Some(source) => layouts[kind] = source
+        None => return Err(ThemeLoadError::MissingLayout(kind~))
+      }
+    }
+    return Ok(layouts)
+  }
+  Err(
+    ThemeLoadError::Manifest(
+      @core.ThemeManifestError::InvalidField(
+        key="layouts",
+        detail="must contain at least one layout",
+      ),
+    ),
+  )
+}
+
+///|
 fn partial_name_from_path(path : String) -> String {
   let normalized = @core.normalize_relative_path(path) catch { _ => return "" }
   let prefix = "partials/"
@@ -219,6 +257,16 @@ fn load_theme_partial_map(
     partials[partial_name_from_path(relative_path)] = source
   }
   Ok(partials)
+}
+
+///|
+fn load_embedded_theme_partial_map() -> Map[String, String] {
+  let partials : Map[String, String] = {}
+  for entry in built_in_theme_partial_file_sources() {
+    let (relative_path, source) = entry
+    partials[partial_name_from_path(relative_path)] = source
+  }
+  partials
 }
 
 ///|
@@ -383,36 +431,51 @@ pub fn load_active_theme_bundle_result(
   let project_manifest_path = theme_child_path(project_root, "theme.json") catch {
     err => return Err(err)
   }
-  let theme_root = if io_path_exists(project_manifest_path) {
-    project_root
-  } else {
-    built_in_default_theme_root()
+  if io_path_exists(project_manifest_path) {
+    let manifest = match load_theme_manifest_result(project_root) {
+      Ok(manifest) => manifest
+      Err(err) => return Err(err)
+    }
+    let layouts = match load_theme_layout_map(project_root, manifest) {
+      Ok(layouts) => layouts
+      Err(err) => return Err(err)
+    }
+    let partials = match load_theme_partial_map(project_root) {
+      Ok(partials) => partials
+      Err(err) => return Err(err)
+    }
+    return match validate_theme_partial_references(layouts, partials) {
+      Ok(_) =>
+        Ok({
+          manifest,
+          layouts,
+          partials,
+          assets_root: Some(project_root + "/assets"),
+          embedded_assets: {},
+          source_kind: ActiveThemeSource::ProjectTheme,
+        })
+      Err(err) => Err(err)
+    }
   }
-  let source_kind = if theme_root == project_root {
-    ActiveThemeSource::ProjectTheme
-  } else {
-    ActiveThemeSource::BuiltInDefault
-  }
-  let manifest = match load_theme_manifest_result(theme_root) {
+  let manifest = match load_embedded_theme_manifest_result() {
     Ok(manifest) => manifest
     Err(err) => return Err(err)
   }
-  let layouts = match load_theme_layout_map(theme_root, manifest) {
+  let layouts = match load_embedded_theme_layout_map(manifest) {
     Ok(layouts) => layouts
     Err(err) => return Err(err)
   }
-  let partials = match load_theme_partial_map(theme_root) {
-    Ok(partials) => partials
-    Err(err) => return Err(err)
-  }
+  let partials = load_embedded_theme_partial_map()
+  let embedded_assets = built_in_theme_asset_file_sources()
   match validate_theme_partial_references(layouts, partials) {
     Ok(_) =>
       Ok({
         manifest,
         layouts,
         partials,
-        assets_root: Some(theme_root + "/assets"),
-        source_kind,
+        assets_root: None,
+        embedded_assets,
+        source_kind: ActiveThemeSource::BuiltInDefault,
       })
     Err(err) => Err(err)
   }

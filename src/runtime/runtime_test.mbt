@@ -30,7 +30,7 @@ test "load_active_theme_layout_result falls back to built-in default theme" {
     content="true",
   )
   inspect(layout.theme_name, content="default")
-  inspect(layout.asset_source_dir is Some(_), content="true")
+  inspect(layout.asset_source_dir, content="None")
   inspect(layout.source.contains("data-theme=\"default\""), content="true")
 }
 
@@ -479,7 +479,8 @@ test "load_active_theme_bundle_result falls back to built-in theme v2 bundle" {
   inspect(bundle.layouts.get("page") is Some(_), content="true")
   inspect(bundle.layouts.get("article") is Some(_), content="true")
   inspect(bundle.partials.get("header") is Some(_), content="true")
-  inspect(bundle.assets_root is Some(_), content="true")
+  inspect(bundle.assets_root, content="None")
+  inspect(bundle.embedded_assets.length() > 0, content="true")
 }
 
 ///|
@@ -761,4 +762,18 @@ test "preview launch rejects missing root directory" {
     launch,
   )
   inspect(result is Err(_), content="true")
+}
+
+///|
+test "native serve delegate command self-spawns current executable" {
+  let command = match
+    @runtime.native_serve_delegate_command_result(
+      "fixtures/v2/minimal/dist", "127.0.0.1", 3000,
+    ) {
+    Ok(command) => command
+    Err(_) => panic()
+  }
+  inspect(command.contains("serve-prebuilt --root"), content="true")
+  inspect(command.contains("native-serve/moon.mod.json"), content="false")
+  inspect(command.contains("moon run"), content="false")
 }
