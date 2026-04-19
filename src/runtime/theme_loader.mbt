@@ -4,6 +4,7 @@ pub(all) struct ActiveThemeBundle {
   layouts : Map[String, String]
   partials : Map[String, String]
   assets_root : String?
+  embedded_assets : Map[String, String]
   source_kind : ActiveThemeSource
 } derive(Debug, Eq)
 
@@ -374,6 +375,50 @@ pub fn declared_slot_values(
 }
 
 ///|
+fn load_embedded_theme_bundle_result() -> Result[
+  ActiveThemeBundle,
+  ThemeLoadError,
+] {
+  let manifest = match
+    @core.parse_theme_manifest_result(embedded_builtin_theme_manifest_source()) {
+    Ok(manifest) => manifest
+    Err(err) => return Err(ThemeLoadError::Manifest(err))
+  }
+  let layout_files = embedded_builtin_theme_layout_file_sources()
+  let layouts : Map[String, String] = {}
+  for _ in manifest.layouts {
+    for entry in manifest.layouts {
+      let (kind, relative_path) = entry
+      match layout_files.get(relative_path) {
+        Some(source) => layouts[kind] = source
+        None => return Err(ThemeLoadError::MissingLayout(kind~))
+      }
+    }
+    let partials = embedded_builtin_theme_partial_sources()
+    match validate_theme_partial_references(layouts, partials) {
+      Ok(_) =>
+        return Ok({
+          manifest,
+          layouts,
+          partials,
+          assets_root: None,
+          embedded_assets: embedded_builtin_theme_asset_sources(),
+          source_kind: ActiveThemeSource::BuiltInDefault,
+        })
+      Err(err) => return Err(err)
+    }
+  }
+  Err(
+    ThemeLoadError::Manifest(
+      @core.ThemeManifestError::InvalidField(
+        key="layouts",
+        detail="must contain at least one layout",
+      ),
+    ),
+  )
+}
+
+///|
 pub fn load_active_theme_bundle_result(
   config : @core.MooninkConfig,
 ) -> Result[ActiveThemeBundle, ThemeLoadError] {
@@ -383,25 +428,18 @@ pub fn load_active_theme_bundle_result(
   let project_manifest_path = theme_child_path(project_root, "theme.json") catch {
     err => return Err(err)
   }
-  let theme_root = if io_path_exists(project_manifest_path) {
-    project_root
-  } else {
-    built_in_default_theme_root()
+  if !io_path_exists(project_manifest_path) {
+    return load_embedded_theme_bundle_result()
   }
-  let source_kind = if theme_root == project_root {
-    ActiveThemeSource::ProjectTheme
-  } else {
-    ActiveThemeSource::BuiltInDefault
-  }
-  let manifest = match load_theme_manifest_result(theme_root) {
+  let manifest = match load_theme_manifest_result(project_root) {
     Ok(manifest) => manifest
     Err(err) => return Err(err)
   }
-  let layouts = match load_theme_layout_map(theme_root, manifest) {
+  let layouts = match load_theme_layout_map(project_root, manifest) {
     Ok(layouts) => layouts
     Err(err) => return Err(err)
   }
-  let partials = match load_theme_partial_map(theme_root) {
+  let partials = match load_theme_partial_map(project_root) {
     Ok(partials) => partials
     Err(err) => return Err(err)
   }
@@ -411,8 +449,9 @@ pub fn load_active_theme_bundle_result(
         manifest,
         layouts,
         partials,
-        assets_root: Some(theme_root + "/assets"),
-        source_kind,
+        assets_root: Some(project_root + "/assets"),
+        embedded_assets: {},
+        source_kind: ActiveThemeSource::ProjectTheme,
       })
     Err(err) => Err(err)
   }

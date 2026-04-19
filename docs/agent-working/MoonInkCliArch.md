@@ -6,14 +6,15 @@ This document is a maintained global architecture note for the MoonInk CLI.
 It must be updated whenever the CLI surface, execution flow, or structural
 package boundaries change materially.
 
-**Last updated:** 2026-04-19 — reflects the current `help` / `onboard` /
+**Last updated:** 2026-04-20 — reflects the current `help` / `onboard` /
 `build` / `check` / `serve` surface, Theme System V2 bundle rendering,
 Obsidian direct-output defaults, content-tree asset handling, homepage
 inference, the M1 article-experience contract, the M2 search/public-shell
 contract, and the M3 metadata/surface contract for draft exclusion, search
 exclusion, homepage modules, generated search/tag/series/archive pages, and
-typed site author/profile data, and the M4 watch-mode preview plus article-local
-relationship-navigation slice.
+typed site author/profile data, plus the single-binary runtime-compatibility
+slice for host-path config resolution, embedded built-in theme fallback, and
+main-binary native preview startup with process exit-code propagation.
 
 ## Current CLI Surface
 
@@ -21,7 +22,7 @@ relationship-navigation slice.
 - `moonink onboard` — first-time setup: generates `moonink.json` with vault-friendly defaults and never rewrites note files
 - `moonink build` — real static-site build into `dist/`
 - `moonink check` — validation-only pass over discovered content; reports diagnostics without writing output
-- `moonink serve` — canonical local preview command: builds into a protected preview pipeline, starts the native-only HTTP preview backend, and keeps rebuilding on change
+- `moonink serve` — canonical local preview command: builds into a protected preview pipeline and starts the native-only in-process HTTP preview backend
 - unknown command fallback
 
 `new` has been replaced by `onboard`.
@@ -41,6 +42,8 @@ Dependency flow:
 
 ```text
 cmd/main -> cli
+cmd/main -> runtime
+cmd/main -> oboard/mocket
 cli -> runtime
 cli -> docflow
 cli -> core
@@ -58,15 +61,17 @@ commands through the runtime boundary.
 src/cmd/main/main.mbt
   -> @env.args()
   -> normalize_runtime_argv(...)
-  -> @cli.parse_cli_request(argv)
+  -> run_main_native_entry(argv)               [src/cmd/main/native_serve.mbt]
+  -> hidden internal serve-prebuilt?           [src/cmd/main/native_serve.mbt]
+  -> otherwise @cli.parse_cli_request(argv)
   -> non-serve commands: @cli.cli_exec(argv)
-  -> serve command: @cli.run_main_serve_command(...)
+  -> serve command: run_main_native_serve_command(...)
   -> prepare_serve_watch_result(...)            [src/cli/serve_watch.mbt]
   -> staged preview build + publish             [src/cli/serve_watch.mbt]
-  -> runtime/spawn_shell_command_result(...)    [src/runtime/serve_process.mbt]
-  -> native-serve/src/cmd/main -- serve-prebuilt
-  -> real mocket HTTP server
-  -> watch snapshot poll + rebuild loop         [src/cli/serve_watch.mbt]
+  -> runtime/launch_preview_result(...)         [src/runtime/serve.mbt]
+  -> native preview preflight                   [src/runtime/preview_startup*.mbt]
+  -> real mocket HTTP server                    [src/cmd/main/native_serve.mbt]
+  -> apply_exit_code(outcome.exit_code)
 ```
 
 Pure dispatch behavior:
@@ -99,13 +104,13 @@ Current real behavior:
    - configured project Theme V2 bundle at `<theme>/theme.json` when `moonink.json.theme` is set, otherwise `theme/theme.json`;
    - configured project legacy `<theme>/layout.html` when `moonink.json.theme` is set, otherwise `theme/layout.html`, if no project bundle exists;
    - configured `template_file` if no project bundle or legacy project layout exists;
-   - repository-owned built-in Theme V2 bundle otherwise.
+   - embedded built-in Theme V2 bundle otherwise.
 6. For Theme V2 builds, validates every source-backed page and generated system surface against the manifest contract before output cleanup:
    - the selected layout key must exist;
    - page overrides must be allowlisted by `page_overrides`.
 7. Fully clears `output_dir` before rebuilding.
 8. Copies project-root `public/` assets into the output root.
-9. Copies active theme assets into `dist/assets/`.
+9. Copies active project theme assets or embedded built-in theme assets into `dist/assets/`.
 10. For Theme V2 builds, emits `dist/assets/theme-vars.css` from declared manifest tokens plus `theme_config` overrides.
 11. Ensures the generated search client asset exists at `dist/assets/moonink-search.js`, even when a custom Theme V2 bundle falls back to `page` for generated surfaces.
 12. Builds the site assembly model from published pages, shared card data, collection surfaces, and navigation.
@@ -198,26 +203,26 @@ Current behavior:
 
 ### serve
 
-`serve` in the main workspace is now the canonical watch-mode preview entry
-while still keeping the real HTTP listener in the native-only subproject.
+`serve` in the main workspace is now the canonical single-binary preview entry.
 
 Current main-workspace behavior:
 
-1. Loads config and discovers content.
-2. Builds preview output into a hidden staging directory instead of writing directly into the live preview root.
-3. Publishes staging output into the live preview root only after a successful rebuild.
+1. Resolves `--config` as a host path, normalizes it to an absolute config path, and derives the absolute project root from that config file.
+2. Loads config and discovers content from the derived project root.
+3. Builds preview output into a hidden staging directory instead of writing directly into the live preview root.
 4. Writes preview-only runtime artifacts under `dist/__moonink/`, including `live-reload.js` and `preview-status.json`.
-5. Spawns the native-only preview backend against the published preview root.
-6. Polls watched config/content/theme/template paths and rebuilds on change.
-7. Keeps serving the last successful output when a later rebuild fails, while surfacing failure state through terminal output and `preview-status.json`.
+5. Publishes staging output into the live preview root only after a successful build.
+6. Validates native preview startup requirements against the published preview root.
+7. Starts the real mocket HTTP server in-process from the main binary.
 
 Behavior split:
 
-- `src/cli/cmd_serve.mbt` still exposes dry-run preview helpers for runtime tests and non-blocking validation coverage.
-- `src/cli/serve_watch.mbt` owns watch snapshots, protected preview publishing, preview status artifacts, and incremental parse/link/render reuse.
-- `src/cmd/main/main.mbt` special-cases `serve` so the user-facing binary can enter the long-running watch-mode preview loop.
-- The standalone real preview server still lives in the separate `native-serve/` subproject, which now supports both direct `serve` and internal `serve-prebuilt` entry modes.
-- Real preview serving is intentionally native-only. The non-native stub path and its `only available on native targets` message reflect the supported-platform boundary, not an unfinished serve implementation.
+- `src/cli/cmd_serve.mbt` still exposes dry-run preview helpers plus the shared build-before-serve orchestration used by tests and the native main entry.
+- `src/cli/serve_watch.mbt` now primarily owns protected preview staging/publish plus preview status artifacts; file watching is no longer part of the supported runtime contract for this slice.
+- `src/cmd/main/native_serve.mbt` owns the real in-process mocket startup plus a hidden internal `serve-prebuilt` mode for native smoke validation.
+- `src/cmd/main/main.mbt` propagates `CliOutcome.exit_code` to the process so detached shell and CI callers can observe fatal runtime/build/serve failures.
+- `native-serve/` remains in the repository as a migration shim rather than a required runtime dependency.
+- Real preview serving is intentionally native-only. JS/Wasm targets stop at dry-run/runtime helpers rather than launching an HTTP server.
 
 ## Content Model
 
@@ -297,7 +302,7 @@ Runtime loader guarantees:
 - missing partial references fail during bundle load
 - invalid token names fail during manifest parse
 - duplicate token names are rejected
-- the built-in Theme V2 bundle under `src/runtime/builtin_theme/` is the default build/check fallback
+- the embedded built-in Theme V2 bundle generated from `src/runtime/builtin_theme/` and exposed by `runtime/builtin_theme_embedded.mbt` is the default build/check fallback and does not require repository path probing at runtime
 
 Legacy compatibility guarantees:
 
@@ -313,11 +318,13 @@ Legacy compatibility guarantees:
 - `runtime/async.mbt` — `RuntimeIOTask[T]` wrapper (currently synchronous `Ready(T)`)
 - `runtime/native.mbt` — default native runtime adapter for CLI-side side effects
 - `runtime/policy.mbt` — conflict and cancellation policy types
+- `runtime/host_paths.mbt` — host-path resolution helpers for cwd-relative vs absolute config inputs
 - `runtime/config_loader.mbt` — config loading and legacy active-layout resolution
+- `runtime/builtin_theme_embedded.mbt` — typed embedded built-in theme manifest/layout/partial/asset accessors
 - `runtime/theme_loader.mbt` — Theme V2 bundle loading, token flattening, slot extraction, and built-in bundle fallback
 - `runtime/content_discovery.mbt` — recursive content discovery / inventory creation
 - preview launch helpers — runtime boundary for dry-run vs native preview execution
-- preview child-process helpers — native spawn/poll/sleep wrappers used by watch-mode serve
+- `runtime/preview_startup*.mbt` — native preview startup preflight for host/port binding
 
 Feature modules in `core` and `docflow` expose result-oriented APIs and remain IO-free.
 Only `runtime` and `cli` touch the filesystem.
@@ -349,7 +356,7 @@ This keeps `docflow` focused on parser/render adapter behavior plus generic them
 
 ## Structural Constraints
 
-- keep `cmd/main` thin (argv normalization only)
+- keep `src/cmd/main/main.mbt` thin (argv normalization plus exit propagation only); native preview helpers belong in sibling files
 - keep `cli_run()` pure for testability
 - `core` must remain dependency-free (no `x/fs`, no `markdown`)
 - preserve explicit stage boundaries: config -> discovery -> parse -> render -> template -> emit
@@ -358,8 +365,8 @@ This keeps `docflow` focused on parser/render adapter behavior plus generic them
 
 ## Known Gaps
 
-- no structured option parser yet (flags and options are not parsed)
-- real preview startup is only supported on native targets; JS/Wasm targets are expected to stop at the native delegation boundary
+- real preview startup is only supported on native targets; JS/Wasm targets stop at dry-run/runtime helpers instead of launching an HTTP server
+- the protected preview pipeline still emits `live-reload.js` / `preview-status.json` artifacts even though hot reload and file watching are not part of the supported contract for this slice
 - Theme V2 bundles are currently project-local only; there is no inheritance or layering implementation yet
 - partial loading currently scans the `partials/` directory non-recursively
 - tokens only emit scalar string/number/bool values to CSS custom properties
@@ -370,9 +377,8 @@ This keeps `docflow` focused on parser/render adapter behavior plus generic them
 
 ## Next Planned Evolution
 
-1. decide whether Theme V2 should grow layered or inheritable bundle composition without breaking the current project-local contract
-2. formalize theme-author documentation for the structured `site` / `page` / `collections` / `slots` contract, including the new generated-surface and homepage-curation fields
-3. decide how M3 should promote more site behavior into stable frontmatter contracts such as draft exclusion, ordering, and richer author/profile metadata
+1. decide whether `serve` should later regain file watching / hot reload as a separate explicitly scoped slice
+2. decide whether Theme V2 should grow layered or inheritable bundle composition without breaking the current project-local contract
+3. formalize theme-author documentation for the structured `site` / `page` / `collections` / `slots` contract, including the new generated-surface and homepage-curation fields
 4. decide whether recursive partial discovery is worth standardizing or whether flat partial sets are sufficient
 5. continue strengthening `check` as the non-emitting validation path for theme and content diagnostics
-6. add structured command flags such as `--config`, `--output`, or serve host/port overrides

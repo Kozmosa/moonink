@@ -1,7 +1,4 @@
 ///|
-let serve_watch_poll_millis : Int = 400
-
-///|
 let serve_watch_max_diagnostic_lines : Int = 6
 
 ///|
@@ -198,22 +195,6 @@ fn preview_status_diagnostics_from_build(
 }
 
 ///|
-fn preview_failure_diagnostics(message : String) -> Array[String] {
-  let lines : Array[String] = []
-  for line_view in message.split("\n") {
-    let line = line_view.to_string().trim().to_string()
-    if line == "" {
-      continue
-    }
-    lines.push(line)
-    if lines.length() >= serve_watch_max_diagnostic_lines {
-      break
-    }
-  }
-  lines
-}
-
-///|
 fn preview_status_from_build_result(
   result : BuildWithDiagnostics,
   revision : Int,
@@ -261,7 +242,7 @@ fn hidden_preview_root(
   project_root : String,
   name : String,
 ) -> String raise @core.ProjectIOError {
-  @core.join_relative_path(project_root, hidden_preview_relative_dir(name)) catch {
+  @runtime.join_host_path(project_root, hidden_preview_relative_dir(name)) catch {
     err =>
       raise @core.project_io_error(
         "preview_root",
@@ -380,7 +361,7 @@ fn configured_content_root(
   if config.content_dir == "." {
     config.project_root
   } else {
-    @core.join_relative_path(config.project_root, config.content_dir) catch {
+    @runtime.join_host_path(config.project_root, config.content_dir) catch {
       err =>
         raise @core.project_io_error(
           "content_root",
@@ -395,7 +376,7 @@ fn configured_content_root(
 fn configured_public_root(
   config : @core.MooninkConfig,
 ) -> String raise @core.ProjectIOError {
-  @core.join_relative_path(config.project_root, "public") catch {
+  @runtime.join_host_path(config.project_root, "public") catch {
     err =>
       raise @core.project_io_error(
         "public_root",
@@ -413,7 +394,7 @@ fn configured_project_theme_root(
     Some(theme_dir) => theme_dir
     None => "theme"
   }
-  @core.join_relative_path(config.project_root, relative) catch {
+  @runtime.join_host_path(config.project_root, relative) catch {
     err =>
       raise @core.project_io_error(
         "theme_root",
@@ -430,7 +411,7 @@ fn configured_template_path(
   match config.template_file {
     Some(template_file) =>
       Some(
-        @core.join_relative_path(config.project_root, template_file) catch {
+        @runtime.join_host_path(config.project_root, template_file) catch {
           err =>
             raise @core.project_io_error(
               "template_path",
@@ -464,7 +445,6 @@ fn watch_roots_for_config(
     Some(path) => append_unique_path(roots, path)
     None => ()
   }
-  append_unique_path(roots, @runtime.built_in_default_theme_root())
   roots
 }
 
@@ -539,19 +519,6 @@ fn watch_snapshot_for_roots(
 }
 
 ///|
-fn watch_snapshot_equal(left : Array[String], right : Array[String]) -> Bool {
-  if left.length() != right.length() {
-    return false
-  }
-  for index in 0..<left.length() {
-    if left[index] != right[index] {
-      return false
-    }
-  }
-  true
-}
-
-///|
 fn build_link_target_signature(
   inputs : Array[@runtime.BuildInput],
   inventory : @core.ContentInventory,
@@ -618,7 +585,7 @@ fn generated_preview_output_path(
   config : @core.MooninkConfig,
   output_path : String,
 ) -> String raise @core.ProjectIOError {
-  @core.join_relative_path(output_root(config), output_path) catch {
+  @runtime.join_host_path(output_root(config), output_path) catch {
     err =>
       raise @core.project_io_error(
         "serve_preview_output",
@@ -1019,95 +986,6 @@ fn prepare_serve_watch_result(
 }
 
 ///|
-fn write_preview_failure_status(
-  preview_root : String,
-  revision : Int,
-  message : String,
-) -> Result[Unit, String] {
-  write_preview_runtime_assets(preview_root, {
-    revision,
-    status: "error",
-    diagnostics: preview_failure_diagnostics(message),
-  }) catch {
-    err =>
-      return Err(
-        "[serve] failed while writing preview status\n" +
-        @core.format_project_io_error(err),
-      )
-  }
-  Ok(())
-}
-
-///|
-fn build_preview_startup_command(
-  session : ServeSession,
-) -> Result[String, String] {
-  match
-    @runtime.native_serve_delegate_command_result(
-      session.preview_root,
-      session.host,
-      session.port,
-    ) {
-    Ok(command) => Ok(command)
-    Err(err) =>
-      Err(
-        "[serve] failed during preview startup\n" +
-        @core.format_project_io_error(err),
-      )
-  }
-}
-
-///|
-fn start_preview_child_result(
-  session : ServeSession,
-) -> Result[@runtime.SpawnedProcess, String] {
-  let command = match build_preview_startup_command(session) {
-    Ok(command) => command
-    Err(message) => return Err(message)
-  }
-  let process = match @runtime.spawn_shell_command_result(command) {
-    Ok(process) => process
-    Err(err) =>
-      return Err(
-        "[serve] failed during preview startup\n" +
-        @core.format_project_io_error(err),
-      )
-  }
-  @runtime.sleep_millis(150)
-  let status = match @runtime.poll_spawned_process_result(process) {
-    Ok(status) => status
-    Err(err) =>
-      return Err(
-        "[serve] failed during preview startup\n" +
-        @core.format_project_io_error(err),
-      )
-  }
-  if status != 0 {
-    return Err(
-      "[serve] failed during preview startup\nreason: preview server exited with status \{status - 1}",
-    )
-  }
-  Ok(process)
-}
-
-///|
-fn preview_process_still_running_result(
-  process : @runtime.SpawnedProcess,
-) -> Result[Unit, String] {
-  match @runtime.poll_spawned_process_result(process) {
-    Ok(0) => Ok(())
-    Ok(status) =>
-      Err(
-        "[serve] watch loop interrupted\nreason: preview server exited with status \{status - 1}",
-      )
-    Err(err) =>
-      Err(
-        "[serve] watch loop interrupted\n" + @core.format_project_io_error(err),
-      )
-  }
-}
-
-///|
 fn prepare_main_serve_launch_with_watch_result(
   config_path : String,
   output_dir : String?,
@@ -1137,66 +1015,4 @@ fn prepare_main_serve_launch_with_watch_result(
       prepared,
     ),
   )
-}
-
-///|
-fn run_main_serve_watch_loop(
-  config_path : String,
-  output_dir : String?,
-  initial : PreparedServeWatch,
-) -> CliOutcome {
-  let preview_process = match
-    start_preview_child_result(initial.runtime.session) {
-    Ok(process) => process
-    Err(message) => return { exit_code: 1, message }
-  }
-  println(format_runtime_ready_message(initial.runtime.session))
-  println("[serve] watch mode active")
-  let mut revision = 1
-  let mut watch_roots = initial.watch_roots
-  let mut watch_snapshot = initial.watch_snapshot
-  let mut cache = initial.cache
-  let preview_root = initial.runtime.session.preview_root
-  while true {
-    @runtime.sleep_millis(serve_watch_poll_millis)
-    match preview_process_still_running_result(preview_process) {
-      Ok(_) => ()
-      Err(message) => return { exit_code: 1, message }
-    }
-    let next_snapshot = watch_snapshot_for_roots(watch_roots) catch {
-      err =>
-        return {
-          exit_code: 1,
-          message: "[serve] watch loop failed\n" +
-          @core.format_project_io_error(err),
-        }
-    }
-    if watch_snapshot_equal(watch_snapshot, next_snapshot) {
-      continue
-    }
-    println("[serve] change detected")
-    match
-      prepare_serve_watch_result(
-        config_path,
-        output_dir,
-        initial.runtime.session.host,
-        initial.runtime.session.port,
-        revision + 1,
-        cache,
-      ) {
-      Ok(prepared) => {
-        revision += 1
-        println(format_serve_build_stage(prepared.runtime.build_stage))
-        watch_roots = prepared.watch_roots
-        watch_snapshot = prepared.watch_snapshot
-        cache = prepared.cache
-      }
-      Err(message) => {
-        println(message)
-        ignore(write_preview_failure_status(preview_root, revision, message))
-        watch_snapshot = next_snapshot
-      }
-    }
-  }
-  { exit_code: 0, message: "" }
 }

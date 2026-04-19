@@ -11,6 +11,7 @@ pub(all) struct ActiveThemeLayout {
   source_kind : ActiveThemeSource
   theme_name : String
   asset_source_dir : String?
+  embedded_assets : Map[String, String]
 } derive(Debug, Eq)
 
 ///|
@@ -22,76 +23,11 @@ fn selected_project_theme_dir(config : @core.MooninkConfig) -> String {
 }
 
 ///|
-fn built_in_theme_marker_path(root : String) -> String {
-  if root == "/" {
-    "/src/runtime/builtin_theme/layout.html"
-  } else {
-    root + "/src/runtime/builtin_theme/layout.html"
-  }
-}
-
-///|
-fn parent_search_dir(path : String) -> String? {
-  if path == "/" {
-    None
-  } else {
-    let mut last_slash : Int? = None
-    for i in 0..<path.length() {
-      if path[i:i + 1].to_string() == "/" {
-        last_slash = Some(i)
-      }
-    }
-    match last_slash {
-      Some(0) => Some("/")
-      Some(index) => Some(path[:index].to_string())
-      None => None
-    }
-  }
-}
-
-///|
-fn find_workspace_root_from(path : String) -> String? {
-  if io_path_exists(built_in_theme_marker_path(path)) {
-    Some(path)
-  } else {
-    match parent_search_dir(path) {
-      Some(parent) => find_workspace_root_from(parent)
-      None => None
-    }
-  }
-}
-
-///|
-pub fn built_in_default_theme_root() -> String {
-  match @env.current_dir() {
-    Some(cwd) =>
-      match find_workspace_root_from(cwd) {
-        Some(root) if root == "/" => "/src/runtime/builtin_theme"
-        Some(root) => root + "/src/runtime/builtin_theme"
-        None => "src/runtime/builtin_theme"
-      }
-    None => "src/runtime/builtin_theme"
-  }
-}
-
-///|
-fn built_in_default_theme_layout_path() -> String {
-  built_in_default_theme_root() + "/layout.html"
-}
-
-///|
-fn built_in_default_theme_layout() -> String raise @core.ConfigError {
-  io_read_file_to_string(built_in_default_theme_layout_path()) catch {
-    err => raise @core.ConfigError::IOError(err)
-  }
-}
-
-///|
 fn project_theme_root(
   config : @core.MooninkConfig,
 ) -> String raise @core.ConfigError {
   let theme_dir = selected_project_theme_dir(config)
-  @core.join_relative_path(config.project_root, theme_dir) catch {
+  join_host_path(config.project_root, theme_dir) catch {
     err =>
       raise @core.ConfigError::InvalidPath(
         path=theme_dir,
@@ -105,14 +41,14 @@ fn project_theme_layout_path(
   config : @core.MooninkConfig,
 ) -> String raise @core.ConfigError {
   let theme_dir = selected_project_theme_dir(config)
-  let layout_path = @core.join_relative_path(theme_dir, "layout.html") catch {
+  let layout_path = join_host_path(theme_dir, "layout.html") catch {
     err =>
       raise @core.ConfigError::InvalidPath(
         path=theme_dir,
         reason=@core.format_path_policy_error(err),
       )
   }
-  @core.join_relative_path(config.project_root, layout_path) catch {
+  join_host_path(config.project_root, layout_path) catch {
     err =>
       raise @core.ConfigError::InvalidPath(
         path=layout_path,
@@ -138,14 +74,12 @@ pub fn load_active_theme_layout_result(
       source_kind: ActiveThemeSource::ProjectTheme,
       theme_name: selected_project_theme_dir(config),
       asset_source_dir: Some(theme_root + "/assets"),
+      embedded_assets: {},
     })
   }
   match config.template_file {
     Some(template_file) => {
-      let full_path = @core.join_relative_path(
-        config.project_root,
-        template_file,
-      ) catch {
+      let full_path = join_host_path(config.project_root, template_file) catch {
         err =>
           return Err(
             @core.ConfigError::InvalidPath(
@@ -162,19 +96,17 @@ pub fn load_active_theme_layout_result(
         source_kind: ActiveThemeSource::TemplateFile,
         theme_name: "",
         asset_source_dir: None,
+        embedded_assets: {},
       })
     }
-    None => {
-      let source = built_in_default_theme_layout() catch {
-        err => return Err(err)
-      }
+    None =>
       Ok({
-        source,
+        source: embedded_builtin_theme_layout_source(),
         source_kind: ActiveThemeSource::BuiltInDefault,
         theme_name: "default",
-        asset_source_dir: Some(built_in_default_theme_root() + "/assets"),
+        asset_source_dir: None,
+        embedded_assets: embedded_builtin_theme_asset_sources(),
       })
-    }
   }
 }
 
@@ -183,13 +115,17 @@ pub fn load_active_theme_layout_result(
 pub fn load_config_result(
   config_path : String,
 ) -> Result[@core.MooninkConfig, @core.ConfigError] {
-  let config_path = @core.normalize_config_path_or_error(config_path) catch {
-    err => return Err(err)
+  let config_path = match resolve_host_path_from_cwd_result(config_path) {
+    Ok(config_path) => config_path
+    Err(err) => return Err(err)
   }
   let source = io_read_file_to_string(config_path) catch {
     err => return Err(@core.ConfigError::IOError(err))
   }
-  try @core.parse_config_json(config_path, source) catch {
+  let project_root = dirname_host_path(config_path)
+  try
+    @core.parse_config_json_with_project_root(config_path, project_root, source)
+  catch {
     err => Err(err)
   } noraise {
     config => Ok(config)
@@ -203,10 +139,7 @@ pub fn load_template_source_result(
   match config.template_file {
     None => Ok(None)
     Some(template_file) => {
-      let full_path = @core.join_relative_path(
-        config.project_root,
-        template_file,
-      ) catch {
+      let full_path = join_host_path(config.project_root, template_file) catch {
         err =>
           return Err(
             @core.ConfigError::InvalidPath(
@@ -227,8 +160,9 @@ pub fn load_template_source_result(
 pub fn read_config_source_task(
   config_path : String,
 ) -> RuntimeIOTask[Result[(String, String), @core.ConfigError]] {
-  let normalized_path = @core.normalize_config_path_or_error(config_path) catch {
-    err => return Ready(Err(err))
+  let normalized_path = match resolve_host_path_from_cwd_result(config_path) {
+    Ok(normalized_path) => normalized_path
+    Err(err) => return Ready(Err(err))
   }
   let source = io_read_file_to_string(normalized_path) catch {
     err => return Ready(Err(@core.ConfigError::IOError(err)))

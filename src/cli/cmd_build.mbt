@@ -198,7 +198,7 @@ fn renderer_for_format(
 
 ///|
 fn output_root(config : @core.MooninkConfig) -> String {
-  @core.join_relative_path(config.project_root, config.output_dir) catch {
+  @runtime.join_host_path(config.project_root, config.output_dir) catch {
     _ => panic()
   }
 }
@@ -220,7 +220,7 @@ fn prepare_output_dir(
 fn copy_public_assets(
   config : @core.MooninkConfig,
 ) -> Unit raise BuildCommandError {
-  let public_root = @core.join_relative_path(config.project_root, "public") catch {
+  let public_root = @runtime.join_host_path(config.project_root, "public") catch {
     err =>
       raise BuildCommandError::ProjectIO(
         @core.project_io_error(
@@ -266,7 +266,7 @@ fn copy_assets_dir(
       ),
     )
   }
-  let target_root = @core.join_relative_path(output_root(config), "assets") catch {
+  let target_root = @runtime.join_host_path(output_root(config), "assets") catch {
     err =>
       raise BuildCommandError::ProjectIO(
         @core.project_io_error(
@@ -282,10 +282,46 @@ fn copy_assets_dir(
 }
 
 ///|
+fn write_embedded_assets(
+  config : @core.MooninkConfig,
+  assets : Map[String, String],
+) -> Unit raise BuildCommandError {
+  for entry in assets {
+    let (relative_path, content) = entry
+    let output_path = @runtime.join_host_path(
+      output_root(config),
+      "assets/" + relative_path,
+    ) catch {
+      err =>
+        raise BuildCommandError::ProjectIO(
+          @core.project_io_error(
+            "copy_theme_assets",
+            relative_path,
+            @core.format_path_policy_error(err),
+          ),
+        )
+    }
+    let parent = @runtime.dirname_host_path(output_path)
+    @runtime.io_ensure_dir(parent) catch {
+      err => raise BuildCommandError::ProjectIO(err)
+    }
+    @runtime.io_write_string(output_path, content) catch {
+      err => raise BuildCommandError::ProjectIO(err)
+    }
+  }
+}
+
+///|
 fn copy_selected_theme_assets(
   config : @core.MooninkConfig,
   active_theme : @runtime.ActiveThemeLayout,
 ) -> Unit raise BuildCommandError {
+  if !active_theme.embedded_assets.is_empty() {
+    write_embedded_assets(config, active_theme.embedded_assets) catch {
+      err => raise err
+    }
+    return
+  }
   match active_theme.asset_source_dir {
     Some(path) => copy_assets_dir(config, path)
     None => ()
@@ -298,7 +334,7 @@ fn write_build_output(
   relative_output_path : String,
   html : String,
 ) -> Unit raise BuildCommandError {
-  let full_path = @core.join_relative_path(
+  let full_path = @runtime.join_host_path(
     output_root(config),
     relative_output_path,
   ) catch {
@@ -311,12 +347,7 @@ fn write_build_output(
         ),
       )
   }
-  let parent = @core.dirname_relative_path(full_path) catch {
-    err =>
-      raise BuildCommandError::ProjectIO(
-        @core.project_io_error("write_file", full_path, err.to_string()),
-      )
-  }
+  let parent = @runtime.dirname_host_path(full_path)
   @runtime.io_ensure_dir(parent) catch {
     err => raise BuildCommandError::ProjectIO(err)
   }
@@ -379,7 +410,7 @@ fn copy_content_tree_assets(
   inventory : @core.ContentInventory,
 ) -> Unit raise BuildCommandError {
   for asset in inventory.asset_files {
-    let target = @core.join_relative_path(
+    let target = @runtime.join_host_path(
       output_root(config),
       asset.relative_path,
     ) catch {
@@ -684,17 +715,20 @@ fn theme_name(active_theme : @runtime.ActiveThemeLayout) -> String {
 
 ///|
 fn theme_asset_root(active_theme : @runtime.ActiveThemeLayout) -> String {
-  match active_theme.asset_source_dir {
-    Some(_) => "/assets/"
-    None => ""
+  if active_theme.asset_source_dir is Some(_) ||
+    !active_theme.embedded_assets.is_empty() {
+    "/assets/"
+  } else {
+    ""
   }
 }
 
 ///|
 fn theme_bundle_asset_root(bundle : @runtime.ActiveThemeBundle) -> String {
-  match bundle.assets_root {
-    Some(_) => "/assets/"
-    None => ""
+  if bundle.assets_root is Some(_) || !bundle.embedded_assets.is_empty() {
+    "/assets/"
+  } else {
+    ""
   }
 }
 
@@ -847,7 +881,7 @@ fn write_theme_vars_output(
 fn ensure_surface_search_asset(
   config : @core.MooninkConfig,
 ) -> Unit raise BuildCommandError {
-  let assets_dir = @core.join_relative_path(output_root(config), "assets") catch {
+  let assets_dir = @runtime.join_host_path(output_root(config), "assets") catch {
     err =>
       raise BuildCommandError::ProjectIO(
         @core.project_io_error(
@@ -860,7 +894,7 @@ fn ensure_surface_search_asset(
   @runtime.io_ensure_dir(assets_dir) catch {
     err => raise BuildCommandError::ProjectIO(err)
   }
-  let target_path = @core.join_relative_path(assets_dir, "moonink-search.js") catch {
+  let target_path = @runtime.join_host_path(assets_dir, "moonink-search.js") catch {
     err =>
       raise BuildCommandError::ProjectIO(
         @core.project_io_error(
@@ -873,10 +907,18 @@ fn ensure_surface_search_asset(
   if @runtime.io_path_exists(target_path) {
     return
   }
-  let source_path = @runtime.built_in_default_theme_root() +
-    "/assets/moonink-search.js"
-  @runtime.io_copy_file(source_path, target_path) catch {
-    err => raise BuildCommandError::ProjectIO(err)
+  match
+    @runtime.embedded_builtin_theme_asset_sources().get("moonink-search.js") {
+    Some(source) =>
+      @runtime.io_write_string(target_path, source) catch {
+        err => raise BuildCommandError::ProjectIO(err)
+      }
+    None =>
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "copy_theme_assets", "moonink-search.js", "embedded built-in theme asset is missing from the binary",
+        ),
+      )
   }
 }
 
@@ -2697,7 +2739,7 @@ fn theme_bundle_manifest_path(
     Some(path) => path
     None => "theme"
   }
-  let manifest_path = @core.join_relative_path(theme_dir, "theme.json") catch {
+  let manifest_path = @runtime.join_host_path(theme_dir, "theme.json") catch {
     err =>
       raise BuildCommandError::ProjectIO(
         @core.project_io_error(
@@ -2707,7 +2749,7 @@ fn theme_bundle_manifest_path(
         ),
       )
   }
-  @core.join_relative_path(config.project_root, manifest_path) catch {
+  @runtime.join_host_path(config.project_root, manifest_path) catch {
     err =>
       raise BuildCommandError::ProjectIO(
         @core.project_io_error(
@@ -2737,7 +2779,7 @@ fn project_legacy_theme_layout_path(
     Some(path) => path
     None => "theme"
   }
-  let layout_path = @core.join_relative_path(theme_dir, "layout.html") catch {
+  let layout_path = @runtime.join_host_path(theme_dir, "layout.html") catch {
     err =>
       raise BuildCommandError::ProjectIO(
         @core.project_io_error(
@@ -2747,7 +2789,7 @@ fn project_legacy_theme_layout_path(
         ),
       )
   }
-  @core.join_relative_path(config.project_root, layout_path) catch {
+  @runtime.join_host_path(config.project_root, layout_path) catch {
     err =>
       raise BuildCommandError::ProjectIO(
         @core.project_io_error(
@@ -2810,6 +2852,12 @@ fn copy_theme_bundle_assets(
   config : @core.MooninkConfig,
   bundle : @runtime.ActiveThemeBundle,
 ) -> Unit raise BuildCommandError {
+  if !bundle.embedded_assets.is_empty() {
+    write_embedded_assets(config, bundle.embedded_assets) catch {
+      err => raise err
+    }
+    return
+  }
   match bundle.assets_root {
     Some(path) => copy_assets_dir(config, path)
     None => ()

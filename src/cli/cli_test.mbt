@@ -822,14 +822,36 @@ fn expected_serve_runtime_message(
 }
 
 ///|
+fn host_path(relative : String) -> String {
+  match @runtime.resolve_host_path_from_cwd_result(relative) {
+    Ok(path) => path
+    Err(_) => panic()
+  }
+}
+
+///|
+fn expected_runtime_ready_message(
+  build_message : String,
+  host : String,
+  port : Int,
+  preview_root : String,
+  status : String,
+) -> String {
+  build_message +
+  "\n[serve] runtime ready\naddress: http://\{host}:\{port}\npreview root: \{preview_root}\nstatus: \{status}"
+}
+
+///|
 fn prepare_isolated_fixture_copy(source_root : String, name : String) -> String {
-  let scratch_parent = "fixtures/v2/_test_runs"
-  let target_root = scratch_parent + "/" + name
+  let scratch_parent = host_path("fixtures/v2/_test_runs")
+  let target_root = @runtime.join_host_path(scratch_parent, name) catch {
+    _ => panic()
+  }
   let _ = try? @runtime.io_remove_dir_all(target_root)
   @runtime.io_ensure_dir(scratch_parent) catch {
     _ => panic()
   }
-  @runtime.io_copy_dir_recursive(source_root, target_root) catch {
+  @runtime.io_copy_dir_recursive(host_path(source_root), target_root) catch {
     _ => panic()
   }
   target_root
@@ -928,12 +950,12 @@ test "runtime cli serve builds fixture before preview skeleton" {
   inspect(outcome.exit_code, content="0")
   inspect(
     outcome.message,
-    content=(
-      #|[serve] build completed
-      #|[serve] runtime ready
-      #|address: http://127.0.0.1:3000
-      #|preview root: fixtures/v2/_test_runs/minimal-serve-default/dist
-      #|status: Dry-run preview launch validated the built output without starting a server.
+    content=expected_runtime_ready_message(
+      "[serve] build completed",
+      "127.0.0.1",
+      3000,
+      fixture_root + "/dist",
+      "Dry-run preview launch validated the built output without starting a server.",
     ),
   )
   let hello_html = @runtime.io_read_file_to_string(
@@ -980,12 +1002,12 @@ test "runtime cli serve respects host port and output override" {
   inspect(outcome.exit_code, content="0")
   inspect(
     outcome.message,
-    content=(
-      #|[serve] build completed
-      #|[serve] runtime ready
-      #|address: http://0.0.0.0:4173
-      #|preview root: fixtures/v2/_test_runs/minimal-serve-preview-dist/preview-dist
-      #|status: Dry-run preview launch validated the built output without starting a server.
+    content=expected_runtime_ready_message(
+      "[serve] build completed",
+      "0.0.0.0",
+      4173,
+      fixture_root + "/preview-dist",
+      "Dry-run preview launch validated the built output without starting a server.",
     ),
   )
   inspect(
@@ -995,7 +1017,7 @@ test "runtime cli serve respects host port and output override" {
 }
 
 ///|
-test "main serve launch plan builds once before delegated preview startup" {
+test "main serve launch plan builds once before in-process preview startup" {
   let fixture_root = prepare_isolated_fixture_copy(
     "fixtures/v2/minimal", "minimal-main-serve-delegate",
   )
@@ -1037,13 +1059,12 @@ test "runtime cli serve continues after build warnings" {
   inspect(outcome.exit_code, content="0")
   inspect(
     outcome.message,
-    content=(
-      #|[serve] build completed with warnings
-      #|[hello.md] Unresolved wikilink target: missing-page
-      #|[serve] runtime ready
-      #|address: http://127.0.0.1:3000
-      #|preview root: fixtures/v2/_test_runs/check-wikilink-warning-serve/dist
-      #|status: Dry-run preview launch validated the built output without starting a server.
+    content=expected_runtime_ready_message(
+      "[serve] build completed with warnings\n[hello.md] Unresolved wikilink target: missing-page",
+      "127.0.0.1",
+      3000,
+      fixture_root + "/dist",
+      "Dry-run preview launch validated the built output without starting a server.",
     ),
   )
   inspect(
@@ -1063,7 +1084,7 @@ test "runtime cli serve continues after build warnings" {
 }
 
 ///|
-test "main serve launch plan keeps warning-tolerant build semantics" {
+test "main serve launch plan keeps warning-tolerant in-process semantics" {
   let fixture_root = prepare_isolated_fixture_copy(
     "fixtures/v2/check_wikilink_warning", "main-serve-warning-delegate",
   )
@@ -2413,9 +2434,8 @@ test "runtime cli check reports invalid configured theme path" {
     fixture_root + "/moonink.json",
   )
   inspect(outcome.exit_code, content="1")
-  inspect(outcome.message.contains("[check] theme/template"), content="true")
   inspect(
-    outcome.message.contains("Failed to resolve active theme path"),
+    outcome.message.contains("[check] failed during config loading"),
     content="true",
   )
   inspect(

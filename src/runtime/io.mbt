@@ -79,14 +79,7 @@ pub fn io_ensure_dir(path : String) -> Unit raise @core.ProjectIOError {
     }
     return
   }
-  let parent = @core.dirname_relative_path(path) catch {
-    err =>
-      raise @core.project_io_error(
-        "create_directory",
-        path,
-        @core.format_path_policy_error(err),
-      )
-  }
+  let parent = dirname_host_path(path)
   io_ensure_dir(parent)
   io_create_dir(path)
 }
@@ -103,7 +96,7 @@ pub fn io_remove_dir_all(path : String) -> Unit raise @core.ProjectIOError {
   }
   let entries = io_read_dir(path)
   for entry in entries {
-    let child = @core.join_relative_path(path, entry) catch {
+    let child = join_host_path(path, entry) catch {
       err =>
         raise @core.project_io_error(
           "remove_directory",
@@ -135,14 +128,7 @@ pub fn io_copy_file(
   source_path : String,
   target_path : String,
 ) -> Unit raise @core.ProjectIOError {
-  let parent = @core.dirname_relative_path(target_path) catch {
-    err =>
-      raise @core.project_io_error(
-        "copy_file",
-        target_path,
-        @core.format_path_policy_error(err),
-      )
-  }
+  let parent = dirname_host_path(target_path)
   io_ensure_dir(parent)
   let bytes = @fs.read_file_to_bytes(source_path) catch {
     err =>
@@ -159,20 +145,13 @@ fn join_io_path(
   base : String,
   child : String,
 ) -> String raise @core.ProjectIOError {
-  let normalized_child = @core.normalize_relative_path(child) catch {
+  join_host_path(base, child) catch {
     err =>
       raise @core.project_io_error(
         "join_path",
         child,
         @core.format_path_policy_error(err),
       )
-  }
-  if base == "/" {
-    "/" + normalized_child
-  } else if base.has_suffix("/") {
-    base + normalized_child
-  } else {
-    base + "/" + normalized_child
   }
 }
 

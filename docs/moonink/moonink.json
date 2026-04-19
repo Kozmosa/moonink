@@ -1,6 +1,6 @@
 {
   "site_name": "月墨 / MoonInk",
-  "site_url": "https://example.com/moonink",
+  "site_url": "https://kozmosa.github.io/moonink",
   "content_dir": ".",
   "output_dir": "dist",
   "exclude": [".obsidian", "dist", ".git", "node_modules", ".trash", "templates", "Templates"],

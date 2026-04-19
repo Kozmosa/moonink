@@ -23,7 +23,7 @@ fn join_content_path(
   base : String,
   child : String,
 ) -> String raise @core.ContentDiscoveryError {
-  @core.join_relative_path(base, child) catch {
+  join_host_path(base, child) catch {
     err => raise content_path_policy_error(child, err)
   }
 }
@@ -404,7 +404,7 @@ pub fn discover_content_result(
   let content_root = if config.content_dir == "." {
     config.project_root
   } else {
-    @core.join_relative_path(config.project_root, config.content_dir) catch {
+    join_host_path(config.project_root, config.content_dir) catch {
       err => return Err(content_path_policy_error(config.content_dir, err))
     }
   }

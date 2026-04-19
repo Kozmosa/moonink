@@ -33,9 +33,12 @@ Current build-time precedence is:
 1. project-local Theme V2 bundle at `<theme>/theme.json`
 2. project-local legacy `<theme>/layout.html` when no Theme V2 bundle exists
 3. configured legacy `template_file` when no project theme override exists
-4. repository-owned built-in Theme V2 bundle
+4. embedded built-in Theme V2 bundle owned by the runtime binary
 
-When the selected theme exposes an assets directory, build copies those assets into `dist/assets/`.
+When the selected theme exposes an assets directory, build copies those assets
+into `dist/assets/`. When the fallback theme comes from embedded resources, the
+same asset contract is satisfied from the embedded asset map instead of
+repository-local files.
 
 ## 6. Current Scope
 
@@ -43,7 +46,7 @@ The current built-in theme slice covers:
 
 - Theme V2 manifest-driven layout selection;
 - basic typography and asset styles;
-- page/article-aware content shells in the repository-owned default theme;
+- page/article-aware content shells in the embedded default theme bundle;
 - dedicated generated-surface layouts for `search`, `collection`, and `archive`;
 - build-owned homepage modules and system pages for `search`, `tags`, `series`, and `archive`;
 - typed author/profile consumption from site config;
