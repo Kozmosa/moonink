@@ -58,6 +58,10 @@ The main workspace still avoids a direct `oboard/mocket` dependency. The user-fa
 binary now delegates to the native-only subproject after a successful build rather
 than duplicating the server implementation or turning `serve` back into a dry-run.
 
+That native-only boundary is intentional. The non-native stub path and its
+`only available on native targets` message are expected outcomes on unsupported
+targets, not regressions in the serve feature.
+
 ### Delegate with a prebuilt-preview entry instead of rebuilding twice
 
 `native-serve` gained an internal `serve-prebuilt` path that accepts the resolved
@@ -83,6 +87,8 @@ coverage. Tests assert the delegated launch plan instead of starting a real serv
   MoonInk workspace where `native-serve/moon.mod.json` is available.
 - The delegated handoff uses a small native shell-exec bridge, so platform-specific
   process-launch behavior is still minimal and native-target oriented.
+- JS/Wasm targets are expected to stop at the native delegation boundary instead
+  of providing a real preview server.
 - Preview remains one-shot: there is still no file watching, live reload, or
   restart-on-change workflow.
 

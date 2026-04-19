@@ -46,6 +46,7 @@ moon run --manifest-path native-serve/moon.mod.json native-serve/src/cmd/main --
 Notes:
 
 - the main workspace `moonink serve` is now the canonical build-once-then-preview entry;
+- `serve` is intentionally scoped to native preview use, so a non-native `only available on native targets` message is expected rather than a sign that the serve path is half-implemented;
 - tests still exercise dry-run helpers in `src/cli/cmd_serve.mbt` rather than starting a long-running server;
 - the native entry accepts an explicit config path so it can be launched from the repo root or another working directory;
 - `native-serve/` is the only place that pulls in `oboard/mocket`.

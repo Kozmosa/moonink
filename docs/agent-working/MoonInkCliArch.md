@@ -200,6 +200,7 @@ Behavior split:
 - `src/cli/cmd_serve.mbt` still exposes dry-run preview helpers for runtime tests and non-blocking validation coverage.
 - `src/cmd/main/main.mbt` special-cases `serve` so the user-facing binary can build once and then `exec` into the delegated native preview backend.
 - The standalone real preview server still lives in the separate `native-serve/` subproject, which now supports both direct `serve` and internal `serve-prebuilt` entry modes.
+- Real preview serving is intentionally native-only. The non-native stub path and its `only available on native targets` message reflect the supported-platform boundary, not an unfinished serve implementation.
 
 ## Content Model
 
@@ -324,6 +325,7 @@ This keeps `docflow` focused on parser/render adapter behavior plus generic them
 
 - no structured option parser yet (flags and options are not parsed)
 - `serve` still has no watch mode, live reload, or incremental rebuild behavior
+- real preview startup is only supported on native targets; JS/Wasm targets are expected to stop at the native delegation boundary
 - Theme V2 bundles are currently project-local only; there is no inheritance or layering implementation yet
 - partial loading currently scans the `partials/` directory non-recursively
 - tokens only emit scalar string/number/bool values to CSS custom properties

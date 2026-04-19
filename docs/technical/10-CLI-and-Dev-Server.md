@@ -69,6 +69,11 @@ Main workspace behavior:
 
 The preview runner is still isolated behind [src/runtime/serve.mbt](src/runtime/serve.mbt). The standard wasm-gc test suite exercises the build-orchestration and dry-run validation helpers, while the standalone native server remains responsible for the actual HTTP listener.
 
+Real preview serving is intentionally native-only. The main-workspace `serve`
+path should be treated as a `--target native` feature; if a non-native target
+hits the runtime stub and reports that native serve delegation is only available
+on native targets, that is expected and matches the supported-platform scope.
+
 ### Native preview server
 
 Real HTTP preview serving is implemented in the standalone [native-serve/](native-serve/) subproject.
@@ -95,6 +100,7 @@ Design constraints:
 - The native subproject is the only place that owns the real preview server dependency.
 - The native entry accepts an explicit config path so it can be launched from the repo root or other working directories.
 - Main-workspace `serve` delegates to `native-serve` through an internal prebuilt-preview handoff instead of rebuilding twice.
+- Non-native targets are not expected to offer a real preview server; the native-only delegation boundary is part of the design.
 
 ## 3. CLI Output Style
 
