@@ -1,0 +1,47 @@
+<!doctype html>
+<html data-theme-v2="moonink-nemophila" data-layout-kind="{{ page.kind }}">
+  <head>
+    <meta charset="utf-8">
+    <title>{{ page.title }}</title>
+    <link rel="stylesheet" href="{{ site.theme_asset_root }}moonink-nemophila.css">
+    <link rel="stylesheet" href="{{ site.theme_asset_root }}theme-vars.css">
+    {{ slots.head }}
+  </head>
+  <body class="nemophila-article" data-kind="{{ page.kind }}" data-url="{{ page.url_path }}">
+    {% include "header" %}
+    <article class="nemophila-article-shell">
+      <header class="nemophila-cover">
+        {% if page.cover_url %}<figure class="nemophila-cover-media"><img src="{{ page.cover_url }}" alt="{{ page.title }}"></figure>{% endif %}
+        <div class="nemophila-cover-copy">
+          <p class="nemophila-kicker">Article</p>
+          <h1>{{ page.title }}</h1>
+          {% if page.summary %}<p class="nemophila-summary">{{ page.summary }}</p>{% endif %}
+          <div class="nemophila-meta">
+            {% if page.date %}<span>{{ page.date }}</span>{% endif %}
+            {% if page.updated %}<span>Updated {{ page.updated }}</span>{% endif %}
+            <span>{{ page.reading_time_label }}</span>
+          </div>
+        </div>
+      </header>
+      <div class="nemophila-article-grid">
+        <main class="nemophila-article-body" data-source="{{ page.source_path }}">{{ page.body_html }}</main>
+        {% if page.has_toc %}
+        <aside class="nemophila-toc">
+          <p class="nemophila-kicker">On this page</p>
+          <ol>
+            {% for item in collections.toc.items %}
+            <li data-level="{{ item.level }}"><a href="#{{ item.id }}">{{ item.title }}</a></li>
+            {% endfor %}
+          </ol>
+        </aside>
+        {% endif %}
+      </div>
+      <section class="nemophila-author-card">
+        <p class="nemophila-kicker">Author</p>
+        <h2>{{ page.author_display }}</h2>
+        {% if site.author.bio %}<p>{{ site.author.bio }}</p>{% endif %}
+      </section>
+    </article>
+    {{ slots.scripts }}
+  </body>
+</html>

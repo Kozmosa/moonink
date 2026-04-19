@@ -2237,6 +2237,103 @@ test "runtime cli build emits theme vars css and declared slot injections" {
 }
 
 ///|
+test "runtime cli build renders moonink nemophila fixture shells" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/theme_v2_nemophila", "theme-v2-nemophila-shells",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let about_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/about/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let article_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/essays/stone-garden/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(
+    index_html.contains("data-theme-v2=\"moonink-nemophila\""),
+    content="true",
+  )
+  inspect(index_html.contains("data-layout-kind=\"index\""), content="true")
+  inspect(about_html.contains("data-layout-kind=\"page\""), content="true")
+  inspect(article_html.contains("data-layout-kind=\"article\""), content="true")
+}
+
+///|
+test "runtime cli build emits moonink nemophila assets and structure" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/theme_v2_nemophila", "theme-v2-nemophila-assets",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let article_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/essays/stone-garden/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let vars_css = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/assets/theme-vars.css",
+  ) catch {
+    _ => panic()
+  }
+  inspect(index_html.contains("moonink-nemophila.css"), content="true")
+  inspect(index_html.contains("class=\"nemophila-home\""), content="true")
+  inspect(index_html.contains("Koz"), content="true")
+  inspect(article_html.contains("class=\"nemophila-article\""), content="true")
+  inspect(article_html.contains("class=\"nemophila-cover\""), content="true")
+  inspect(article_html.contains("class=\"nemophila-author-card\""), content="true")
+  inspect(vars_css.contains("--moonink-color-base: #6c9ae4;"), content="true")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/assets/moonink-nemophila.css"),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli build uses moonink nemophila page fallback for generated surfaces" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/theme_v2_nemophila", "theme-v2-nemophila-generated",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let archive_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/archive/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let article_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/essays/stone-garden/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(archive_html.contains("class=\"nemophila-page\""), content="true")
+  inspect(article_html.contains("class=\"nemophila-toc\""), content="true")
+  inspect(
+    article_html.contains("class=\"nemophila-author-card\""),
+    content="true",
+  )
+}
+
+///|
 test "runtime cli build uses configured theme directory" {
   let fixture_root = prepare_isolated_fixture_copy(
     "fixtures/v2/theme_v2_basic", "theme-v2-config-selector",

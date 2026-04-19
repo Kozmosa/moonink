@@ -1,0 +1,22 @@
+<!doctype html>
+<html data-theme-v2="moonink-nemophila" data-layout-kind="{{ page.kind }}">
+  <head>
+    <meta charset="utf-8">
+    <title>{{ page.title }}</title>
+    <link rel="stylesheet" href="{{ site.theme_asset_root }}moonink-nemophila.css">
+    <link rel="stylesheet" href="{{ site.theme_asset_root }}theme-vars.css">
+    {{ slots.head }}
+  </head>
+  <body class="nemophila-page" data-kind="{{ page.kind }}" data-url="{{ page.url_path }}">
+    {% include "header" %}
+    <main class="nemophila-page-shell">
+      <header class="nemophila-page-header">
+        <p class="nemophila-kicker">{{ page.kind_label }}</p>
+        <h1 class="nemophila-page-title">{{ page.title }}</h1>
+        {% if page.summary %}<p class="nemophila-page-summary">{{ page.summary }}</p>{% endif %}
+      </header>
+      <div class="nemophila-prose" data-source="{{ page.source_path }}">{{ page.body_html }}</div>
+    </main>
+    {{ slots.scripts }}
+  </body>
+</html>
