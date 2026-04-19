@@ -306,6 +306,16 @@ test "build navigation model uses nav_title and hides nav_hidden pages" {
       nav_title: "Home",
       nav_hidden: false,
       description: "",
+      summary: "",
+      date: None,
+      updated: None,
+      tags: [],
+      series: None,
+      cover: None,
+      author: None,
+      column: None,
+      reading_time_minutes: 1,
+      source_format: @core.SourceFormat::Markdown,
       source_path: "index.md",
       url_path: "/",
       content_kind: @core.ContentKind::Page,
@@ -316,6 +326,16 @@ test "build navigation model uses nav_title and hides nav_hidden pages" {
       nav_title: "Documentation",
       nav_hidden: false,
       description: "",
+      summary: "",
+      date: None,
+      updated: None,
+      tags: [],
+      series: None,
+      cover: None,
+      author: None,
+      column: None,
+      reading_time_minutes: 1,
+      source_format: @core.SourceFormat::Markdown,
       source_path: "guide/index.md",
       url_path: "/guide/",
       content_kind: @core.ContentKind::Page,
@@ -326,6 +346,16 @@ test "build navigation model uses nav_title and hides nav_hidden pages" {
       nav_title: "Quick Start",
       nav_hidden: false,
       description: "",
+      summary: "",
+      date: None,
+      updated: None,
+      tags: [],
+      series: None,
+      cover: None,
+      author: None,
+      column: None,
+      reading_time_minutes: 1,
+      source_format: @core.SourceFormat::Markdown,
       source_path: "guide/install.md",
       url_path: "/guide/install/",
       content_kind: @core.ContentKind::Page,
@@ -336,6 +366,16 @@ test "build navigation model uses nav_title and hides nav_hidden pages" {
       nav_title: "Config",
       nav_hidden: true,
       description: "",
+      summary: "",
+      date: None,
+      updated: None,
+      tags: [],
+      series: None,
+      cover: None,
+      author: None,
+      column: None,
+      reading_time_minutes: 1,
+      source_format: @core.SourceFormat::Markdown,
       source_path: "guide/config.md",
       url_path: "/guide/config/",
       content_kind: @core.ContentKind::Page,
@@ -346,6 +386,16 @@ test "build navigation model uses nav_title and hides nav_hidden pages" {
       nav_title: "Hello",
       nav_hidden: false,
       description: "",
+      summary: "",
+      date: None,
+      updated: None,
+      tags: [],
+      series: None,
+      cover: None,
+      author: None,
+      column: None,
+      reading_time_minutes: 1,
+      source_format: @core.SourceFormat::Markdown,
       source_path: "hello.md",
       url_path: "/hello/",
       content_kind: @core.ContentKind::Article,
@@ -370,6 +420,16 @@ test "build navigation model treats section index as landing item" {
       nav_title: "Guide",
       nav_hidden: false,
       description: "",
+      summary: "",
+      date: None,
+      updated: None,
+      tags: [],
+      series: None,
+      cover: None,
+      author: None,
+      column: None,
+      reading_time_minutes: 1,
+      source_format: @core.SourceFormat::Markdown,
       source_path: "guide/index.md",
       url_path: "/guide/",
       content_kind: @core.ContentKind::Page,
@@ -380,6 +440,16 @@ test "build navigation model treats section index as landing item" {
       nav_title: "Advanced",
       nav_hidden: false,
       description: "",
+      summary: "",
+      date: None,
+      updated: None,
+      tags: [],
+      series: None,
+      cover: None,
+      author: None,
+      column: None,
+      reading_time_minutes: 1,
+      source_format: @core.SourceFormat::Markdown,
       source_path: "guide/advanced/index.md",
       url_path: "/guide/advanced/",
       content_kind: @core.ContentKind::Page,
@@ -390,6 +460,16 @@ test "build navigation model treats section index as landing item" {
       nav_title: "Reference",
       nav_hidden: false,
       description: "",
+      summary: "",
+      date: None,
+      updated: None,
+      tags: [],
+      series: None,
+      cover: None,
+      author: None,
+      column: None,
+      reading_time_minutes: 1,
+      source_format: @core.SourceFormat::Markdown,
       source_path: "guide/advanced/reference.md",
       url_path: "/guide/advanced/reference/",
       content_kind: @core.ContentKind::Page,
@@ -812,7 +892,10 @@ test "runtime cli serve builds fixture before preview skeleton" {
   ) catch {
     _ => panic()
   }
-  inspect(hello_html.contains("<h1>Hello World</h1>"), content="true")
+  inspect(
+    hello_html.contains("<h1 id=\"hello-world\">Hello World</h1>"),
+    content="true",
+  )
 }
 
 ///|
@@ -1411,11 +1494,10 @@ test "runtime cli build renders backlinks for minimal fixture" {
     _ => panic()
   }
   inspect(
-    hello_html.contains(
-      "<aside class=\"page-backlinks\"><section class=\"backlinks\" aria-label=\"Backlinks\"><h2>Backlinks</h2><ul><li><a href=\"/\">Home</a></li></ul></section></aside>",
-    ),
+    hello_html.contains("<span class=\"backlink-title\">Home</span>"),
     content="true",
   )
+  inspect(hello_html.contains("See hello."), content="true")
 }
 
 ///|
@@ -1510,6 +1592,52 @@ test "runtime cli build uses built-in theme v2 fallback" {
 }
 
 ///|
+test "runtime cli build renders branded article experience" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/article_experience_basic", "article-experience-basic",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let article_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/essays/stone-garden/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(article_html.contains("class=\"article-hero\""), content="true")
+  inspect(
+    article_html.contains(
+      "Designing a site that feels like a room you can return to instead of a pile of exported notes.",
+    ),
+    content="true",
+  )
+  inspect(article_html.contains("Updated 2026-04-18"), content="true")
+  inspect(article_html.contains("1 min read"), content="true")
+  inspect(
+    article_html.contains("src=\"/images/stone-garden.png\""),
+    content="true",
+  )
+  inspect(article_html.contains("href=\"#threshold\""), content="true")
+  inspect(article_html.contains("href=\"#texture\""), content="true")
+  inspect(article_html.contains("id=\"threshold\""), content="true")
+  inspect(article_html.contains("id=\"texture\""), content="true")
+  inspect(article_html.contains(">Companion Note<"), content="true")
+  inspect(
+    article_html.contains("While revising Stone Garden, I kept trimming"),
+    content="true",
+  )
+  inspect(article_html.contains(">Studio Rituals<"), content="true")
+  inspect(article_html.contains("Shared tags: garden, systems"), content="true")
+  inspect(article_html.contains(">Open Loops<"), content="true")
+  inspect(article_html.contains(">Koz<"), content="true")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/images/stone-garden.png"),
+    content="true",
+  )
+}
+
+///|
 test "runtime cli build writes minimal fixture html files" {
   let fixture_root = prepare_isolated_fixture_copy(
     "fixtures/v2/minimal", "minimal-build-default",
@@ -1593,7 +1721,7 @@ test "runtime cli build writes minimal fixture html files" {
     content="true",
   )
   inspect(
-    hello_html.contains("class=\"content-kind-label\">article</p>"),
+    hello_html.contains("class=\"section-kicker\">Article</p>"),
     content="true",
   )
   inspect(

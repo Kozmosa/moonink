@@ -76,6 +76,16 @@ pub(all) struct CheckReport {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct ArticleExperienceModel {
+  toc : Map[String, Array[@core.HeadingEntry]]
+  backlinks : Map[String, Array[@core.BacklinkEntry]]
+  related : Map[String, Array[@core.RelatedEntry]]
+  previous : Map[String, @core.PageLink]
+  next : Map[String, @core.PageLink]
+  series : Map[String, @core.SeriesNav]
+} derive(Debug, Eq)
+
+///|
 fn format_runtime_config_error(err : @core.ConfigError) -> String {
   "[build] failed during config loading\n\{@core.format_config_error(err)}"
 }
@@ -611,36 +621,38 @@ fn append_route_conflicts(
 }
 
 ///|
-fn render_backlinks_html(
-  current_url : String,
-  pages : Array[@core.SitePage],
-  backlinks : Map[String, Array[String]],
-) -> String {
-  let backlink_urls = match backlinks.get(current_url) {
-    Some(urls) => urls
-    None => []
-  }
-  if backlink_urls.is_empty() {
+fn render_backlinks_html(entries : Array[@core.BacklinkEntry]) -> String {
+  if entries.is_empty() {
     return ""
   }
   let items : Array[String] = []
-  for url in backlink_urls {
-    let mut title = url
-    for page in pages {
-      if page.url_path == url {
-        title = page.title
-        break
-      }
+  for entry in entries {
+    let date_html = match entry.date {
+      Some(date) =>
+        "<p class=\"backlink-meta\"><span class=\"backlink-date\">" +
+        escape_html_text(date) +
+        "</span></p>"
+      None => ""
+    }
+    let series_html = match entry.series {
+      Some(series) =>
+        "<p class=\"backlink-series\">" + escape_html_text(series) + "</p>"
+      None => ""
     }
     items.push(
-      "<li><a href=\"" +
-      escape_html_text(url) +
-      "\">" +
-      escape_html_text(title) +
-      "</a></li>",
+      "<li class=\"backlink-card\"><a class=\"backlink-link\" href=\"" +
+      escape_html_text(entry.page.url_path) +
+      "\"><span class=\"backlink-title\">" +
+      escape_html_text(entry.page.title) +
+      "</span></a>" +
+      series_html +
+      date_html +
+      "<p class=\"backlink-snippet\">" +
+      escape_html_text(entry.snippet) +
+      "</p></li>",
     )
   }
-  "<aside class=\"page-backlinks\"><section class=\"backlinks\" aria-label=\"Backlinks\"><h2>Backlinks</h2><ul>" +
+  "<aside class=\"page-backlinks\"><section class=\"backlinks\" aria-label=\"Backlinks\"><div class=\"section-heading\"><p class=\"section-kicker\">Knowledge network</p><h2>Backlinks</h2></div><ul class=\"backlink-list\">" +
   items.iter().join("") +
   "</ul></section></aside>"
 }
@@ -735,6 +747,23 @@ fn theme_number_value(value : Int) -> @core.ThemeConfigValue {
 }
 
 ///|
+fn theme_optional_string_value(value : String?) -> @core.ThemeConfigValue {
+  match value {
+    Some(text) => theme_string_value(text)
+    None => @core.ThemeConfigValue::NullValue
+  }
+}
+
+///|
+fn theme_string_array_value(values : Array[String]) -> @core.ThemeConfigValue {
+  let items : Array[@core.ThemeConfigValue] = []
+  for value in values {
+    items.push(theme_string_value(value))
+  }
+  theme_array_value(items)
+}
+
+///|
 fn theme_array_value(
   values : Array[@core.ThemeConfigValue],
 ) -> @core.ThemeConfigValue {
@@ -777,12 +806,97 @@ fn theme_site_page_value(page : @core.SitePage) -> @core.ThemeConfigValue {
   value["title"] = theme_string_value(page.title)
   value["nav_title"] = theme_string_value(page.nav_title)
   value["description"] = theme_string_value(page.description)
+  value["summary"] = theme_string_value(page.summary)
+  value["date"] = theme_optional_string_value(page.date)
+  value["updated"] = theme_optional_string_value(page.updated)
+  value["tags"] = theme_string_array_value(page.tags)
+  value["series"] = theme_optional_string_value(page.series)
+  value["cover"] = theme_optional_string_value(page.cover)
+  value["author"] = theme_optional_string_value(page.author)
+  value["column"] = theme_optional_string_value(page.column)
+  value["reading_time"] = theme_number_value(page.reading_time_minutes)
   value["url"] = theme_string_value(page.url_path)
   value["url_path"] = theme_string_value(page.url_path)
   value["source_path"] = theme_string_value(page.source_path)
   value["nav_hidden"] = theme_bool_value(page.nav_hidden)
   value["is_index"] = theme_bool_value(page.is_index)
   theme_object_value(value)
+}
+
+///|
+fn theme_page_link_value(link : @core.PageLink?) -> @core.ThemeConfigValue {
+  match link {
+    Some(page_link) => {
+      let value : Map[String, @core.ThemeConfigValue] = {}
+      value["title"] = theme_string_value(page_link.title)
+      value["url"] = theme_string_value(page_link.url_path)
+      value["url_path"] = theme_string_value(page_link.url_path)
+      value["source_path"] = theme_string_value(page_link.source_path)
+      theme_object_value(value)
+    }
+    None => theme_object_value({})
+  }
+}
+
+///|
+fn theme_heading_value(heading : @core.HeadingEntry) -> @core.ThemeConfigValue {
+  let value : Map[String, @core.ThemeConfigValue] = {}
+  value["level"] = theme_number_value(heading.level)
+  value["id"] = theme_string_value(heading.id)
+  value["title"] = theme_string_value(heading.title)
+  theme_object_value(value)
+}
+
+///|
+fn theme_backlink_entry_value(
+  entry : @core.BacklinkEntry,
+) -> @core.ThemeConfigValue {
+  let value : Map[String, @core.ThemeConfigValue] = {}
+  value["title"] = theme_string_value(entry.page.title)
+  value["url"] = theme_string_value(entry.page.url_path)
+  value["url_path"] = theme_string_value(entry.page.url_path)
+  value["source_path"] = theme_string_value(entry.page.source_path)
+  value["snippet"] = theme_string_value(entry.snippet)
+  value["date"] = theme_optional_string_value(entry.date)
+  value["series"] = theme_optional_string_value(entry.series)
+  theme_object_value(value)
+}
+
+///|
+fn theme_related_entry_value(
+  entry : @core.RelatedEntry,
+) -> @core.ThemeConfigValue {
+  let value : Map[String, @core.ThemeConfigValue] = {}
+  value["title"] = theme_string_value(entry.page.title)
+  value["url"] = theme_string_value(entry.page.url_path)
+  value["url_path"] = theme_string_value(entry.page.url_path)
+  value["source_path"] = theme_string_value(entry.page.source_path)
+  value["reason"] = theme_string_value(entry.reason)
+  value["score"] = theme_number_value(entry.score)
+  value["shared_tags"] = theme_string_array_value(entry.shared_tags)
+  value["series"] = theme_optional_string_value(entry.series)
+  value["date"] = theme_optional_string_value(entry.date)
+  theme_object_value(value)
+}
+
+///|
+fn theme_series_nav_value(series : @core.SeriesNav?) -> @core.ThemeConfigValue {
+  match series {
+    Some(series_nav) => {
+      let items : Array[@core.ThemeConfigValue] = []
+      for item in series_nav.items {
+        items.push(theme_page_link_value(Some(item)))
+      }
+      let value : Map[String, @core.ThemeConfigValue] = {}
+      value["name"] = theme_string_value(series_nav.name)
+      value["previous"] = theme_page_link_value(series_nav.previous)
+      value["next"] = theme_page_link_value(series_nav.next)
+      value["items"] = theme_array_value(items)
+      value["count"] = theme_number_value(series_nav.items.length())
+      theme_object_value(value)
+    }
+    None => theme_object_value({})
+  }
 }
 
 ///|
@@ -843,15 +957,6 @@ fn collect_theme_section_items(
     None => ()
   }
   sections
-}
-
-///|
-fn page_titles_by_url(pages : Array[@core.SitePage]) -> Map[String, String] {
-  let titles : Map[String, String] = {}
-  for page in pages {
-    titles[page.url_path] = page.title
-  }
-  titles
 }
 
 ///|
@@ -1331,11 +1436,99 @@ pub fn site_page_nav_hidden(meta : @core.PageMeta) -> Bool {
 }
 
 ///|
-pub fn site_page_description(meta : @core.PageMeta) -> String {
-  match meta.frontmatter.description {
-    Some(description) => description
-    None => ""
+fn normalized_optional_text(value : String?) -> String? {
+  match value {
+    Some(text) => {
+      let normalized = @core.normalize_inline_text(text)
+      if normalized.is_empty() {
+        None
+      } else {
+        Some(normalized)
+      }
+    }
+    None => None
   }
+}
+
+///|
+fn clip_summary(source : String, max_length : Int) -> String {
+  if source.length() <= max_length {
+    return source
+  }
+  let mut end = max_length
+  while end > 0 && source[end - 1:end].to_string() != " " {
+    end -= 1
+  }
+  let clipped = if end <= 0 {
+    source[:max_length].to_string()
+  } else {
+    source[:end].to_string().trim().to_string()
+  }
+  if clipped.is_empty() {
+    source[:max_length].to_string()
+  } else {
+    clipped + "..."
+  }
+}
+
+///|
+fn site_page_summary(input : @runtime.BuildInput) -> String {
+  match normalized_optional_text(input.meta.frontmatter.summary) {
+    Some(summary) => summary
+    None =>
+      match normalized_optional_text(input.meta.frontmatter.description) {
+        Some(description) => description
+        None => {
+          let text = @core.source_plain_text(
+            input.docflow_content,
+            input.meta.format,
+          )
+          if text.is_empty() {
+            ""
+          } else {
+            clip_summary(text, 220)
+          }
+        }
+      }
+  }
+}
+
+///|
+pub fn site_page_description(meta : @core.PageMeta) -> String {
+  match normalized_optional_text(meta.frontmatter.description) {
+    Some(description) => description
+    None =>
+      match normalized_optional_text(meta.frontmatter.summary) {
+        Some(summary) => summary
+        None => ""
+      }
+  }
+}
+
+///|
+fn normalized_cover_url(value : String?) -> String? {
+  match value {
+    Some(path) => {
+      let trimmed = path.trim().to_string()
+      if trimmed.is_empty() {
+        None
+      } else if trimmed.has_prefix("http://") ||
+        trimmed.has_prefix("https://") ||
+        trimmed.has_prefix("/") {
+        Some(trimmed)
+      } else if trimmed.has_prefix("./") {
+        Some("/" + trimmed[2:trimmed.length()].to_string())
+      } else {
+        Some("/" + trimmed)
+      }
+    }
+    None => None
+  }
+}
+
+///|
+fn site_page_link(page : @core.SitePage) -> @core.PageLink {
+  { title: page.title, url_path: page.url_path, source_path: page.source_path }
 }
 
 ///|
@@ -1345,6 +1538,19 @@ fn build_site_page(input : @runtime.BuildInput) -> @core.SitePage {
     nav_title: site_page_nav_title(input.meta),
     nav_hidden: site_page_nav_hidden(input.meta),
     description: site_page_description(input.meta),
+    summary: site_page_summary(input),
+    date: normalized_optional_text(input.meta.frontmatter.date),
+    updated: normalized_optional_text(input.meta.frontmatter.updated),
+    tags: input.meta.frontmatter.tags,
+    series: normalized_optional_text(input.meta.frontmatter.series),
+    cover: normalized_cover_url(input.meta.frontmatter.cover),
+    author: normalized_optional_text(input.meta.frontmatter.author),
+    column: normalized_optional_text(input.meta.frontmatter.column),
+    reading_time_minutes: @core.estimate_reading_time_minutes(
+      input.docflow_content,
+      input.meta.format,
+    ),
+    source_format: input.meta.format,
     source_path: input.meta.source_path,
     url_path: input.meta.url_path,
     content_kind: input.meta.content_kind,
@@ -1382,15 +1588,443 @@ pub fn build_site_assembly_model(
 }
 
 ///|
+fn backlink_scan_document(
+  input : @runtime.BuildInput,
+) -> @docflow.ParsedDocument {
+  {
+    backend_name: "backlink-scan",
+    source_format: input.meta.format,
+    source_path: input.meta.source_path,
+    source_uuid: input.meta.source_path,
+    diagnostics: @docflow.empty_document_diagnostics(),
+    backend_payload: Some(input.docflow_content),
+  }
+}
+
+///|
+fn pages_by_url(pages : Array[@core.SitePage]) -> Map[String, @core.SitePage] {
+  let indexed : Map[String, @core.SitePage] = {}
+  for page in pages {
+    indexed[page.url_path] = page
+  }
+  indexed
+}
+
+///|
+fn compare_optional_dates_desc(left : String?, right : String?) -> Int {
+  match left {
+    Some(left_date) =>
+      match right {
+        Some(right_date) => right_date.compare(left_date)
+        None => -1
+      }
+    None =>
+      match right {
+        Some(_) => 1
+        None => 0
+      }
+  }
+}
+
+///|
+fn compare_optional_dates_asc(left : String?, right : String?) -> Int {
+  match left {
+    Some(left_date) =>
+      match right {
+        Some(right_date) => left_date.compare(right_date)
+        None => -1
+      }
+    None =>
+      match right {
+        Some(_) => 1
+        None => 0
+      }
+  }
+}
+
+///|
+fn compare_site_pages_by_recency(
+  left : @core.SitePage,
+  right : @core.SitePage,
+) -> Int {
+  let date_compare = compare_optional_dates_desc(left.date, right.date)
+  if date_compare != 0 {
+    return date_compare
+  }
+  left.source_path.compare(right.source_path)
+}
+
+///|
+fn compare_site_pages_by_series_order(
+  left : @core.SitePage,
+  right : @core.SitePage,
+) -> Int {
+  let date_compare = compare_optional_dates_asc(left.date, right.date)
+  if date_compare != 0 {
+    return date_compare
+  }
+  left.source_path.compare(right.source_path)
+}
+
+///|
+fn compare_backlink_entries(
+  left : @core.BacklinkEntry,
+  right : @core.BacklinkEntry,
+) -> Int {
+  let date_compare = compare_optional_dates_desc(left.date, right.date)
+  if date_compare != 0 {
+    return date_compare
+  }
+  left.page.source_path.compare(right.page.source_path)
+}
+
+///|
+fn compare_related_entries(
+  left : @core.RelatedEntry,
+  right : @core.RelatedEntry,
+) -> Int {
+  if left.score != right.score {
+    return right.score - left.score
+  }
+  let date_compare = compare_optional_dates_desc(left.date, right.date)
+  if date_compare != 0 {
+    return date_compare
+  }
+  left.page.source_path.compare(right.page.source_path)
+}
+
+///|
+fn contains_url(urls : Array[String], target : String) -> Bool {
+  urls.search_by(fn(url) { url == target }) is Some(_)
+}
+
+///|
+fn dedupe_urls(urls : Array[String]) -> Array[String] {
+  let deduped : Array[String] = []
+  for url in urls {
+    if !contains_url(deduped, url) {
+      deduped.push(url)
+    }
+  }
+  deduped
+}
+
+///|
+fn shared_tags(left : Array[String], right : Array[String]) -> Array[String] {
+  let shared : Array[String] = []
+  for tag in left {
+    if right.search_by(fn(candidate) { candidate == tag }) is Some(_) &&
+      shared.search_by(fn(existing) { existing == tag }) is None {
+      shared.push(tag)
+    }
+  }
+  shared
+}
+
+///|
+fn article_pages_only(pages : Array[@core.SitePage]) -> Array[@core.SitePage] {
+  let filtered : Array[@core.SitePage] = []
+  for page in pages {
+    if page.content_kind == @core.ContentKind::Article && !page.is_index {
+      filtered.push(page)
+    }
+  }
+  filtered
+}
+
+///|
+fn build_toc_by_url(
+  inputs : Array[@runtime.BuildInput],
+) -> Map[String, Array[@core.HeadingEntry]] {
+  let toc : Map[String, Array[@core.HeadingEntry]] = {}
+  for input in inputs {
+    if input.meta.format != @core.SourceFormat::Markdown {
+      continue
+    }
+    let headings : Array[@core.HeadingEntry] = []
+    for heading in @docflow.collect_markdown_headings(input.docflow_content) {
+      if heading.level > 1 {
+        headings.push(heading)
+      }
+    }
+    if !headings.is_empty() {
+      toc[input.meta.url_path] = headings
+    }
+  }
+  toc
+}
+
+///|
+fn build_outbound_links_by_url(
+  inputs : Array[@runtime.BuildInput],
+  wikilinker : @docflow.WikiLinker,
+) -> Map[String, Array[String]] {
+  let outbound : Map[String, Array[String]] = {}
+  for input in inputs {
+    if input.meta.format != @core.SourceFormat::Markdown {
+      outbound[input.meta.url_path] = []
+      continue
+    }
+    let targets = @docflow.collect_resolved_wikilink_targets(
+      wikilinker,
+      backlink_scan_document(input),
+    )
+    outbound[input.meta.url_path] = dedupe_urls(targets)
+  }
+  outbound
+}
+
+///|
+fn build_backlink_entries_by_url(
+  inputs : Array[@runtime.BuildInput],
+  pages : Array[@core.SitePage],
+  wikilinker : @docflow.WikiLinker,
+) -> Map[String, Array[@core.BacklinkEntry]] {
+  let page_index = pages_by_url(pages)
+  let collected : Map[String, Array[@core.BacklinkEntry]] = {}
+  for input in inputs {
+    if input.meta.format != @core.SourceFormat::Markdown {
+      continue
+    }
+    let source_page = match page_index.get(input.meta.url_path) {
+      Some(page) => page
+      None => continue
+    }
+    for
+      mention in @docflow.collect_resolved_wikilink_mentions(
+        wikilinker,
+        backlink_scan_document(input),
+      ) {
+      if mention.target_url == source_page.url_path {
+        continue
+      }
+      let existing = match collected.get(mention.target_url) {
+        Some(entries) => entries
+        None => []
+      }
+      let already_present = existing.search_by(fn(entry) {
+          entry.page.url_path == source_page.url_path
+        })
+        is Some(_)
+      if already_present {
+        continue
+      }
+      collected[mention.target_url] = existing +
+        [
+          {
+            page: site_page_link(source_page),
+            snippet: mention.snippet,
+            date: source_page.date,
+            series: source_page.series,
+          },
+        ]
+    }
+  }
+  let sorted : Map[String, Array[@core.BacklinkEntry]] = {}
+  for entry in collected {
+    let (url, backlinks) = entry
+    backlinks.sort_by(compare_backlink_entries)
+    sorted[url] = backlinks
+  }
+  sorted
+}
+
+///|
+fn build_article_prev_next(
+  pages : Array[@core.SitePage],
+) -> (Map[String, @core.PageLink], Map[String, @core.PageLink]) {
+  let articles = article_pages_only(pages)
+  articles.sort_by(compare_site_pages_by_recency)
+  let previous : Map[String, @core.PageLink] = {}
+  let next : Map[String, @core.PageLink] = {}
+  for index in 0..<articles.length() {
+    let current = articles[index]
+    if index > 0 {
+      previous[current.url_path] = site_page_link(articles[index - 1])
+    }
+    if index + 1 < articles.length() {
+      next[current.url_path] = site_page_link(articles[index + 1])
+    }
+  }
+  (previous, next)
+}
+
+///|
+fn build_series_nav_by_url(
+  pages : Array[@core.SitePage],
+) -> Map[String, @core.SeriesNav] {
+  let grouped : Map[String, Array[@core.SitePage]] = {}
+  for page in article_pages_only(pages) {
+    match page.series {
+      Some(series_name) => {
+        let existing = match grouped.get(series_name) {
+          Some(items) => items
+          None => []
+        }
+        grouped[series_name] = existing + [page]
+      }
+      None => ()
+    }
+  }
+  let navigation : Map[String, @core.SeriesNav] = {}
+  for entry in grouped {
+    let (series_name, items) = entry
+    items.sort_by(compare_site_pages_by_series_order)
+    let page_links : Array[@core.PageLink] = []
+    for item in items {
+      page_links.push(site_page_link(item))
+    }
+    for index in 0..<items.length() {
+      let previous = if index > 0 {
+        Some(site_page_link(items[index - 1]))
+      } else {
+        None
+      }
+      let next = if index + 1 < items.length() {
+        Some(site_page_link(items[index + 1]))
+      } else {
+        None
+      }
+      navigation[items[index].url_path] = {
+        name: series_name,
+        previous,
+        next,
+        items: page_links,
+      }
+    }
+  }
+  navigation
+}
+
+///|
+fn relationship_reason(
+  direct_link : Bool,
+  reverse_link : Bool,
+  shared_tags : Array[String],
+  same_series : Bool,
+) -> String {
+  let reasons : Array[String] = []
+  if same_series {
+    reasons.push("Same series")
+  }
+  if direct_link && reverse_link {
+    reasons.push("Links both ways")
+  } else if direct_link || reverse_link {
+    reasons.push("Directly linked")
+  }
+  if !shared_tags.is_empty() {
+    reasons.push("Shared tags: " + shared_tags.iter().join(", "))
+  }
+  reasons.iter().join(" · ")
+}
+
+///|
+fn relationship_score(
+  direct_link : Bool,
+  reverse_link : Bool,
+  shared_tags : Array[String],
+  same_series : Bool,
+) -> Int {
+  let link_score = if direct_link && reverse_link {
+    8
+  } else if direct_link || reverse_link {
+    5
+  } else {
+    0
+  }
+  let tag_score = shared_tags.length() * 3
+  let series_score = if same_series { 7 } else { 0 }
+  link_score + tag_score + series_score
+}
+
+///|
+fn build_related_entries_by_url(
+  pages : Array[@core.SitePage],
+  outbound : Map[String, Array[String]],
+) -> Map[String, Array[@core.RelatedEntry]] {
+  let related : Map[String, Array[@core.RelatedEntry]] = {}
+  let articles = article_pages_only(pages)
+  for current in articles {
+    let current_outbound = match outbound.get(current.url_path) {
+      Some(urls) => urls
+      None => []
+    }
+    let entries : Array[@core.RelatedEntry] = []
+    for candidate in articles {
+      if candidate.url_path == current.url_path || candidate.is_index {
+        continue
+      }
+      let candidate_outbound = match outbound.get(candidate.url_path) {
+        Some(urls) => urls
+        None => []
+      }
+      let tags = shared_tags(current.tags, candidate.tags)
+      let same_series = match current.series {
+        Some(series_name) =>
+          match candidate.series {
+            Some(candidate_series) => candidate_series == series_name
+            None => false
+          }
+        None => false
+      }
+      let direct_link = contains_url(current_outbound, candidate.url_path)
+      let reverse_link = contains_url(candidate_outbound, current.url_path)
+      let score = relationship_score(
+        direct_link, reverse_link, tags, same_series,
+      )
+      if score <= 0 {
+        continue
+      }
+      entries.push({
+        page: site_page_link(candidate),
+        reason: relationship_reason(
+          direct_link, reverse_link, tags, same_series,
+        ),
+        score,
+        shared_tags: tags,
+        series: candidate.series,
+        date: candidate.date,
+      })
+    }
+    entries.sort_by(compare_related_entries)
+    related[current.url_path] = if entries.length() > 4 {
+      entries[:4].to_array()
+    } else {
+      entries
+    }
+  }
+  related
+}
+
+///|
+fn build_article_experience_model(
+  inputs : Array[@runtime.BuildInput],
+  pages : Array[@core.SitePage],
+  wikilinker : @docflow.WikiLinker,
+) -> ArticleExperienceModel {
+  let toc = build_toc_by_url(inputs)
+  let backlinks = build_backlink_entries_by_url(inputs, pages, wikilinker)
+  let outbound = build_outbound_links_by_url(inputs, wikilinker)
+  let related = build_related_entries_by_url(pages, outbound)
+  let (previous, next) = build_article_prev_next(pages)
+  let series = build_series_nav_by_url(pages)
+  { toc, backlinks, related, previous, next, series }
+}
+
+///|
 fn build_search_index_item(
   input : @runtime.BuildInput,
 ) -> @core.SearchIndexItem {
   let frontmatter = input.meta.frontmatter
+  let excerpt = match frontmatter.extra.get("excerpt") {
+    Some(value) => Some(value)
+    None => frontmatter.summary
+  }
   {
     title: site_page_title(input.meta),
     url: input.meta.url_path,
     excerpt: @core.search_index_excerpt(
-      frontmatter.extra.get("excerpt"),
+      excerpt,
       input.docflow_content,
       input.meta.format,
     ),
@@ -1421,14 +2055,66 @@ fn write_search_index_output(
 }
 
 ///|
+fn find_page_by_url(
+  pages : Array[@core.SitePage],
+  url_path : String,
+) -> @core.SitePage? {
+  for page in pages {
+    if page.url_path == url_path {
+      return Some(page)
+    }
+  }
+  None
+}
+
+///|
+fn experience_backlinks_for_url(
+  experience : ArticleExperienceModel,
+  url_path : String,
+) -> Array[@core.BacklinkEntry] {
+  match experience.backlinks.get(url_path) {
+    Some(entries) => entries
+    None => []
+  }
+}
+
+///|
+fn experience_related_for_url(
+  experience : ArticleExperienceModel,
+  url_path : String,
+) -> Array[@core.RelatedEntry] {
+  match experience.related.get(url_path) {
+    Some(entries) => entries
+    None => []
+  }
+}
+
+///|
+fn experience_toc_for_url(
+  experience : ArticleExperienceModel,
+  url_path : String,
+) -> Array[@core.HeadingEntry] {
+  match experience.toc.get(url_path) {
+    Some(entries) => entries
+    None => []
+  }
+}
+
+///|
+fn reading_time_label(minutes : Int) -> String {
+  minutes.to_string() + " min read"
+}
+
+///|
 fn build_template_context(
   config : @core.MooninkConfig,
   active_theme : @runtime.ActiveThemeLayout,
   assembly : @core.SiteAssemblyModel,
-  backlinks : Map[String, Array[String]],
+  experience : ArticleExperienceModel,
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
 ) -> @docflow.TemplateContext {
+  let backlinks = experience_backlinks_for_url(experience, input.meta.url_path)
   let current_section = find_current_section_page(assembly.pages, input.meta)
   let current_section_title = match current_section {
     Some(section) => section.nav_title
@@ -1456,7 +2142,7 @@ fn build_template_context(
       assembly.navigation,
       input.meta.url_path,
     ),
-    backlink_urls: [],
+    backlink_urls: backlinks.map(fn(entry) { entry.page.url_path }),
     current_section_title,
     current_section_url,
     page_header_title: site_page_title(input.meta),
@@ -1465,11 +2151,7 @@ fn build_template_context(
       assembly.pages,
       input,
     ),
-    backlinks_html: render_backlinks_html(
-      input.meta.url_path,
-      assembly.pages,
-      backlinks,
-    ),
+    backlinks_html: render_backlinks_html(backlinks),
     body_html: rendered.html,
   }
 }
@@ -1479,13 +2161,13 @@ fn apply_build_template(
   config : @core.MooninkConfig,
   active_theme : @runtime.ActiveThemeLayout,
   assembly : @core.SiteAssemblyModel,
-  backlinks : Map[String, Array[String]],
+  experience : ArticleExperienceModel,
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
   template_source : String,
 ) -> @docflow.TemplatedPage {
   let context = build_template_context(
-    config, active_theme, assembly, backlinks, input, rendered,
+    config, active_theme, assembly, experience, input, rendered,
   )
   @docflow.apply_template(rendered, context, template_source)
 }
@@ -1640,11 +2322,16 @@ fn build_theme_render_context(
   config : @core.MooninkConfig,
   bundle : @runtime.ActiveThemeBundle,
   assembly : @core.SiteAssemblyModel,
-  backlinks : Map[String, Array[String]],
+  experience : ArticleExperienceModel,
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
 ) -> @docflow.ThemeRenderContext {
   let page_model = @core.page_view_model_from_meta(input.meta)
+  let current_page = match
+    find_page_by_url(assembly.pages, input.meta.url_path) {
+    Some(page) => page
+    None => build_site_page(input)
+  }
   let current_section = find_current_section_page(assembly.pages, input.meta)
   let current_section_title = match current_section {
     Some(section) => section.nav_title
@@ -1664,11 +2351,16 @@ fn build_theme_render_context(
     assembly.pages,
     input,
   )
-  let backlinks_html = render_backlinks_html(
+  let backlink_entries = experience_backlinks_for_url(
+    experience,
     input.meta.url_path,
-    assembly.pages,
-    backlinks,
   )
+  let related_entries = experience_related_for_url(
+    experience,
+    input.meta.url_path,
+  )
+  let toc_entries = experience_toc_for_url(experience, input.meta.url_path)
+  let backlinks_html = render_backlinks_html(backlink_entries)
 
   let nav_items : Array[@core.ThemeConfigValue] = []
   for item in assembly.navigation.items {
@@ -1678,23 +2370,28 @@ fn build_theme_render_context(
   for page in assembly.pages {
     page_items.push(theme_site_page_value(page))
   }
-  let page_titles = page_titles_by_url(assembly.pages)
   let backlink_items : Array[@core.ThemeConfigValue] = []
-  let backlink_urls = match backlinks.get(input.meta.url_path) {
-    Some(urls) => urls
-    None => []
+  for backlink in backlink_entries {
+    backlink_items.push(theme_backlink_entry_value(backlink))
   }
-  for url in backlink_urls {
-    let backlink : Map[String, @core.ThemeConfigValue] = {}
-    backlink["title"] = theme_string_value(
-      match page_titles.get(url) {
-        Some(title) => title
-        None => url
-      },
-    )
-    backlink["url"] = theme_string_value(url)
-    backlink["url_path"] = theme_string_value(url)
-    backlink_items.push(theme_object_value(backlink))
+  let related_items : Array[@core.ThemeConfigValue] = []
+  for related in related_entries {
+    related_items.push(theme_related_entry_value(related))
+  }
+  let toc_items : Array[@core.ThemeConfigValue] = []
+  for heading in toc_entries {
+    toc_items.push(theme_heading_value(heading))
+  }
+  let previous_link = experience.previous.get(input.meta.url_path)
+  let next_link = experience.next.get(input.meta.url_path)
+  let series_nav = experience.series.get(input.meta.url_path)
+  let series_items : Array[@core.ThemeConfigValue] = []
+  match series_nav {
+    Some(nav) =>
+      for item in nav.items {
+        series_items.push(theme_page_link_value(Some(item)))
+      }
+    None => ()
   }
 
   let site : Map[String, @core.ThemeConfigValue] = {}
@@ -1712,25 +2409,59 @@ fn build_theme_render_context(
   let page : Map[String, @core.ThemeConfigValue] = {}
   page["kind"] = theme_string_value(page_model.kind)
   page["layout"] = theme_string_value(page_model.layout)
-  page["title"] = theme_string_value(site_page_title(input.meta))
-  page["nav_title"] = theme_string_value(site_page_nav_title(input.meta))
-  page["description"] = theme_string_value(site_page_description(input.meta))
+  page["title"] = theme_string_value(current_page.title)
+  page["nav_title"] = theme_string_value(current_page.nav_title)
+  page["description"] = theme_string_value(current_page.description)
+  page["summary"] = theme_string_value(current_page.summary)
+  page["date"] = theme_optional_string_value(current_page.date)
+  page["updated"] = theme_optional_string_value(current_page.updated)
+  page["tags"] = theme_string_array_value(current_page.tags)
+  page["series"] = theme_optional_string_value(current_page.series)
+  page["cover"] = theme_optional_string_value(current_page.cover)
+  page["cover_url"] = theme_optional_string_value(current_page.cover)
+  page["author"] = theme_optional_string_value(current_page.author)
+  page["author_display"] = theme_string_value(
+    match current_page.author {
+      Some(author) => author
+      None => config.site_name
+    },
+  )
+  page["column"] = theme_optional_string_value(current_page.column)
+  page["reading_time"] = theme_number_value(current_page.reading_time_minutes)
+  page["reading_time_label"] = theme_string_value(
+    reading_time_label(current_page.reading_time_minutes),
+  )
   page["url"] = theme_string_value(input.meta.url_path)
   page["url_path"] = theme_string_value(input.meta.url_path)
   page["source_path"] = theme_string_value(input.meta.source_path)
   page["body_class"] = theme_string_value(page_body_class(input.meta))
   page["body_html"] = theme_string_value(rendered.html)
+  page["source_format"] = theme_string_value(
+    current_page.source_format.to_string(),
+  )
   page["theme_meta"] = theme_object_value(page_model.theme_meta)
   page["navigation_html"] = theme_string_value(navigation_html)
   page["current_section_title"] = theme_string_value(current_section_title)
   page["current_section_url"] = theme_string_value(current_section_url)
   page["page_header_html"] = theme_string_value(page_header_html)
   page["backlinks_html"] = theme_string_value(backlinks_html)
+  page["has_backlinks"] = theme_bool_value(!backlink_entries.is_empty())
+  page["has_related"] = theme_bool_value(!related_entries.is_empty())
+  page["has_toc"] = theme_bool_value(!toc_entries.is_empty())
+  page["previous"] = theme_page_link_value(previous_link)
+  page["next"] = theme_page_link_value(next_link)
+  page["has_neighbors"] = theme_bool_value(
+    previous_link is Some(_) || next_link is Some(_),
+  )
+  page["series_nav"] = theme_series_nav_value(series_nav)
 
   let collections : Map[String, @core.ThemeConfigValue] = {}
   collections["nav"] = theme_collection_items_value(nav_items)
   collections["pages"] = theme_collection_items_value(page_items)
   collections["backlinks"] = theme_collection_items_value(backlink_items)
+  collections["related"] = theme_collection_items_value(related_items)
+  collections["toc"] = theme_collection_items_value(toc_items)
+  collections["series"] = theme_collection_items_value(series_items)
   collections["sections"] = theme_collection_items_value(section_items)
 
   let slots : Map[String, @core.ThemeConfigValue] = {}
@@ -1757,7 +2488,7 @@ fn apply_build_theme_template(
   config : @core.MooninkConfig,
   bundle : @runtime.ActiveThemeBundle,
   assembly : @core.SiteAssemblyModel,
-  backlinks : Map[String, Array[String]],
+  experience : ArticleExperienceModel,
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
 ) -> @docflow.TemplatedPage raise BuildCommandError {
@@ -1765,7 +2496,7 @@ fn apply_build_theme_template(
     err => raise err
   }
   let context = build_theme_render_context(
-    config, bundle, assembly, backlinks, input, rendered,
+    config, bundle, assembly, experience, input, rendered,
   )
   {
     route: input.meta.url_path,
@@ -1962,7 +2693,11 @@ fn build_site_result(
   let mut page_count = 0
   let diagnostics : Array[BuildDiagnostic] = []
   let wikilinker = build_wikilinker_with_assets(inputs, inventory.asset_files)
-  let backlinks = build_backlink_index(inputs, wikilinker)
+  let experience = build_article_experience_model(
+    inputs,
+    assembly.pages,
+    wikilinker,
+  )
   for input in inputs {
     let parser = match parser_for_format(input.meta.format) {
       Ok(parser) => parser
@@ -1991,7 +2726,7 @@ fn build_site_result(
     let templated = match theme_bundle {
       Some(bundle) =>
         apply_build_theme_template(
-          config, bundle, assembly, backlinks, input, rendered,
+          config, bundle, assembly, experience, input, rendered,
         ) catch {
           err => return Err(err)
         }
@@ -2004,7 +2739,7 @@ fn build_site_result(
           config,
           active_theme,
           assembly,
-          backlinks,
+          experience,
           input,
           rendered,
           active_theme.source,
@@ -2263,6 +2998,7 @@ fn check_output_categories() -> Array[CheckCategory] {
     CheckCategory::Routes,
     CheckCategory::Site,
     CheckCategory::Wikilinks,
+    CheckCategory::Site,
   ]
 }
 

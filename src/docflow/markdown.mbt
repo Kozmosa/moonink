@@ -19,7 +19,7 @@ pub fn markdown_backend_capabilities() -> ParserCapabilities {
 /// Render Markdown through mizchi/markdown using the serialized parser payload contract.
 pub fn render_markdown_backend_payload(serialized_markdown : String) -> String {
   let result = @markdown.parse(serialized_markdown)
-  @markdown.render_html(result.document)
+  inject_html_heading_ids(@markdown.render_html(result.document))
 }
 
 ///|

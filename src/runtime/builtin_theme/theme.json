@@ -6,12 +6,18 @@
     "article": "layouts/article.html"
   },
   "tokens": [
-    { "name": "color.bg", "default": "#f8f5ef" },
-    { "name": "color.fg", "default": "#2d241d" },
-    { "name": "sidebar.width", "default": "16rem" },
-    { "name": "article.width", "default": "44rem" },
-    { "name": "border.muted", "default": "#d9d0c4" },
-    { "name": "text.muted", "default": "#5c5146" }
+    { "name": "color.bg", "default": "#f3ede2" },
+    { "name": "color.fg", "default": "#231b15" },
+    { "name": "color.surface", "default": "#fbf7f0" },
+    { "name": "color.surface.alt", "default": "#ecdfcf" },
+    { "name": "color.accent", "default": "#8d4c2f" },
+    { "name": "color.accent.soft", "default": "#d9b59c" },
+    { "name": "sidebar.width", "default": "17rem" },
+    { "name": "article.width", "default": "48rem" },
+    { "name": "border.muted", "default": "#d7c6b4" },
+    { "name": "text.muted", "default": "#655648" },
+    { "name": "radius.card", "default": "1.35rem" },
+    { "name": "shadow.card", "default": "0 22px 60px rgba(61, 38, 18, 0.12)" }
   ],
   "slots": ["head", "scripts"]
 }

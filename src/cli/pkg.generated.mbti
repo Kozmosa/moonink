@@ -97,6 +97,15 @@ pub(all) suberror CheckCommandError {
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+pub(all) struct ArticleExperienceModel {
+  toc : Map[String, Array[@core.HeadingEntry]]
+  backlinks : Map[String, Array[@core.BacklinkEntry]]
+  related : Map[String, Array[@core.RelatedEntry]]
+  previous : Map[String, @core.PageLink]
+  next : Map[String, @core.PageLink]
+  series : Map[String, @core.SeriesNav]
+} derive(Eq, @debug.Debug)
+
 pub struct BuildCliOptions {
   config_path : String
   output_dir : String?

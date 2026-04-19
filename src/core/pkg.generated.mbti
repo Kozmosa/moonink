@@ -20,6 +20,8 @@ pub fn default_exclude() -> Array[String]
 
 pub fn dirname_relative_path(String) -> String raise PathPolicyError
 
+pub fn estimate_reading_time_minutes(String, SourceFormat) -> Int
+
 pub fn extract_frontmatter_raw(String) -> (String?, String)
 
 pub fn extract_json_object(Map[String, Json], String) -> Map[String, Json]?
@@ -37,6 +39,8 @@ pub fn generate_route(String, RouteStyle) -> String
 pub fn join_relative_path(String, String) -> String raise PathPolicyError
 
 pub fn normalize_config_path_or_error(String) -> String raise ConfigError
+
+pub fn normalize_inline_text(String) -> String
 
 pub fn normalize_output_dir_or_error(String) -> String raise ConfigError
 
@@ -65,6 +69,8 @@ pub fn search_index_document_to_json(SearchIndexDocument) -> String
 pub fn search_index_excerpt(String?, String, SourceFormat) -> String
 
 pub fn should_exclude(String, Array[String]) -> Bool
+
+pub fn source_plain_text(String, SourceFormat) -> String
 
 pub fn theme_config_value_from_json(Json) -> ThemeConfigValue
 
@@ -108,6 +114,13 @@ pub(all) suberror ThemeManifestError {
 pub impl Show for ThemeManifestError
 
 // Types and methods
+pub(all) struct BacklinkEntry {
+  page : PageLink
+  snippet : String
+  date : String?
+  series : String?
+} derive(Eq, @debug.Debug)
+
 pub(all) struct BuildContext {
   config : MooninkConfig
   pages : Array[PageMeta]
@@ -141,6 +154,12 @@ pub(all) struct Frontmatter {
   description : String?
   content_type : String?
   date : String?
+  updated : String?
+  summary : String?
+  series : String?
+  cover : String?
+  author : String?
+  column : String?
   tags : Array[String]
   draft : Bool
   layout : String?
@@ -156,6 +175,12 @@ pub(all) enum FrontmatterFieldShape {
   List
 } derive(Eq, @debug.Debug)
 pub impl Show for FrontmatterFieldShape
+
+pub(all) struct HeadingEntry {
+  level : Int
+  id : String
+  title : String
+} derive(Eq, @debug.Debug)
 
 pub(all) struct MooninkConfig {
   config_path : String
@@ -188,6 +213,12 @@ pub(all) struct NavigationModel {
   note : String
 } derive(Eq, @debug.Debug)
 
+pub(all) struct PageLink {
+  title : String
+  url_path : String
+  source_path : String
+} derive(Eq, @debug.Debug)
+
 pub(all) struct PageMeta {
   source_path : String
   url_path : String
@@ -201,6 +232,15 @@ pub(all) struct PageMeta {
   is_index : Bool
 } derive(Eq, @debug.Debug)
 pub fn PageMeta::new(String, ContentKind, SourceFormat, Frontmatter, RouteStyle) -> Self
+
+pub(all) struct RelatedEntry {
+  page : PageLink
+  reason : String
+  score : Int
+  shared_tags : Array[String]
+  series : String?
+  date : String?
+} derive(Eq, @debug.Debug)
 
 pub(all) enum RouteStyle {
   Pretty
@@ -222,6 +262,13 @@ pub(all) struct SearchIndexItem {
   date : String?
 } derive(Eq, @debug.Debug)
 
+pub(all) struct SeriesNav {
+  name : String
+  previous : PageLink?
+  next : PageLink?
+  items : Array[PageLink]
+} derive(Eq, @debug.Debug)
+
 pub(all) struct SiteAssemblyModel {
   pages : Array[SitePage]
   navigation : NavigationModel
@@ -236,6 +283,16 @@ pub(all) struct SitePage {
   nav_title : String
   nav_hidden : Bool
   description : String
+  summary : String
+  date : String?
+  updated : String?
+  tags : Array[String]
+  series : String?
+  cover : String?
+  author : String?
+  column : String?
+  reading_time_minutes : Int
+  source_format : SourceFormat
   source_path : String
   url_path : String
   content_kind : ContentKind

@@ -19,6 +19,10 @@ pub fn article_site_entry(TemplatedPage) -> SiteEntry
 
 pub fn broken_parser_adapter(name? : String, note? : String) -> ParserAdapter
 
+pub fn collect_markdown_headings(String) -> Array[@core.HeadingEntry]
+
+pub fn collect_resolved_wikilink_mentions(WikiLinker, ParsedDocument) -> Array[ResolvedWikilinkMention]
+
 pub fn collect_resolved_wikilink_targets(WikiLinker, ParsedDocument) -> Array[String]
 
 pub fn construct_site(Array[SiteEntry]) -> SiteAssembly
@@ -48,6 +52,8 @@ pub fn format_document_diagnostics(DocumentDiagnostics) -> String
 pub fn html_passthrough_parser_adapter() -> ParserAdapter
 
 pub fn indexed_wikilinker(Map[String, String], Map[String, Array[String]], resource_targets? : Map[String, String], ambiguous_resource_targets? : Map[String, Array[String]], name? : String, note? : String) -> WikiLinker
+
+pub fn inject_html_heading_ids(String) -> String
 
 pub fn lookup_parser_adapter(ParserRegistry, @core.SourceFormat) -> Result[ParserAdapter, AdapterRegistryError]
 
@@ -183,6 +189,13 @@ pub(all) struct RenderedDocument {
   source_uuid : String
   html : String
   note : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ResolvedWikilinkMention {
+  target_url : String
+  label : String
+  snippet : String
+  is_embed : Bool
 } derive(Eq, @debug.Debug)
 
 pub(all) struct SiteAssembly {

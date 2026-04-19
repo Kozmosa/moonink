@@ -89,6 +89,14 @@ pub(all) struct WikiLinker {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct ResolvedWikilinkMention {
+  target_url : String
+  label : String
+  snippet : String
+  is_embed : Bool
+} derive(Debug, Eq)
+
+///|
 /// Contract surface for render backends that transform parsed documents into HTML.
 pub(all) struct RenderAdapter {
   name : String

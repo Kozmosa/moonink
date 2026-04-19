@@ -5,6 +5,16 @@ test "site assembly model supports construction" {
     nav_title: "Home",
     nav_hidden: false,
     description: "Landing page",
+    summary: "Landing page",
+    date: None,
+    updated: None,
+    tags: [],
+    series: None,
+    cover: None,
+    author: None,
+    column: None,
+    reading_time_minutes: 1,
+    source_format: @core.SourceFormat::Markdown,
     source_path: "index.md",
     url_path: "/",
     content_kind: @core.ContentKind::Page,
@@ -411,6 +421,18 @@ test "parse_frontmatter parses core fields" {
 }
 
 ///|
+test "parse_frontmatter parses article presentation fields" {
+  let yaml = "title: My Article\nsummary: Quick tour\nupdated: 2026-04-19\nseries: Notebook Atlas\ncover: images/cover.png\nauthor: Koz\ncolumn: Essays"
+  let fm = @core.parse_frontmatter(yaml)
+  inspect(fm.summary, content="Some(\"Quick tour\")")
+  inspect(fm.updated, content="Some(\"2026-04-19\")")
+  inspect(fm.series, content="Some(\"Notebook Atlas\")")
+  inspect(fm.cover, content="Some(\"images/cover.png\")")
+  inspect(fm.author, content="Some(\"Koz\")")
+  inspect(fm.column, content="Some(\"Essays\")")
+}
+
+///|
 test "parse_frontmatter parses tags list" {
   let yaml = "title: Tagged\ntags: [moonbit, ssg, test]"
   let fm = @core.parse_frontmatter(yaml)
@@ -542,6 +564,44 @@ test "search index excerpt derives plain text from markdown body" {
       @core.SourceFormat::Markdown,
     ),
     content="Hello World This is body text for search.",
+  )
+}
+
+///|
+test "source_plain_text normalizes markdown for presentation signals" {
+  inspect(
+    @core.source_plain_text(
+      "# Heading\n\nThis is **bold** and [linked](guide.md).",
+      @core.SourceFormat::Markdown,
+    ),
+    content="Heading This is bold and linked.",
+  )
+}
+
+///|
+test "estimate_reading_time_minutes rounds up small documents to one minute" {
+  inspect(
+    @core.estimate_reading_time_minutes(
+      "Short note with only a few words.",
+      @core.SourceFormat::Markdown,
+    ),
+    content="1",
+  )
+}
+
+///|
+test "estimate_reading_time_minutes counts cjk characters as individual words" {
+  // 440 CJK characters → ceil(440/220) = 2 minutes
+  let sb = StringBuilder::new()
+  for _ in 0..<440 {
+    sb.write_string("石")
+  }
+  inspect(
+    @core.estimate_reading_time_minutes(
+      sb.to_string(),
+      @core.SourceFormat::Unknown,
+    ),
+    content="2",
   )
 }
 

@@ -237,6 +237,103 @@ fn rewrite_markdown_wikilinks(
 }
 
 ///|
+fn find_line_start(payload : String, cursor : Int) -> Int {
+  let mut index = cursor
+  while index > 0 {
+    if payload[index - 1:index].to_string() == "\n" {
+      return index
+    }
+    index -= 1
+  }
+  0
+}
+
+///|
+fn find_line_end(payload : String, cursor : Int) -> Int {
+  let mut index = cursor
+  while index < payload.length() {
+    if payload[index:index + 1].to_string() == "\n" {
+      return index
+    }
+    index += 1
+  }
+  payload.length()
+}
+
+///|
+fn replace_wikilinks_with_labels(source : String) -> String {
+  let output = StringBuilder::new()
+  let mut cursor = 0
+  while cursor < source.length() {
+    if find_embed_open(source, cursor) {
+      match find_wikilink_close(source, cursor + 3) {
+        Some(close_cursor) => {
+          let inner = source[cursor + 3:close_cursor].to_string()
+          let (_, label) = parse_wikilink_inner(inner)
+          output.write_string(label)
+          cursor = close_cursor + 2
+        }
+        None => {
+          output.write_string(source[cursor:].to_string())
+          cursor = source.length()
+        }
+      }
+    } else if cursor + 1 < source.length() &&
+      source[cursor:cursor + 2].to_string() == "[[" {
+      match find_wikilink_close(source, cursor + 2) {
+        Some(close_cursor) => {
+          let inner = source[cursor + 2:close_cursor].to_string()
+          let (_, label) = parse_wikilink_inner(inner)
+          output.write_string(label)
+          cursor = close_cursor + 2
+        }
+        None => {
+          output.write_string(source[cursor:].to_string())
+          cursor = source.length()
+        }
+      }
+    } else {
+      output.write_char(source.unsafe_get(cursor).unsafe_to_char())
+      cursor += 1
+    }
+  }
+  output.to_string()
+}
+
+///|
+fn clip_snippet(source : String, max_length : Int) -> String {
+  if source.length() <= max_length {
+    return source
+  }
+  let mut end = max_length
+  while end > 0 && source[end - 1:end].to_string() != " " {
+    end -= 1
+  }
+  let clipped = if end <= 0 {
+    source[:max_length].to_string()
+  } else {
+    source[:end].to_string().trim().to_string()
+  }
+  if clipped.is_empty() {
+    source[:max_length].to_string()
+  } else {
+    clipped + "..."
+  }
+}
+
+///|
+fn mention_snippet(payload : String, cursor : Int) -> String {
+  let line_start = find_line_start(payload, cursor)
+  let line_end = find_line_end(payload, cursor)
+  let line = payload[line_start:line_end].to_string()
+  let text = @core.source_plain_text(
+    replace_wikilinks_with_labels(line),
+    @core.SourceFormat::Markdown,
+  )
+  clip_snippet(text, 160)
+}
+
+///|
 fn collect_resolved_wikilink_targets_from_payload(
   linker : WikiLinker,
   payload : String,
@@ -269,6 +366,43 @@ fn collect_resolved_wikilink_targets_from_payload(
 }
 
 ///|
+fn collect_resolved_wikilink_mentions_from_payload(
+  linker : WikiLinker,
+  payload : String,
+) -> Array[ResolvedWikilinkMention] {
+  let mentions : Array[ResolvedWikilinkMention] = []
+  let mut cursor = 0
+  while cursor < payload.length() {
+    if cursor + 1 < payload.length() &&
+      payload[cursor:cursor + 2].to_string() == "[[" {
+      match find_wikilink_close(payload, cursor + 2) {
+        Some(close_cursor) => {
+          let inner = payload[cursor + 2:close_cursor].to_string()
+          let (target, label) = parse_wikilink_inner(inner)
+          if target != "" {
+            match resolve_wikilink(linker, target) {
+              Ok(url) =>
+                mentions.push({
+                  target_url: url,
+                  label,
+                  snippet: mention_snippet(payload, cursor),
+                  is_embed: false,
+                })
+              Err(_) => ()
+            }
+          }
+          cursor = close_cursor + 2
+        }
+        None => cursor = payload.length()
+      }
+    } else {
+      cursor += 1
+    }
+  }
+  mentions
+}
+
+///|
 /// Collect resolved WikiLink destinations without inspecting rendered markdown links.
 pub fn collect_resolved_wikilink_targets(
   linker : WikiLinker,
@@ -279,6 +413,22 @@ pub fn collect_resolved_wikilink_targets(
       match parsed.backend_payload {
         Some(payload) =>
           collect_resolved_wikilink_targets_from_payload(linker, payload)
+        None => []
+      }
+    _ => []
+  }
+}
+
+///|
+pub fn collect_resolved_wikilink_mentions(
+  linker : WikiLinker,
+  parsed : ParsedDocument,
+) -> Array[ResolvedWikilinkMention] {
+  match parsed.source_format {
+    @core.SourceFormat::Markdown =>
+      match parsed.backend_payload {
+        Some(payload) =>
+          collect_resolved_wikilink_mentions_from_payload(linker, payload)
         None => []
       }
     _ => []
