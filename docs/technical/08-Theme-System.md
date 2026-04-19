@@ -47,7 +47,8 @@ The current built-in theme slice covers:
 - dedicated generated-surface layouts for `search`, `collection`, and `archive`;
 - build-owned homepage modules and system pages for `search`, `tags`, `series`, and `archive`;
 - typed author/profile consumption from site config;
-- reuse of existing `navigation_html`, `current_section_*`, and `page_header_html` template context fields.
+- article-local relationship navigation through structured `collections.relationships`;
+- reuse of existing `navigation_html`, `current_section_*`, `page_header_html`, and preview-time `slots.scripts` injection.
 
 The Theme V2 layout map currently recognizes:
 

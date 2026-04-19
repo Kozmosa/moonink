@@ -99,6 +99,7 @@ pub(all) suberror CheckCommandError {
 // Types and methods
 pub(all) struct ArticleExperienceModel {
   toc : Map[String, Array[@core.HeadingEntry]]
+  mentioned : Map[String, Array[@core.RelationshipEntry]]
   backlinks : Map[String, Array[@core.BacklinkEntry]]
   related : Map[String, Array[@core.RelatedEntry]]
   previous : Map[String, @core.PageLink]
@@ -211,6 +212,8 @@ pub(all) struct PreparedServeRuntime {
   build_stage : ServeBuildStage
 } derive(Eq, @debug.Debug)
 
+type PreparedServeWatch derive(Eq, @debug.Debug)
+
 pub enum ServeBuildStage {
   Clean(BuildSummary)
   WithWarnings(BuildSummary, Array[BuildDiagnostic])
@@ -223,6 +226,10 @@ pub struct ServeCliOptions {
   port : Int
 } derive(Eq, @debug.Debug)
 pub impl Show for ServeCliOptions
+
+type ServePreviewStatus derive(Eq, @debug.Debug)
+
+type ServeRenderCache derive(Eq, @debug.Debug)
 
 pub struct ServeSession {
   host : String

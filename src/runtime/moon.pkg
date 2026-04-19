@@ -14,5 +14,7 @@ options(
     "search_index_clock_wasm.mbt": [ "wasm", "wasm-gc" ],
     "serve_delegate_native.mbt": [ "native", "llvm" ],
     "serve_delegate_stub.mbt": [ "js", "wasm", "wasm-gc" ],
+    "serve_process_native.mbt": [ "native", "llvm" ],
+    "serve_process_stub.mbt": [ "js", "wasm", "wasm-gc" ],
   },
 )

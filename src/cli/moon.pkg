@@ -2,4 +2,5 @@ import {
   "kozmosa/moonink/core" @core,
   "kozmosa/moonink/runtime" @runtime,
   "kozmosa/moonink/docflow" @docflow,
+  "moonbitlang/core/encoding/utf8" @utf8,
 }

@@ -78,6 +78,7 @@ pub(all) struct CheckReport {
 ///|
 pub(all) struct ArticleExperienceModel {
   toc : Map[String, Array[@core.HeadingEntry]]
+  mentioned : Map[String, Array[@core.RelationshipEntry]]
   backlinks : Map[String, Array[@core.BacklinkEntry]]
   related : Map[String, Array[@core.RelatedEntry]]
   previous : Map[String, @core.PageLink]
@@ -1113,6 +1114,23 @@ fn theme_backlink_entry_value(
 }
 
 ///|
+fn theme_relationship_entry_value(
+  entry : @core.RelationshipEntry,
+) -> @core.ThemeConfigValue {
+  let value : Map[String, @core.ThemeConfigValue] = {}
+  value["kind"] = theme_string_value(entry.kind)
+  value["title"] = theme_string_value(entry.page.title)
+  value["url"] = theme_string_value(entry.page.url_path)
+  value["url_path"] = theme_string_value(entry.page.url_path)
+  value["source_path"] = theme_string_value(entry.page.source_path)
+  value["reason"] = theme_optional_string_value(entry.reason)
+  value["snippet"] = theme_optional_string_value(entry.snippet)
+  value["date"] = theme_optional_string_value(entry.date)
+  value["series"] = theme_optional_string_value(entry.series)
+  theme_object_value(value)
+}
+
+///|
 fn theme_related_entry_value(
   entry : @core.RelatedEntry,
 ) -> @core.ThemeConfigValue {
@@ -1182,6 +1200,54 @@ fn theme_collection_items_value(
   collection["count"] = theme_number_value(items.length())
   collection["items"] = theme_array_value(items)
   theme_object_value(collection)
+}
+
+///|
+fn theme_relationship_sections_value(
+  mentioned_items : Array[@core.ThemeConfigValue],
+  backlink_items : Array[@core.ThemeConfigValue],
+  related_items : Array[@core.ThemeConfigValue],
+) -> @core.ThemeConfigValue {
+  let all_items : Array[@core.ThemeConfigValue] = []
+  for item in mentioned_items {
+    all_items.push(item)
+  }
+  for item in backlink_items {
+    all_items.push(item)
+  }
+  for item in related_items {
+    all_items.push(item)
+  }
+  let value : Map[String, @core.ThemeConfigValue] = {}
+  value["count"] = theme_number_value(all_items.length())
+  value["items"] = theme_array_value(all_items)
+  value["mentioned"] = theme_collection_items_value(mentioned_items)
+  value["backlinks"] = theme_collection_items_value(backlink_items)
+  value["related"] = theme_collection_items_value(related_items)
+  theme_object_value(value)
+}
+
+///|
+fn merge_slot_value(
+  existing : @core.ThemeConfigValue?,
+  extra : @core.ThemeConfigValue,
+) -> @core.ThemeConfigValue {
+  match existing {
+    Some(@core.ThemeConfigValue::StringValue(current)) =>
+      match extra {
+        @core.ThemeConfigValue::StringValue(addition) =>
+          if current.is_empty() {
+            theme_string_value(addition)
+          } else if addition.is_empty() {
+            theme_string_value(current)
+          } else {
+            theme_string_value(current + "\n" + addition)
+          }
+        _ => extra
+      }
+    Some(_) => extra
+    None => extra
+  }
 }
 
 ///|
@@ -2086,6 +2152,57 @@ fn build_outbound_links_by_url(
 }
 
 ///|
+let max_mention_entries_per_page : Int = 5
+
+///|
+fn build_mentioned_relationships_by_url(
+  inputs : Array[@runtime.BuildInput],
+  pages : Array[@core.SitePage],
+  wikilinker : @docflow.WikiLinker,
+) -> Map[String, Array[@core.RelationshipEntry]] {
+  let page_index = pages_by_url(pages)
+  let relationships : Map[String, Array[@core.RelationshipEntry]] = {}
+  for input in inputs {
+    if input.meta.format != @core.SourceFormat::Markdown {
+      continue
+    }
+    let entries : Array[@core.RelationshipEntry] = []
+    let seen_targets : Array[String] = []
+    for
+      mention in @docflow.collect_resolved_wikilink_mentions(
+        wikilinker,
+        backlink_scan_document(input),
+      ) {
+      if mention.target_url == input.meta.url_path ||
+        contains_url(seen_targets, mention.target_url) {
+        continue
+      }
+      match page_index.get(mention.target_url) {
+        Some(page) => {
+          seen_targets.push(mention.target_url)
+          entries.push({
+            kind: "mentioned",
+            page: site_page_link(page),
+            reason: None,
+            snippet: Some(mention.snippet),
+            date: page.date,
+            series: page.series,
+          })
+          if entries.length() >= max_mention_entries_per_page {
+            break
+          }
+        }
+        None => ()
+      }
+    }
+    if !entries.is_empty() {
+      relationships[input.meta.url_path] = entries
+    }
+  }
+  relationships
+}
+
+///|
 fn build_backlink_entries_by_url(
   inputs : Array[@runtime.BuildInput],
   pages : Array[@core.SitePage],
@@ -2314,12 +2431,15 @@ fn build_article_experience_model(
   wikilinker : @docflow.WikiLinker,
 ) -> ArticleExperienceModel {
   let toc = build_toc_by_url(inputs)
+  let mentioned = build_mentioned_relationships_by_url(
+    inputs, pages, wikilinker,
+  )
   let backlinks = build_backlink_entries_by_url(inputs, pages, wikilinker)
   let outbound = build_outbound_links_by_url(inputs, wikilinker)
   let related = build_related_entries_by_url(pages, outbound)
   let (previous, next) = build_article_prev_next(pages)
   let series = build_series_nav_by_url(pages)
-  { toc, backlinks, related, previous, next, series }
+  { toc, mentioned, backlinks, related, previous, next, series }
 }
 
 ///|
@@ -2432,6 +2552,17 @@ fn experience_backlinks_for_url(
   url_path : String,
 ) -> Array[@core.BacklinkEntry] {
   match experience.backlinks.get(url_path) {
+    Some(entries) => entries
+    None => []
+  }
+}
+
+///|
+fn experience_mentioned_for_url(
+  experience : ArticleExperienceModel,
+  url_path : String,
+) -> Array[@core.RelationshipEntry] {
+  match experience.mentioned.get(url_path) {
     Some(entries) => entries
     None => []
   }
@@ -2711,6 +2842,7 @@ fn build_theme_render_context(
   experience : ArticleExperienceModel,
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
+  extra_slots : Map[String, @core.ThemeConfigValue],
 ) -> @docflow.ThemeRenderContext raise BuildCommandError {
   let page_model = @core.page_view_model_from_meta(input.meta)
   let current_page = match
@@ -2738,6 +2870,10 @@ fn build_theme_render_context(
     input,
   )
   let backlink_entries = experience_backlinks_for_url(
+    experience,
+    input.meta.url_path,
+  )
+  let mentioned_entries = experience_mentioned_for_url(
     experience,
     input.meta.url_path,
   )
@@ -2800,9 +2936,39 @@ fn build_theme_render_context(
   for backlink in backlink_entries {
     backlink_items.push(theme_backlink_entry_value(backlink))
   }
+  let mentioned_items : Array[@core.ThemeConfigValue] = []
+  for mentioned in mentioned_entries {
+    mentioned_items.push(theme_relationship_entry_value(mentioned))
+  }
+  let backlink_relationship_items : Array[@core.ThemeConfigValue] = []
+  for backlink in backlink_entries {
+    backlink_relationship_items.push(
+      theme_relationship_entry_value({
+        kind: "backlink",
+        page: backlink.page,
+        reason: Some("Referenced by"),
+        snippet: Some(backlink.snippet),
+        date: backlink.date,
+        series: backlink.series,
+      }),
+    )
+  }
   let related_items : Array[@core.ThemeConfigValue] = []
   for related in related_entries {
     related_items.push(theme_related_entry_value(related))
+  }
+  let related_relationship_items : Array[@core.ThemeConfigValue] = []
+  for related in related_entries {
+    related_relationship_items.push(
+      theme_relationship_entry_value({
+        kind: "related",
+        page: related.page,
+        reason: Some(related.reason),
+        snippet: None,
+        date: related.date,
+        series: related.series,
+      }),
+    )
   }
   let toc_items : Array[@core.ThemeConfigValue] = []
   for heading in toc_entries {
@@ -2889,6 +3055,20 @@ fn build_theme_render_context(
   page["surface_html"] = theme_string_value(surface_html)
   page["has_surface"] = theme_bool_value(!surface_html.is_empty())
   page["has_backlinks"] = theme_bool_value(!backlink_entries.is_empty())
+  page["has_relationships"] = theme_bool_value(
+    !mentioned_entries.is_empty() ||
+    !backlink_entries.is_empty() ||
+    !related_entries.is_empty(),
+  )
+  page["has_relationship_mentions"] = theme_bool_value(
+    !mentioned_entries.is_empty(),
+  )
+  page["has_relationship_backlinks"] = theme_bool_value(
+    !backlink_entries.is_empty(),
+  )
+  page["has_relationship_related"] = theme_bool_value(
+    !related_entries.is_empty(),
+  )
   page["has_related"] = theme_bool_value(!related_entries.is_empty())
   page["has_toc"] = theme_bool_value(show_toc)
   page["previous"] = theme_page_link_value(previous_link)
@@ -2904,6 +3084,9 @@ fn build_theme_render_context(
   collections["nav"] = theme_collection_items_value(nav_items)
   collections["pages"] = theme_collection_items_value(page_items)
   collections["backlinks"] = theme_collection_items_value(backlink_items)
+  collections["relationships"] = theme_relationship_sections_value(
+    mentioned_items, backlink_relationship_items, related_relationship_items,
+  )
   collections["related"] = theme_collection_items_value(related_items)
   collections["toc"] = theme_collection_items_value(toc_items)
   collections["series"] = theme_collection_items_value(series_items)
@@ -2937,6 +3120,10 @@ fn build_theme_render_context(
     ),
   )
   apply_declared_slot_values(slots, bundle, config)
+  for entry in extra_slots {
+    let (slot_name, slot_value) = entry
+    slots[slot_name] = merge_slot_value(slots.get(slot_name), slot_value)
+  }
 
   { site, page, collections, slots, locals: {} }
 }
@@ -2949,12 +3136,13 @@ fn apply_build_theme_template(
   experience : ArticleExperienceModel,
   input : @runtime.BuildInput,
   rendered : @docflow.RenderedDocument,
+  extra_slots? : Map[String, @core.ThemeConfigValue] = {},
 ) -> @docflow.TemplatedPage raise BuildCommandError {
   let layout_source = select_theme_layout(bundle, input) catch {
     err => raise err
   }
   let context = build_theme_render_context(
-    config, bundle, assembly, experience, input, rendered,
+    config, bundle, assembly, experience, input, rendered, extra_slots,
   ) catch {
     err => raise err
   }

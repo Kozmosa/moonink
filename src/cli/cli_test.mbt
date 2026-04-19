@@ -945,6 +945,24 @@ test "runtime cli serve builds fixture before preview skeleton" {
     hello_html.contains("<h1 id=\"hello-world\">Hello World</h1>"),
     content="true",
   )
+  inspect(
+    hello_html.contains(
+      "<script defer src=\"/__moonink/live-reload.js\"></script>",
+    ),
+    content="true",
+  )
+  inspect(
+    @runtime.io_path_exists(
+      fixture_root + "/dist/__moonink/preview-status.json",
+    ),
+    content="true",
+  )
+  let preview_status = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/__moonink/preview-status.json",
+  ) catch {
+    _ => panic()
+  }
+  inspect(preview_status.contains("\"status\":\"ready\""), content="true")
 }
 
 ///|
@@ -1030,6 +1048,16 @@ test "runtime cli serve continues after build warnings" {
   )
   inspect(
     @runtime.io_path_exists(fixture_root + "/dist/index.html"),
+    content="true",
+  )
+  let preview_status = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/__moonink/preview-status.json",
+  ) catch {
+    _ => panic()
+  }
+  inspect(preview_status.contains("\"status\":\"warning\""), content="true")
+  inspect(
+    preview_status.contains("Unresolved wikilink target: missing-page"),
     content="true",
   )
 }
@@ -1542,10 +1570,9 @@ test "runtime cli build renders backlinks for minimal fixture" {
   ) catch {
     _ => panic()
   }
-  inspect(
-    hello_html.contains("<span class=\"backlink-title\">Home</span>"),
-    content="true",
-  )
+  inspect(hello_html.contains("Explore this thread"), content="true")
+  inspect(hello_html.contains("Referenced by"), content="true")
+  inspect(hello_html.contains(">Home<"), content="true")
   inspect(hello_html.contains("See hello."), content="true")
 }
 
@@ -1679,6 +1706,10 @@ test "runtime cli build renders branded article experience" {
   inspect(article_html.contains(">Studio Rituals<"), content="true")
   inspect(article_html.contains("Shared tags: garden, systems"), content="true")
   inspect(article_html.contains(">Open Loops<"), content="true")
+  inspect(article_html.contains("Explore this thread"), content="true")
+  inspect(article_html.contains("Mentioned here"), content="true")
+  inspect(article_html.contains("Referenced by"), content="true")
+  inspect(article_html.contains("Keep reading"), content="true")
   inspect(article_html.contains(">Koz<"), content="true")
   inspect(
     @runtime.io_path_exists(fixture_root + "/dist/images/stone-garden.png"),

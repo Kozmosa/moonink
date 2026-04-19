@@ -9,6 +9,13 @@ pub fn io_read_file_to_string(
 }
 
 ///|
+pub fn io_read_file_to_bytes(path : String) -> Bytes raise @core.ProjectIOError {
+  @fs.read_file_to_bytes(path) catch {
+    err => raise @core.project_io_error("read_file", path, err.to_string())
+  }
+}
+
+///|
 pub fn io_path_exists(path : String) -> Bool {
   @fs.path_exists(path)
 }

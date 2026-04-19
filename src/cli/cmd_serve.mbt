@@ -128,48 +128,18 @@ pub fn prepare_serve_runtime_session(
   host : String,
   port : Int,
 ) -> Result[PreparedServeRuntime, String] {
-  let config = match @runtime.load_config_result(config_path) {
-    Ok(config) => config
-    Err(err) =>
-      return Err(
-        "[serve] build failed before preview startup\n" +
-        format_runtime_config_error(err),
-      )
+  match
+    prepare_serve_watch_result(
+      config_path,
+      output_dir,
+      host,
+      port,
+      1,
+      empty_serve_render_cache(),
+    ) {
+    Ok(prepared) => Ok(prepared.runtime)
+    Err(message) => Err(message)
   }
-  let config = match apply_serve_output_override_result(config, output_dir) {
-    Ok(config) => config
-    Err(err) =>
-      return Err(
-        "[serve] build failed before preview startup\n" +
-        format_runtime_config_error(err),
-      )
-  }
-  let inventory = match
-    @runtime.run_runtime_io_task(@runtime.discover_content_task(config)) {
-    Ok(inventory) => inventory
-    Err(err) =>
-      return Err(
-        "[serve] build failed before preview startup\n" +
-        format_runtime_content_error(err),
-      )
-  }
-  let result = match build_site_result(config, inventory) {
-    Ok(result) => result
-    Err(err) =>
-      return Err(
-        "[serve] build failed before preview startup\n" +
-        format_build_command_error(err),
-      )
-  }
-  let build_stage = if result.diagnostics.is_empty() {
-    ServeBuildStage::Clean(result.summary)
-  } else {
-    ServeBuildStage::WithWarnings(result.summary, result.diagnostics)
-  }
-  Ok({
-    session: prepare_serve_session(output_root(config), host~, port~),
-    build_stage,
-  })
 }
 
 ///|
@@ -203,55 +173,29 @@ pub fn prepare_main_serve_launch_result(
   host : String,
   port : Int,
 ) -> Result[MainServeLaunch, String] {
-  let prepared = match
-    prepare_serve_runtime_session(config_path, output_dir, host, port) {
-    Ok(prepared) => prepared
-    Err(message) => return Err(message)
+  match
+    prepare_main_serve_launch_with_watch_result(
+      config_path, output_dir, host, port,
+    ) {
+    Ok((launch, _)) => Ok(launch)
+    Err(message) => Err(message)
   }
-  Ok({
-    build_message: format_serve_build_stage(prepared.build_stage),
-    preview_root: prepared.session.preview_root,
-    host: prepared.session.host,
-    port: prepared.session.port,
-  })
 }
 
 ///|
 pub fn run_main_serve_command(options : ServeCliOptions) -> CliOutcome {
-  let launch = match
-    prepare_main_serve_launch_result(
+  let (launch, prepared) = match
+    prepare_main_serve_launch_with_watch_result(
       options.config_path,
       options.output_dir,
       options.host,
       options.port,
     ) {
-    Ok(launch) => launch
+    Ok(state) => state
     Err(message) => return { exit_code: 1, message }
   }
   println(launch.build_message)
-  let command = match
-    @runtime.native_serve_delegate_command_result(
-      launch.preview_root,
-      launch.host,
-      launch.port,
-    ) {
-    Ok(command) => command
-    Err(err) =>
-      return {
-        exit_code: 1,
-        message: "[serve] failed during preview startup\n" +
-        @core.format_project_io_error(err),
-      }
-  }
-  @runtime.exec_native_serve_delegate(command) catch {
-    err =>
-      return {
-        exit_code: 1,
-        message: "[serve] failed during preview startup\n" +
-        @core.format_project_io_error(err),
-      }
-  }
-  { exit_code: 0, message: "" }
+  run_main_serve_watch_loop(options.config_path, options.output_dir, prepared)
 }
 
 ///|
