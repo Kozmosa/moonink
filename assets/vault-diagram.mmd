@@ -1,0 +1,60 @@
+%% MoonInk docs vault overview source.
+%% Render with Mermaid CLI to update vault-diagram.png.
+%%{init: {
+%%  "theme": "base",
+%%  "themeVariables": {
+%%    "background": "#fbf7f2",
+%%    "primaryColor": "#d9ecff",
+%%    "primaryTextColor": "#1f2a37",
+%%    "primaryBorderColor": "#5b7c99",
+%%    "lineColor": "#5b7c99",
+%%    "secondaryColor": "#f5dcc8",
+%%    "secondaryTextColor": "#3f2f26",
+%%    "tertiaryColor": "#dcebd8",
+%%    "tertiaryTextColor": "#28412f",
+%%    "fontFamily": "Georgia, Noto Serif SC, serif"
+%%  }
+%%}}%%
+flowchart LR
+  classDef vault fill:#fff9f0,stroke:#b87d3f,color:#3f2f26,stroke-width:1.5px;
+  classDef source fill:#e8f3ff,stroke:#5b7c99,color:#1f2a37,stroke-width:1.5px;
+  classDef runtime fill:#eaf6ea,stroke:#5a8a63,color:#28412f,stroke-width:1.5px;
+  classDef publish fill:#f4ebff,stroke:#7a67a6,color:#352652,stroke-width:1.5px;
+  classDef note fill:#fff,stroke:#8b8b8b,color:#333,stroke-dasharray: 4 3;
+
+  subgraph vault["Author Vault / docs/moonink"]
+    readme["index.md<br/>guide/*.md"]
+    assets["assets/vault-diagram.png<br/>images / Attachments"]
+    pub["public/<br/>robots.txt / badge.svg"]
+  end
+
+  subgraph build["MoonInk Build"]
+    discover["Content discovery<br/>page/article + passthrough assets"]
+    linker["WikiLinker<br/>[[page]] / ![[image.png]]"]
+    render["DocFlow + Theme V2<br/>HTML render"]
+    copy["Asset copy<br/>content tree + public/"]
+  end
+
+  subgraph output["dist/"]
+    html["/index/ /guide/...<br/>rendered HTML"]
+    copied["/assets/...<br/>/quick-checklist.txt<br/>copied resources"]
+  end
+
+  publishSite["GitHub Pages<br/>kozmosa.github.io/moonink"]:::publish
+  experience["Readers see:<br/>real pages, backlinks,<br/>linked images, public files"]:::note
+
+  readme --> discover
+  assets --> discover
+  pub --> copy
+  discover --> linker
+  discover --> copy
+  linker --> render
+  copy --> copied
+  render --> html
+  html --> publishSite
+  copied --> publishSite
+  publishSite --> experience
+
+  class readme,assets,pub vault;
+  class discover,linker,render,copy runtime;
+  class html,copied source;
