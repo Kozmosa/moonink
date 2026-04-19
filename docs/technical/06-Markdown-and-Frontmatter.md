@@ -29,6 +29,14 @@ Frontmatter parsing should stay independent from content parser backends. Its jo
 - `author`
 - `tags`
 - `date`
+- `summary`
+- `updated`
+- `series`
+- `cover`
+- `column`
+- `layout`
+- `draft`
+- `search`
 
 ## 4. Parsing Responsibilities
 
@@ -88,3 +96,15 @@ Parser backends should follow a two-level policy:
 - fatal parser errors only when a meaningful parsed document cannot be returned.
 
 Diagnostics should be stored as structured data and later formatted into user-facing messages.
+
+## 9. M2 Search Visibility Contract
+
+MoonInk M2 recognizes `search: false` as the per-document opt-out for the built-in
+search index.
+
+- `search` must be a boolean scalar when present
+- `search: false` removes the document from `search-index.json`
+- malformed `search` values are blocking `check` diagnostics
+
+The field only controls search-index inclusion. It does not currently act as a
+general publication-visibility toggle.

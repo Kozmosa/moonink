@@ -162,6 +162,7 @@ pub(all) struct Frontmatter {
   column : String?
   tags : Array[String]
   draft : Bool
+  search_enabled : Bool
   layout : String?
   theme_meta : Map[String, ThemeConfigValue]
   extra : Map[String, String]
@@ -175,6 +176,20 @@ pub(all) enum FrontmatterFieldShape {
   List
 } derive(Eq, @debug.Debug)
 pub impl Show for FrontmatterFieldShape
+
+pub(all) struct GeneratedPage {
+  kind : String
+  title : String
+  summary : String
+  description : String
+  source_path : String
+  url_path : String
+  output_path : String
+  layout_key : String
+  body_html : String
+  head_html : String
+  scripts_html : String
+} derive(Eq, @debug.Debug)
 
 pub(all) struct HeadingEntry {
   level : Int
@@ -257,6 +272,8 @@ pub(all) struct SearchIndexDocument {
 pub(all) struct SearchIndexItem {
   title : String
   url : String
+  kind : String
+  summary : String?
   excerpt : String
   tags : Array[String]
   date : String?

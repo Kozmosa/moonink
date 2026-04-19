@@ -70,6 +70,21 @@ pub(all) struct SeriesNav {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct GeneratedPage {
+  kind : String
+  title : String
+  summary : String
+  description : String
+  source_path : String
+  url_path : String
+  output_path : String
+  layout_key : String
+  body_html : String
+  head_html : String
+  scripts_html : String
+} derive(Debug, Eq)
+
+///|
 /// Tree node used by the auto-navigation site assembly stage.
 pub(all) struct NavigationItem {
   title : String

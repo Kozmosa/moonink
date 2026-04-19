@@ -21,7 +21,16 @@ MoonInk uses JSON as its project configuration format (`moonink.json`).
   "output_dir": "dist",
   "exclude": [".obsidian", "dist", ".git", "node_modules", ".trash", "templates", "Templates"],
   "route_style": "pretty",
-  "text_encoding": "utf-8"
+  "text_encoding": "utf-8",
+  "theme": "theme",
+  "theme_config": {
+    "homepage": {
+      "hero_title": "Notes From The Workbench",
+      "hero_summary": "Essays, field notes, and connected writing from the MoonInk lab.",
+      "featured_paths": ["essays/stone-garden.md"],
+      "recent_count": 2
+    }
+  }
 }
 ```
 
@@ -39,6 +48,8 @@ MoonInk uses JSON as its project configuration format (`moonink.json`).
 - `exclude` — directories to skip during recursive scan (default: `[".obsidian", "dist", ".git", "node_modules", ".trash", "templates", "Templates"]`)
 - `route_style` — URL shape: `"pretty"` (trailing-slash directories) or `"direct"` (`.html` extension); default: `"pretty"`
 - `text_encoding` — encoding declaration in emitted HTML (default: `"utf-8"`)
+- `theme` — project-local theme directory name for Theme V2 bundles or legacy theme overrides (default: `"theme"`)
+- `theme_config` — nested Theme V2 configuration data used for token overrides, declared slots, and homepage curation
 
 ## 5. Route Style
 
@@ -53,7 +64,19 @@ Validation catches:
 - invalid or parent-traversal paths;
 - malformed JSON.
 
-## 7. Obsidian Vault Compatibility
+## 7. `theme_config.homepage`
+
+MoonInk M2 adds a small typed homepage curation contract under `theme_config.homepage`.
+
+- `hero_title` — optional homepage hero title override
+- `hero_summary` — optional homepage hero summary override
+- `featured_paths` — ordered array of source-relative content paths to pin into the featured module
+- `recent_count` — positive integer cap for the generated "recent writing" module
+
+`featured_paths` are validated during build against discovered source paths.
+An unresolved entry is a blocking build error.
+
+## 8. Obsidian Vault Compatibility
 
 MoonInk now treats a typical Obsidian vault as a first-class content root:
 

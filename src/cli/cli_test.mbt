@@ -2723,6 +2723,296 @@ test "runtime cli build emits search index contract fixture" {
 }
 
 ///|
+test "runtime cli build omits search false content from search index" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/m2_public_shell_basic", "m2-search-index-contract",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let search_index = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/search-index.json",
+  ) catch {
+    _ => panic()
+  }
+  inspect(search_index.contains("\"title\":\"Stone Garden\""), content="true")
+  inspect(search_index.contains("\"title\":\"Companion Note\""), content="true")
+  inspect(
+    search_index.contains("\"title\":\"Private Scratchpad\""),
+    content="false",
+  )
+  inspect(search_index.contains("\"kind\":\"article\""), content="true")
+  inspect(
+    search_index.contains(
+      "\"summary\":\"Designing a site that feels like a room you can return to.\"",
+    ),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli check reports non boolean search field" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/m2_public_shell_basic", "m2-invalid-search-frontmatter",
+  )
+  let invalid_search_note =
+    #|---
+    #|title: Private Scratchpad
+    #|search: maybe
+    #|---
+    #|
+    #|# Private Scratchpad
+  @runtime.io_write_string(
+    fixture_root + "/notes/private-scratchpad.md",
+    invalid_search_note,
+  ) catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(
+    outcome.message.contains("Frontmatter field `search` must be a boolean"),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli build emits generated search page" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/m2_public_shell_basic", "m2-generated-search-page",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/search/index.html"),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli build rejects reserved generated roots from source content" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/m2_public_shell_basic", "m2-reserved-root-conflict",
+  )
+  @runtime.io_ensure_dir(fixture_root + "/search") catch {
+    _ => panic()
+  }
+  @runtime.io_write_string(
+    fixture_root + "/search/index.md",
+    "# This should conflict\n",
+  ) catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("reserved generated root"), content="true")
+  inspect(outcome.message.contains("search"), content="true")
+}
+
+///|
+test "runtime cli build falls back to page layout for custom theme search page" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/theme_v2_basic", "m2-search-page-theme-fallback",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let search_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/search/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(search_html.contains("data-layout-kind=\"page\""), content="true")
+  inspect(search_html.contains("moonink-search.js"), content="true")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/assets/moonink-search.js"),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli build renders the built in search ui" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/m2_public_shell_basic", "m2-search-ui",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let search_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/search/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(search_html.contains("id=\"moonink-search-query\""), content="true")
+  inspect(search_html.contains("data-moonink-search-results"), content="true")
+  inspect(search_html.contains("moonink-search.js"), content="true")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/assets/moonink-search.js"),
+    content="true",
+  )
+}
+
+///|
+test "runtime cli build renders configured homepage hero and featured items" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/m2_public_shell_basic", "m2-homepage-curation",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(index_html.contains("Notes From The Workbench"), content="true")
+  inspect(index_html.contains("Stone Garden"), content="true")
+  inspect(index_html.contains("Quiet Joins"), content="true")
+  inspect(index_html.contains("href=\"/search/\""), content="true")
+  inspect(index_html.contains("href=\"/tags/\""), content="true")
+}
+
+///|
+test "runtime cli build fails when homepage featured path is missing" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/m2_public_shell_basic", "m2-homepage-missing-featured",
+  )
+  let invalid_homepage_config =
+    #|{
+    #|  "site_name": "MoonInk Lab",
+    #|  "site_url": "https://moonink.example",
+    #|  "theme_config": {
+    #|    "homepage": {
+    #|      "featured_paths": ["notes/missing.md"],
+    #|      "recent_count": 2
+    #|    }
+    #|  }
+    #|}
+  @runtime.io_write_string(
+    fixture_root + "/moonink.json",
+    invalid_homepage_config,
+  ) catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("homepage.featured_paths"), content="true")
+}
+
+///|
+test "runtime cli build renders curated homepage shell" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/m2_public_shell_basic", "m2-homepage-shell",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  inspect(index_html.contains("class=\"home-hero\""), content="true")
+  inspect(index_html.contains("Notes From The Workbench"), content="true")
+  inspect(index_html.contains("class=\"home-module-grid\""), content="true")
+  inspect(index_html.contains("href=\"/search/\""), content="true")
+  inspect(index_html.contains("href=\"/archive/\""), content="true")
+}
+
+///|
+test "runtime cli build emits tags series and archive pages" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/m2_public_shell_basic", "m2-collection-pages",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+
+  let tags_index = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/tags/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let garden_tag = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/tags/garden/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let series_page = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/series/notebook-atlas/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let archive_page = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/archive/index.html",
+  ) catch {
+    _ => panic()
+  }
+
+  inspect(tags_index.contains("garden"), content="true")
+  inspect(garden_tag.contains("Stone Garden"), content="true")
+  inspect(garden_tag.contains("Companion Note"), content="true")
+  inspect(series_page.contains("Notebook Atlas"), content="true")
+  inspect(series_page.contains("Quiet Joins"), content="true")
+  inspect(archive_page.contains("2026"), content="true")
+}
+
+///|
+test "runtime cli build emits canonical og and rss outputs for m2 pages" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/m2_public_shell_basic", "m2-public-metadata",
+  )
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+
+  let article_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/essays/stone-garden/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let rss_xml = @runtime.io_read_file_to_string(fixture_root + "/dist/rss.xml") catch {
+    _ => panic()
+  }
+
+  inspect(
+    article_html.contains(
+      "<link rel=\"canonical\" href=\"https://moonink.example/essays/stone-garden/\"",
+    ),
+    content="true",
+  )
+  inspect(
+    article_html.contains(
+      "<meta property=\"og:title\" content=\"Stone Garden\"",
+    ),
+    content="true",
+  )
+  inspect(article_html.contains("application/rss+xml"), content="true")
+  inspect(rss_xml.contains("<title>MoonInk Lab</title>"), content="true")
+  inspect(
+    rss_xml.contains(
+      "<link>https://moonink.example/essays/stone-garden/</link>",
+    ),
+    content="true",
+  )
+}
+
+///|
 test "runtime cli build reports missing configured template file" {
   let config_path = "fixtures/v2/missing_template_file/moonink.json"
   let outcome = @cli.run_build_command_runtime_from_config(config_path)

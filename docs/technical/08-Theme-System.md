@@ -29,9 +29,10 @@ The theme should follow the palette and tone defined in `docs/Brand_Design.md`, 
 
 Current build-time precedence is:
 
-1. project-local `theme/layout.html`
-2. configured `template_file`
-3. repository-owned built-in default theme
+1. project-local Theme V2 bundle at `<theme>/theme.json`
+2. project-local legacy `<theme>/layout.html` when no Theme V2 bundle exists
+3. configured legacy `template_file` when no project theme override exists
+4. repository-owned built-in Theme V2 bundle
 
 When the selected theme exposes an assets directory, build copies those assets into `dist/assets/`.
 
@@ -39,12 +40,26 @@ When the selected theme exposes an assets directory, build copies those assets i
 
 The currently shipped built-in theme slice covers:
 
-- one shared built-in layout;
+- Theme V2 manifest-driven layout selection;
 - basic typography and asset styles;
 - page/article-aware content shells in the repository-owned default theme;
+- dedicated generated-surface layouts for `search`, `collection`, and `archive`;
 - reuse of existing `navigation_html`, `current_section_*`, and `page_header_html` template context fields.
 
-It does **not** yet provide a stable manifest format, partial/include system, multi-theme support, or a public theme plugin API.
+The Theme V2 layout map currently recognizes:
+
+- `index`
+- `page`
+- `article`
+- `search`
+- `collection`
+- `archive`
+
+Compatibility rule:
+
+- if a custom Theme V2 bundle omits `search`, `collection`, or `archive`, MoonInk falls back to the bundle's `page` layout for those generated surfaces.
+
+It does **not** yet provide multi-theme layering, inheritance, or a stable public theme plugin API.
 
 ## 7. Public API Position
 
