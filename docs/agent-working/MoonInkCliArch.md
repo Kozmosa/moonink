@@ -9,8 +9,9 @@ package boundaries change materially.
 **Last updated:** 2026-04-19 — reflects the current `help` / `onboard` /
 `build` / `check` / `serve` surface, Theme System V2 bundle rendering,
 Obsidian direct-output defaults, content-tree asset handling, homepage
-inference, and the M1 article-experience contract for metadata, TOC,
-contextual backlinks, related notes, and series navigation.
+inference, the M1 article-experience contract for metadata/TOC/backlinks/
+related/series navigation, and the M4 watch-mode preview plus article-local
+relationship-navigation slice.
 
 ## Current CLI Surface
 
@@ -18,7 +19,7 @@ contextual backlinks, related notes, and series navigation.
 - `moonink onboard` — first-time setup: generates `moonink.json` with vault-friendly defaults and never rewrites note files
 - `moonink build` — real static-site build into `dist/`
 - `moonink check` — validation-only pass over discovered content; reports diagnostics without writing output
-- `moonink serve` — canonical local preview command: builds first, then delegates real HTTP serving to the native-only preview backend
+- `moonink serve` — canonical local preview command: builds into a protected preview pipeline, starts the native-only HTTP preview backend, and keeps rebuilding on change
 - unknown command fallback
 
 `new` has been replaced by `onboard`.
@@ -58,11 +59,12 @@ src/cmd/main/main.mbt
   -> @cli.parse_cli_request(argv)
   -> non-serve commands: @cli.cli_exec(argv)
   -> serve command: @cli.run_main_serve_command(...)
-  -> prepare_serve_runtime_session(...)         [src/cli/cmd_serve.mbt]
-  -> real build pipeline                        [src/cli/cmd_build.mbt]
-  -> runtime/native_serve_delegate_command...   [src/runtime/serve.mbt]
+  -> prepare_serve_watch_result(...)            [src/cli/serve_watch.mbt]
+  -> staged preview build + publish             [src/cli/serve_watch.mbt]
+  -> runtime/spawn_shell_command_result(...)    [src/runtime/serve_process.mbt]
   -> native-serve/src/cmd/main -- serve-prebuilt
   -> real mocket HTTP server
+  -> watch snapshot poll + rebuild loop         [src/cli/serve_watch.mbt]
 ```
 
 Pure dispatch behavior:
@@ -104,6 +106,7 @@ Current real behavior:
 9. For Theme V2 builds, emits `dist/assets/theme-vars.css` from declared manifest tokens plus `theme_config` overrides.
 10. Builds the site assembly model from discovered pages, presentation metadata, and navigation.
 11. Builds a route-aware WikiLinker index plus article-experience signals:
+    - outbound relationship mentions from resolved markdown wikilinks;
     - contextual backlinks from markdown wikilink mentions;
     - related-note candidates from link + tag + series overlap;
     - article previous/next navigation;
@@ -118,7 +121,7 @@ Current real behavior:
 16. For Theme V2 builds, assembles a structured render context with:
     - `site` metadata including `theme_name`, `theme_asset_root`, and full `theme_config`;
     - `page` metadata including kind, layout key, summary/date/updated/tags/series/cover/author/column/reading-time, section context, rendered body, and page-level theme metadata;
-    - `collections.nav`, `collections.pages`, `collections.backlinks`, `collections.related`, `collections.toc`, `collections.series`, and `collections.sections`;
+    - `collections.nav`, `collections.pages`, `collections.backlinks`, `collections.related`, `collections.relationships`, `collections.toc`, `collections.series`, and `collections.sections`;
     - built-in and manifest-declared `slots`.
 17. Renders Theme V2 templates through `docflow.render_theme_template(...)`, including `{% if %}`, `{% for %}`, and partial includes.
 18. Emits HTML files using `core.output_html_path(...)`, respecting configured `route_style` (`pretty` or `direct`).
@@ -184,21 +187,24 @@ Current behavior:
 
 ### serve
 
-`serve` in the main workspace is now the canonical preview entry while still
-keeping the real HTTP listener in the native-only subproject.
+`serve` in the main workspace is now the canonical watch-mode preview entry
+while still keeping the real HTTP listener in the native-only subproject.
 
 Current main-workspace behavior:
 
 1. Loads config and discovers content.
-2. Reuses the real `build_site_result(...)` path to build preview output.
-3. Prints build-complete or build-with-warnings output from the main CLI.
-4. Delegates the built preview root plus host/port to the native-only preview backend.
-5. Lets the delegated backend validate preview startup and own the long-running server lifecycle.
+2. Builds preview output into a hidden staging directory instead of writing directly into the live preview root.
+3. Publishes staging output into the live preview root only after a successful rebuild.
+4. Writes preview-only runtime artifacts under `dist/__moonink/`, including `live-reload.js` and `preview-status.json`.
+5. Spawns the native-only preview backend against the published preview root.
+6. Polls watched config/content/theme/template paths and rebuilds on change.
+7. Keeps serving the last successful output when a later rebuild fails, while surfacing failure state through terminal output and `preview-status.json`.
 
 Behavior split:
 
 - `src/cli/cmd_serve.mbt` still exposes dry-run preview helpers for runtime tests and non-blocking validation coverage.
-- `src/cmd/main/main.mbt` special-cases `serve` so the user-facing binary can build once and then `exec` into the delegated native preview backend.
+- `src/cli/serve_watch.mbt` owns watch snapshots, protected preview publishing, preview status artifacts, and incremental parse/link/render reuse.
+- `src/cmd/main/main.mbt` special-cases `serve` so the user-facing binary can enter the long-running watch-mode preview loop.
 - The standalone real preview server still lives in the separate `native-serve/` subproject, which now supports both direct `serve` and internal `serve-prebuilt` entry modes.
 - Real preview serving is intentionally native-only. The non-native stub path and its `only available on native targets` message reflect the supported-platform boundary, not an unfinished serve implementation.
 
@@ -288,6 +294,7 @@ Legacy compatibility guarantees:
 - `runtime/theme_loader.mbt` — Theme V2 bundle loading, token flattening, slot extraction, and built-in bundle fallback
 - `runtime/content_discovery.mbt` — recursive content discovery / inventory creation
 - preview launch helpers — runtime boundary for dry-run vs native preview execution
+- preview child-process helpers — native spawn/poll/sleep wrappers used by watch-mode serve
 
 Feature modules in `core` and `docflow` expose result-oriented APIs and remain IO-free.
 Only `runtime` and `cli` touch the filesystem.
@@ -301,6 +308,7 @@ that are intentionally kept above `docflow` and `core`:
 - assemble navigation from page-only structure plus `nav_title` / `nav_hidden` metadata
 - derive section context for the current page
 - build page-header HTML and contextual backlink HTML helpers
+- compute article-local relationship mentions from resolved outbound wikilinks
 - compute backlinks from markdown wikilink mention snippets
 - compute related-note candidates from outbound links, reverse links, shared tags, and shared series
 - compute article previous/next ordering and series navigation
@@ -324,7 +332,6 @@ This keeps `docflow` focused on parser/render adapter behavior plus generic them
 ## Known Gaps
 
 - no structured option parser yet (flags and options are not parsed)
-- `serve` still has no watch mode, live reload, or incremental rebuild behavior
 - real preview startup is only supported on native targets; JS/Wasm targets are expected to stop at the native delegation boundary
 - Theme V2 bundles are currently project-local only; there is no inheritance or layering implementation yet
 - partial loading currently scans the `partials/` directory non-recursively

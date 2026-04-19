@@ -242,6 +242,15 @@ pub(all) struct RelatedEntry {
   date : String?
 } derive(Eq, @debug.Debug)
 
+pub(all) struct RelationshipEntry {
+  kind : String
+  page : PageLink
+  reason : String?
+  snippet : String?
+  date : String?
+  series : String?
+} derive(Eq, @debug.Debug)
+
 pub(all) enum RouteStyle {
   Pretty
   Direct

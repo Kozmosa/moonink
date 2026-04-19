@@ -52,6 +52,16 @@ pub(all) struct BacklinkEntry {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct RelationshipEntry {
+  kind : String
+  page : PageLink
+  reason : String?
+  snippet : String?
+  date : String?
+  series : String?
+} derive(Debug, Eq)
+
+///|
 pub(all) struct RelatedEntry {
   page : PageLink
   reason : String

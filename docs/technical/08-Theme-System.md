@@ -39,10 +39,11 @@ When the selected theme exposes an assets directory, build copies those assets i
 
 The currently shipped built-in theme slice covers:
 
-- one shared built-in layout;
+- one repository-owned built-in Theme V2 bundle plus legacy fallback layout;
 - basic typography and asset styles;
 - page/article-aware content shells in the repository-owned default theme;
-- reuse of existing `navigation_html`, `current_section_*`, and `page_header_html` template context fields.
+- article-local relationship navigation through structured `collections.relationships`;
+- reuse of `navigation_html`, `current_section_*`, `page_header_html`, and preview-time `slots.scripts` injection.
 
 It does **not** yet provide a stable manifest format, partial/include system, multi-theme support, or a public theme plugin API.
 

@@ -32,11 +32,14 @@ MoonInk resolves note links from the discovered page inventory using exact sourc
 
 ## 5. Current Output Support
 
-MoonInk now resolves supported WikiLinks during build and exposes backlinks in template context as `backlinks_html`.
+MoonInk now resolves supported WikiLinks during build and exposes relationship
+data in both legacy HTML helpers and Theme V2 structured collections.
 
-- built-in/default theme output renders a backlinks block only when backlinks exist;
-- the backlinks block lists pages or articles that linked to the current page;
-- the minimal fixture renders a backlink on the generated hello page pointing back to Home.
+- backlinks remain a build-time derived feature based on resolved note-to-note links;
+- built-in article output now groups local discovery as:
+  - `Mentioned here` from outbound resolved WikiLinks in the current article;
+  - `Referenced by` from backlink entries with snippets;
+  - `Keep reading` from the related-note heuristic;
 - resource-style WikiLinks rewrite to ordinary Markdown links;
 - image embeds rewrite to Markdown image syntax so the final renderer emits `<img>` output;
 - non-image embeds degrade to ordinary links that preserve the resolved asset URL.

@@ -66,24 +66,57 @@
               </section>
               {% endif %}
 
-              {% if page.has_related %}
+              {% if page.has_relationships %}
               <section class="continuation-block">
                 <div class="section-heading">
-                  <p class="section-kicker">Related reading</p>
-                  <h2>Keep following the thread</h2>
+                  <p class="section-kicker">Explore this thread</p>
+                  <h2>Follow the local knowledge path</h2>
                 </div>
-                <ul class="related-list">
-                  {% for item in collections.related.items %}
-                  <li class="related-card">
-                    <a href="{{ item.url }}">{{ item.title }}</a>
-                    <p class="related-reason">{{ item.reason }}</p>
-                  </li>
-                  {% endfor %}
-                </ul>
+                <div class="relationship-stack">
+                  {% if page.has_relationship_mentions %}
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Mentioned here</p>
+                    <ul class="related-list">
+                      {% for item in collections.relationships.mentioned.items %}
+                      <li class="related-card">
+                        <a href="{{ item.url }}">{{ item.title }}</a>
+                        {% if item.snippet %}<p class="related-reason">{{ item.snippet }}</p>{% endif %}
+                      </li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                  {% endif %}
+
+                  {% if page.has_relationship_backlinks %}
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Referenced by</p>
+                    <ul class="related-list">
+                      {% for item in collections.relationships.backlinks.items %}
+                      <li class="related-card">
+                        <a href="{{ item.url }}">{{ item.title }}</a>
+                        {% if item.snippet %}<p class="related-reason">{{ item.snippet }}</p>{% endif %}
+                      </li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                  {% endif %}
+
+                  {% if page.has_relationship_related %}
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Keep reading</p>
+                    <ul class="related-list">
+                      {% for item in collections.relationships.related.items %}
+                      <li class="related-card">
+                        <a href="{{ item.url }}">{{ item.title }}</a>
+                        {% if item.reason %}<p class="related-reason">{{ item.reason }}</p>{% endif %}
+                      </li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                  {% endif %}
+                </div>
               </section>
               {% endif %}
-
-              {{ slots.backlinks_html }}
 
               <section class="author-card">
                 <div class="section-heading">

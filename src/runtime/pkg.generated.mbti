@@ -41,6 +41,8 @@ pub fn io_path_exists(String) -> Bool
 
 pub fn io_read_dir(String) -> Array[String] raise @core.ProjectIOError
 
+pub fn io_read_file_to_bytes(String) -> Bytes raise @core.ProjectIOError
+
 pub fn io_read_file_to_string(String) -> String raise @core.ProjectIOError
 
 pub fn io_remove_dir(String) -> Unit raise @core.ProjectIOError
@@ -75,6 +77,8 @@ pub fn native_runtime_adapter() -> NativeRuntimeAdapter
 
 pub fn native_serve_delegate_command_result(String, String, Int) -> Result[String, @core.ProjectIOError]
 
+pub fn poll_spawned_process_result(SpawnedProcess) -> Result[Int, @core.ProjectIOError]
+
 pub fn prepare_preview_launch(String, String, Int, note? : String) -> PreviewLaunch
 
 pub fn read_config_source_task(String) -> RuntimeIOTask[Result[(String, String), @core.ConfigError]]
@@ -86,6 +90,12 @@ pub fn[T] run_native_runtime_io_task_with_policy(RuntimeIOTask[T], RuntimeTaskPo
 pub fn[T] run_runtime_io_task(RuntimeIOTask[T]) -> T
 
 pub fn runtime_task_policy() -> RuntimeTaskPolicy
+
+pub fn sleep_millis(Int) -> Unit
+
+pub fn spawn_shell_command_result(String) -> Result[SpawnedProcess, @core.ProjectIOError]
+
+pub fn terminate_spawned_process_result(SpawnedProcess) -> Result[Unit, @core.ProjectIOError]
 
 // Errors
 pub(all) suberror ThemeLoadError {
@@ -163,6 +173,10 @@ pub(all) struct RuntimeTaskPolicy {
   conflict_policy : RuntimeConflictPolicy
   cancellation_policy : RuntimeCancellationPolicy
   scheduling_note : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct SpawnedProcess {
+  pid : Int
 } derive(Eq, @debug.Debug)
 
 // Type aliases

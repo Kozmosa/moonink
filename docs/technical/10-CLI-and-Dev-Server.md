@@ -61,11 +61,15 @@ Run a local preview flow for the generated site.
 Main workspace behavior:
 
 1. Load `moonink.json`.
-2. Reuse the build pipeline to regenerate `output_dir`.
-3. If build finishes with warnings, print them and continue.
-4. If build fails fatally, stop before preview startup.
-5. Delegate the built preview root plus `--host` / `--port` to the native-only preview backend.
-6. Let the delegated native backend report runtime-ready or preview-startup failure output.
+2. Build preview output through a hidden staging directory under `.moonink-preview/`.
+3. Publish staging output into the real preview root only after a successful rebuild.
+4. Emit preview-only runtime assets under `dist/__moonink/`:
+   - `live-reload.js`
+   - `preview-status.json`
+5. Start the native-only preview backend against the published preview root.
+6. Poll watched config/content/theme/template paths and rebuild on change.
+7. If a rebuild finishes with warnings, keep serving the new output and surface the warning both in terminal output and `preview-status.json`.
+8. If a rebuild fails fatally, keep serving the last successful output and update `preview-status.json` with error state instead of tearing down preview.
 
 The preview runner is still isolated behind [src/runtime/serve.mbt](src/runtime/serve.mbt). The standard wasm-gc test suite exercises the build-orchestration and dry-run validation helpers, while the standalone native server remains responsible for the actual HTTP listener.
 
@@ -73,6 +77,9 @@ Real preview serving is intentionally native-only. The main-workspace `serve`
 path should be treated as a `--target native` feature; if a non-native target
 hits the runtime stub and reports that native serve delegation is only available
 on native targets, that is expected and matches the supported-platform scope.
+
+Watch-mode preview uses polling rather than OS-specific file watching. The
+browser refresh behavior is intentionally a full-page reload, not HMR.
 
 ### Native preview server
 
