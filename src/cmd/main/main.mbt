@@ -12,6 +12,13 @@ fn normalize_runtime_argv(raw_argv : Array[String]) -> Array[String] {
 ///|
 /// Entry point for the MoonInk CLI.
 fn main {
-  let outcome = @cli.cli_exec(normalize_runtime_argv(@env.args()))
-  println(outcome.message)
+  let argv = normalize_runtime_argv(@env.args())
+  let outcome = match @cli.parse_cli_request(argv) {
+    @cli.ParsedCliRequest::Serve(options) =>
+      @cli.run_main_serve_command(options)
+    _ => @cli.cli_exec(argv)
+  }
+  if !outcome.message.is_empty() {
+    println(outcome.message)
+  }
 }

@@ -2,7 +2,9 @@
   "is-main": true,
   "import": [
     "moonbitlang/core/env",
+    "moonbitlang/core/string",
     "kozmosa/moonink/cli",
+    "kozmosa/moonink/runtime",
     "oboard/mocket",
     "oboard/mocket/static_file"
   ],

@@ -6,10 +6,10 @@ This document is a maintained global architecture note for the MoonInk CLI.
 It must be updated whenever the CLI surface, execution flow, or structural
 package boundaries change materially.
 
-**Last updated:** 2026-04-18 — reflects the current `help` / `onboard` /
+**Last updated:** 2026-04-19 — reflects the current `help` / `onboard` /
 `build` / `check` / `serve` surface, Theme System V2 bundle rendering,
 Obsidian direct-output defaults, content-tree asset handling, homepage
-inference, and the current build-time theme context contract.
+inference, and the current main-binary serve delegation contract.
 
 ## Current CLI Surface
 
@@ -17,7 +17,7 @@ inference, and the current build-time theme context contract.
 - `moonink onboard` — first-time setup: generates `moonink.json` with vault-friendly defaults and never rewrites note files
 - `moonink build` — real static-site build into `dist/`
 - `moonink check` — validation-only pass over discovered content; reports diagnostics without writing output
-- `moonink serve` — runtime preview orchestration: builds first, validates preview launch, and reports preview address/output root
+- `moonink serve` — canonical local preview command: builds first, then delegates real HTTP serving to the native-only preview backend
 - unknown command fallback
 
 `new` has been replaced by `onboard`.
@@ -54,14 +54,14 @@ commands through the runtime boundary.
 src/cmd/main/main.mbt
   -> @env.args()
   -> normalize_runtime_argv(...)
-  -> @cli.cli_exec(argv)
-  -> parse_cli_command                          [src/cli/moonink.mbt]
-  -> runtime command dispatch                   [src/cli/moonink.mbt]
-  -> build/check/serve/onboard runtime entry    [src/cli/cmd_build.mbt / cmd_serve.mbt / cmd_onboard.mbt]
-  -> runtime/native.mbt adapter
-  -> runtime/async.mbt task boundary
-  -> runtime/config + discovery + IO helpers
-  -> core/docflow result APIs
+  -> @cli.parse_cli_request(argv)
+  -> non-serve commands: @cli.cli_exec(argv)
+  -> serve command: @cli.run_main_serve_command(...)
+  -> prepare_serve_runtime_session(...)         [src/cli/cmd_serve.mbt]
+  -> real build pipeline                        [src/cli/cmd_build.mbt]
+  -> runtime/native_serve_delegate_command...   [src/runtime/serve.mbt]
+  -> native-serve/src/cmd/main -- serve-prebuilt
+  -> real mocket HTTP server
 ```
 
 Pure dispatch behavior:
@@ -177,22 +177,22 @@ Current behavior:
 
 ### serve
 
-`serve` in the main workspace is no longer a pure placeholder, but it is also not the
-full native server implementation.
+`serve` in the main workspace is now the canonical preview entry while still
+keeping the real HTTP listener in the native-only subproject.
 
 Current main-workspace behavior:
 
 1. Loads config and discovers content.
 2. Reuses the real `build_site_result(...)` path to build preview output.
-3. Prepares preview launch metadata for `127.0.0.1:3000`.
-4. Validates the preview launch through a preview-runner boundary.
-5. Reports preview address, preview root, and runner status.
+3. Prints build-complete or build-with-warnings output from the main CLI.
+4. Delegates the built preview root plus host/port to the native-only preview backend.
+5. Lets the delegated backend validate preview startup and own the long-running server lifecycle.
 
 Behavior split:
 
-- `src/cli/cmd_serve.mbt` uses a dry-run preview runner in normal runtime tests and main-workspace execution semantics.
-- The native mocket preview runner is delegated through the runtime boundary.
-- The standalone real preview server lives in the separate `native-serve/` subproject, which is launched independently from the main MoonInk workspace.
+- `src/cli/cmd_serve.mbt` still exposes dry-run preview helpers for runtime tests and non-blocking validation coverage.
+- `src/cmd/main/main.mbt` special-cases `serve` so the user-facing binary can build once and then `exec` into the delegated native preview backend.
+- The standalone real preview server still lives in the separate `native-serve/` subproject, which now supports both direct `serve` and internal `serve-prebuilt` entry modes.
 
 ## Content Model
 
@@ -303,7 +303,7 @@ This keeps `docflow` focused on parser/render adapter behavior plus generic them
 ## Known Gaps
 
 - no structured option parser yet (flags and options are not parsed)
-- `serve` in the main workspace validates preview launch and reports readiness, but the real long-running preview server still lives in `native-serve/` rather than the main workspace binary
+- `serve` still has no watch mode, live reload, or incremental rebuild behavior
 - Theme V2 bundles are currently project-local only; there is no inheritance or layering implementation yet
 - partial loading currently scans the `partials/` directory non-recursively
 - tokens only emit scalar string/number/bool values to CSS custom properties
