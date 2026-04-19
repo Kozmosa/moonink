@@ -7,23 +7,13 @@ import {
 }
 
 // Values
-pub fn built_in_theme_asset_file_sources() -> Map[String, String]
-
-pub fn built_in_theme_asset_source(String) -> String?
-
-pub fn built_in_theme_layout_file_sources() -> Map[String, String]
-
-pub fn built_in_theme_legacy_layout_source() -> String
-
-pub fn built_in_theme_manifest_source() -> String
-
-pub fn built_in_theme_partial_file_sources() -> Map[String, String]
-
 pub fn current_utc_iso8601_second() -> String
 
 pub fn declared_slot_values(Array[String], Map[String, @core.ThemeConfigValue]) -> Map[String, String]
 
 pub fn default_runtime_task_policy() -> RuntimeTaskPolicy
+
+pub fn dirname_host_path(String) -> String
 
 pub fn discover_content_result(@core.MooninkConfig) -> Result[@core.ContentInventory, @core.ContentDiscoveryError]
 
@@ -31,7 +21,15 @@ pub fn discover_content_task(@core.MooninkConfig) -> RuntimeIOTask[Result[@core.
 
 pub fn dry_run_preview_runner() -> PreviewRunner
 
-pub fn exec_native_serve_delegate(String) -> Unit raise @core.ProjectIOError
+pub fn embedded_builtin_theme_asset_sources() -> Map[String, String]
+
+pub fn embedded_builtin_theme_layout_file_sources() -> Map[String, String]
+
+pub fn embedded_builtin_theme_layout_source() -> String
+
+pub fn embedded_builtin_theme_manifest_source() -> String
+
+pub fn embedded_builtin_theme_partial_sources() -> Map[String, String]
 
 pub fn flatten_theme_config_values(Map[String, @core.ThemeConfigValue]) -> Map[String, String]
 
@@ -63,6 +61,8 @@ pub fn io_remove_file(String) -> Unit raise @core.ProjectIOError
 
 pub fn io_write_string(String, String) -> Unit raise @core.ProjectIOError
 
+pub fn join_host_path(String, String) -> String raise @core.PathPolicyError
+
 pub fn launch_preview_result(PreviewRunner, PreviewLaunch) -> Result[PreviewLaunch, @core.ProjectIOError]
 
 pub fn load_active_theme_bundle_result(@core.MooninkConfig) -> Result[ActiveThemeBundle, ThemeLoadError]
@@ -85,13 +85,11 @@ pub fn native_mocket_preview_runner() -> PreviewRunner
 
 pub fn native_runtime_adapter() -> NativeRuntimeAdapter
 
-pub fn native_serve_delegate_command_result(String, String, Int) -> Result[String, @core.ProjectIOError]
-
-pub fn poll_spawned_process_result(SpawnedProcess) -> Result[Int, @core.ProjectIOError]
-
 pub fn prepare_preview_launch(String, String, Int, note? : String) -> PreviewLaunch
 
 pub fn read_config_source_task(String) -> RuntimeIOTask[Result[(String, String), @core.ConfigError]]
+
+pub fn resolve_host_path_from_cwd_result(String) -> Result[String, @core.ConfigError]
 
 pub fn[T] run_native_runtime_io_task(RuntimeIOTask[T]) -> T
 
@@ -101,11 +99,7 @@ pub fn[T] run_runtime_io_task(RuntimeIOTask[T]) -> T
 
 pub fn runtime_task_policy() -> RuntimeTaskPolicy
 
-pub fn sleep_millis(Int) -> Unit
-
-pub fn spawn_shell_command_result(String) -> Result[SpawnedProcess, @core.ProjectIOError]
-
-pub fn terminate_spawned_process_result(SpawnedProcess) -> Result[Unit, @core.ProjectIOError]
+pub fn validate_native_preview_startup_result(String, Int) -> Result[Unit, @core.ProjectIOError]
 
 // Errors
 pub(all) suberror ThemeLoadError {
@@ -131,6 +125,7 @@ pub(all) struct ActiveThemeLayout {
   source_kind : ActiveThemeSource
   theme_name : String
   asset_source_dir : String?
+  embedded_assets : Map[String, String]
 } derive(Eq, @debug.Debug)
 
 pub(all) enum ActiveThemeSource {
@@ -184,10 +179,6 @@ pub(all) struct RuntimeTaskPolicy {
   conflict_policy : RuntimeConflictPolicy
   cancellation_policy : RuntimeCancellationPolicy
   scheduling_note : String
-} derive(Eq, @debug.Debug)
-
-pub(all) struct SpawnedProcess {
-  pid : Int
 } derive(Eq, @debug.Debug)
 
 // Type aliases

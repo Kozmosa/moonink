@@ -10,149 +10,51 @@ fn normalize_runtime_argv(raw_argv : Array[String]) -> Array[String] {
 }
 
 ///|
-pub(all) struct ServePrebuiltOptions {
-  root : String
-  host : String
-  port : Int
-} derive(Debug, Eq)
+#cfg(target="js")
+extern "js" fn runtime_js_try_exit(code : Int) -> Bool =
+  #| function(code) {
+  #|   if (typeof process !== "undefined" && typeof process.exit === "function") {
+  #|     process.exit(code);
+  #|     return true;
+  #|   }
+  #|   return false;
+  #| }
 
 ///|
-enum ServePrebuiltRequest {
-  NotRequested
-  Invalid
-  Run(ServePrebuiltOptions)
-} derive(Debug, Eq)
+#cfg(any(target="native", target="llvm"))
+extern "c" fn runtime_native_exit(code : Int) = "exit"
 
 ///|
-fn next_flag_value(
-  flag_name : String,
-  tokens : Array[String],
-  index : Int,
-) -> String? {
-  if index + 1 < tokens.length() {
-    Some(tokens[index + 1])
-  } else {
-    println(
-      "[serve] failed during preview startup\nreason: missing value for \{flag_name}",
-    )
-    None
+#cfg(any(target="wasm", target="wasm-gc"))
+fn runtime_wasm_exit(code : Int) -> Unit = "__moonbit_sys_unstable" "exit"
+
+///|
+#cfg(target="js")
+fn apply_exit_code(code : Int) -> Unit {
+  if !runtime_js_try_exit(code) {
+    panic()
   }
 }
 
 ///|
-fn parse_serve_prebuilt_options(tokens : Array[String]) -> ServePrebuiltRequest {
-  if tokens.is_empty() || tokens[0] != "serve-prebuilt" {
-    return ServePrebuiltRequest::NotRequested
-  }
-  let mut root = ""
-  let mut host = @cli.DEFAULT_SERVE_HOST
-  let mut port = @cli.DEFAULT_SERVE_PORT
-  let mut index = 1
-  while index < tokens.length() {
-    let token = tokens[index]
-    if token == "--root" {
-      let value = match next_flag_value("--root", tokens, index) {
-        Some(value) => value
-        None => return ServePrebuiltRequest::Invalid
-      }
-      root = value
-      index += 2
-    } else if token == "--host" {
-      let value = match next_flag_value("--host", tokens, index) {
-        Some(value) => value
-        None => return ServePrebuiltRequest::Invalid
-      }
-      host = value
-      index += 2
-    } else if token == "--port" {
-      let value = match next_flag_value("--port", tokens, index) {
-        Some(value) => value
-        None => return ServePrebuiltRequest::Invalid
-      }
-      let parsed = @string.parse_int(value) catch {
-        _ => {
-          println(
-            "[serve] failed during preview startup\nreason: invalid port \{value}",
-          )
-          return ServePrebuiltRequest::Invalid
-        }
-      }
-      if parsed <= 0 || parsed > 65535 {
-        println(
-          "[serve] failed during preview startup\nreason: invalid port \{value}",
-        )
-        return ServePrebuiltRequest::Invalid
-      }
-      port = parsed
-      index += 2
-    } else {
-      println(
-        "[serve] failed during preview startup\nreason: unknown internal flag \{token}",
-      )
-      return ServePrebuiltRequest::Invalid
-    }
-  }
-  if root.is_empty() {
-    println(
-      "[serve] failed during preview startup\nreason: missing required --root",
-    )
-    ServePrebuiltRequest::Invalid
-  } else {
-    ServePrebuiltRequest::Run({ root, host, port })
-  }
+#cfg(any(target="native", target="llvm"))
+fn apply_exit_code(code : Int) -> Unit {
+  runtime_native_exit(code)
 }
 
 ///|
-fn launch_native_preview(session : @cli.ServeSession) -> Unit {
-  println(
-    @cli.format_runtime_ready_message(
-      @cli.prepare_serve_session(
-        session.preview_root,
-        host=session.host,
-        port=session.port,
-        note="Native mocket preview server started.",
-      ),
-    ),
-  )
-  let app = @mocket.new()
-  app.static_assets("/", @static_file.new(session.preview_root))
-  app.serve(port=session.port)
-}
-
-///|
-fn run_prebuilt_preview(options : ServePrebuiltOptions) -> Unit {
-  let startup = @cli.start_prepared_serve_session_result(
-    @cli.prepare_serve_session(
-      options.root,
-      host=options.host,
-      port=options.port,
-    ),
-    @runtime.dry_run_preview_runner(),
-  )
-  match startup {
-    Ok(session) => launch_native_preview(session)
-    Err(message) => println(message)
-  }
+#cfg(any(target="wasm", target="wasm-gc"))
+fn apply_exit_code(code : Int) -> Unit {
+  runtime_wasm_exit(code)
 }
 
 ///|
 /// Entry point for the MoonInk CLI.
 fn main {
   let argv = normalize_runtime_argv(@env.args())
-  match parse_serve_prebuilt_options(argv) {
-    ServePrebuiltRequest::Run(options) => {
-      run_prebuilt_preview(options)
-      return
-    }
-    ServePrebuiltRequest::Invalid => return
-    ServePrebuiltRequest::NotRequested => ()
-  }
-  let outcome = match @cli.parse_cli_request(argv) {
-    @cli.ParsedCliRequest::Serve(options) =>
-      @cli.run_main_serve_command(options)
-    _ => @cli.cli_exec(argv)
-  }
+  let outcome = run_main_native_entry(argv)
   if !outcome.message.is_empty() {
     println(outcome.message)
   }
+  apply_exit_code(outcome.exit_code)
 }

@@ -92,3 +92,28 @@ pub fn built_in_theme_asset_file_sources() -> Map[String, String] {
 pub fn built_in_theme_asset_source(relative_path : String) -> String? {
   built_in_theme_asset_file_sources().get(relative_path)
 }
+
+///|
+pub fn embedded_builtin_theme_layout_source() -> String {
+  built_in_theme_legacy_layout_source()
+}
+
+///|
+pub fn embedded_builtin_theme_manifest_source() -> String {
+  built_in_theme_manifest_source()
+}
+
+///|
+pub fn embedded_builtin_theme_layout_file_sources() -> Map[String, String] {
+  built_in_theme_layout_file_sources()
+}
+
+///|
+pub fn embedded_builtin_theme_partial_sources() -> Map[String, String] {
+  built_in_theme_partial_file_sources()
+}
+
+///|
+pub fn embedded_builtin_theme_asset_sources() -> Map[String, String] {
+  built_in_theme_asset_file_sources()
+}
