@@ -32,7 +32,7 @@ Runs the static generation pipeline:
 5. Apply templater and site constructor.
 6. Emit HTML to `output_dir` (default `dist/`).
 
-Current implementation includes the real parser/render/template/site-assembly flow, route-aware pretty/direct output layout, build-time wikilink rewriting based on discovered page routes, project-root `public/` asset copying, and a Theme MVP that resolves layouts in this order: `theme/layout.html`, then `template_file`, then the built-in default theme; selected theme assets are copied into `dist/assets/` when present.
+Current implementation includes the real parser/render/template/site-assembly flow, route-aware pretty/direct output layout, build-time wikilink rewriting based on discovered page routes, project-root `public/` asset copying, and a Theme MVP that resolves layouts in this order: `theme/layout.html`, then `template_file`, then the embedded built-in default theme; selected project theme assets are copied into `dist/assets/`, and built-in assets are emitted from the embedded bundle.
 
 Obsidian-direct output support extends the same build path:
 
@@ -71,7 +71,7 @@ Main workspace behavior:
 7. If a rebuild finishes with warnings, keep serving the new output and surface the warning both in terminal output and `preview-status.json`.
 8. If a rebuild fails fatally, keep serving the last successful output and update `preview-status.json` with error state instead of tearing down preview.
 
-The preview runner is still isolated behind [src/runtime/serve.mbt](src/runtime/serve.mbt). The standard wasm-gc test suite exercises the build-orchestration and dry-run validation helpers, while the standalone native server remains responsible for the actual HTTP listener.
+The preview runner is still isolated behind [src/runtime/serve.mbt](src/runtime/serve.mbt). The standard wasm-gc test suite exercises the build-orchestration and dry-run validation helpers, while the native main binary owns the actual HTTP listener through an internal `serve-prebuilt` mode.
 
 Real preview serving is intentionally native-only. The main-workspace `serve`
 path should be treated as a `--target native` feature; if a non-native target
@@ -83,30 +83,28 @@ browser refresh behavior is intentionally a full-page reload, not HMR.
 
 ### Native preview server
 
-Real HTTP preview serving is implemented in the standalone [native-serve/](native-serve/) subproject.
+Real HTTP preview serving is compiled into the main native binary.
 
 Responsibilities of the native entry:
 
 1. Parse CLI argv using the same normalization pattern as the main binary.
-2. Support direct `serve` for standalone native use, including build + preview startup.
-3. Support an internal `serve-prebuilt` handoff used by the main workspace CLI after a successful build.
-4. Reuse `kozmosa/moonink/cli.start_prepared_serve_session_result(...)` to validate preview startup before handing off to the real server.
+2. Support the internal `serve-prebuilt` handoff used by the main workspace CLI after a successful build.
+3. Reuse `kozmosa/moonink/cli.start_prepared_serve_session_result(...)` to validate preview startup before handing off to the real server.
+4. Start a real `oboard/mocket` static file server rooted at the generated preview directory.
 5. Print the runtime-ready message with a native-server note.
-6. Start a real `oboard/mocket` static file server rooted at the generated preview directory.
 
 Example launch from the repository root:
 
 ```bash
-moon run --manifest-path native-serve/moon.mod.json native-serve/src/cmd/main --target native -- serve fixtures/v2/minimal/moonink.json
+moon run src/cmd/main --target native -- serve fixtures/v2/minimal/moonink.json
 ```
 
 Design constraints:
 
-- `oboard/mocket` must stay out of the main workspace `src/` dependency graph so `moon test` and wasm-gc build plans remain clean.
 - The main workspace `moonink serve` is the canonical build-once-then-preview command.
-- The native subproject is the only place that owns the real preview server dependency.
+- The native main binary owns the real preview server dependency and detached release contract.
 - The native entry accepts an explicit config path so it can be launched from the repo root or other working directories.
-- Main-workspace `serve` delegates to `native-serve` through an internal prebuilt-preview handoff instead of rebuilding twice.
+- Main-workspace `serve` self-spawns the same binary through an internal prebuilt-preview handoff instead of rebuilding twice.
 - Non-native targets are not expected to offer a real preview server; the native-only delegation boundary is part of the design.
 
 ## 3. CLI Output Style

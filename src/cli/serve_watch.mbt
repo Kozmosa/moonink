@@ -464,7 +464,6 @@ fn watch_roots_for_config(
     Some(path) => append_unique_path(roots, path)
     None => ()
   }
-  append_unique_path(roots, @runtime.built_in_default_theme_root())
   roots
 }
 

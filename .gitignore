@@ -21,3 +21,4 @@ fixtures/v2/*/preview-dist/
 fixtures/v2/_test_runs/
 docs/superpowers/plans
 dist/
+artifacts/release/

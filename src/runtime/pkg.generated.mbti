@@ -7,7 +7,17 @@ import {
 }
 
 // Values
-pub fn built_in_default_theme_root() -> String
+pub fn built_in_theme_asset_file_sources() -> Map[String, String]
+
+pub fn built_in_theme_asset_source(String) -> String?
+
+pub fn built_in_theme_layout_file_sources() -> Map[String, String]
+
+pub fn built_in_theme_legacy_layout_source() -> String
+
+pub fn built_in_theme_manifest_source() -> String
+
+pub fn built_in_theme_partial_file_sources() -> Map[String, String]
 
 pub fn current_utc_iso8601_second() -> String
 
@@ -112,6 +122,7 @@ pub(all) struct ActiveThemeBundle {
   layouts : Map[String, String]
   partials : Map[String, String]
   assets_root : String?
+  embedded_assets : Map[String, String]
   source_kind : ActiveThemeSource
 } derive(Eq, @debug.Debug)
 

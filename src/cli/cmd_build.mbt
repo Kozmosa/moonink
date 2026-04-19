@@ -694,7 +694,7 @@ fn theme_asset_root(active_theme : @runtime.ActiveThemeLayout) -> String {
 fn theme_bundle_asset_root(bundle : @runtime.ActiveThemeBundle) -> String {
   match bundle.assets_root {
     Some(_) => "/assets/"
-    None => ""
+    None => if bundle.embedded_assets.length() > 0 { "/assets/" } else { "" }
   }
 }
 
@@ -873,9 +873,16 @@ fn ensure_surface_search_asset(
   if @runtime.io_path_exists(target_path) {
     return
   }
-  let source_path = @runtime.built_in_default_theme_root() +
-    "/assets/moonink-search.js"
-  @runtime.io_copy_file(source_path, target_path) catch {
+  let source = match @runtime.built_in_theme_asset_source("moonink-search.js") {
+    Some(source) => source
+    None =>
+      raise BuildCommandError::ProjectIO(
+        @core.project_io_error(
+          "copy_theme_assets", "moonink-search.js", "embedded built-in search asset is unavailable",
+        ),
+      )
+  }
+  @runtime.io_write_string(target_path, source) catch {
     err => raise BuildCommandError::ProjectIO(err)
   }
 }
@@ -2812,7 +2819,47 @@ fn copy_theme_bundle_assets(
 ) -> Unit raise BuildCommandError {
   match bundle.assets_root {
     Some(path) => copy_assets_dir(config, path)
-    None => ()
+    None => {
+      let target_root = @core.join_relative_path(output_root(config), "assets") catch {
+        err =>
+          raise BuildCommandError::ProjectIO(
+            @core.project_io_error(
+              "copy_theme_assets",
+              output_root(config),
+              @core.format_path_policy_error(err),
+            ),
+          )
+      }
+      for entry in bundle.embedded_assets {
+        let (relative_path, source) = entry
+        let target_path = @core.join_relative_path(target_root, relative_path) catch {
+          err =>
+            raise BuildCommandError::ProjectIO(
+              @core.project_io_error(
+                "copy_theme_assets",
+                relative_path,
+                @core.format_path_policy_error(err),
+              ),
+            )
+        }
+        let parent = @core.dirname_relative_path(target_path) catch {
+          err =>
+            raise BuildCommandError::ProjectIO(
+              @core.project_io_error(
+                "copy_theme_assets",
+                target_path,
+                err.to_string(),
+              ),
+            )
+        }
+        @runtime.io_ensure_dir(parent) catch {
+          err => raise BuildCommandError::ProjectIO(err)
+        }
+        @runtime.io_write_string(target_path, source) catch {
+          err => raise BuildCommandError::ProjectIO(err)
+        }
+      }
+    }
   }
 }
 

@@ -84,29 +84,20 @@ fn shell_quote(value : String) -> String {
 }
 
 ///|
-fn serve_delegate_workspace_root() -> String raise @core.ProjectIOError {
-  let cwd = match @env.current_dir() {
-    Some(path) => path
-    None =>
-      raise @core.project_io_error(
-        "serve_delegate", ".", "current working directory is unavailable",
-      )
+fn current_executable_path() -> String raise @core.ProjectIOError {
+  let argv = @env.args()
+  if argv.length() == 0 {
+    raise @core.project_io_error(
+      "serve_delegate", ".", "current executable path is unavailable",
+    )
   }
-  match find_workspace_root_from(cwd) {
-    Some(root) => root
-    None =>
-      raise @core.project_io_error(
-        "serve_delegate", cwd, "could not locate MoonInk workspace root for native serve delegation",
-      )
+  let executable = argv[0]
+  if executable.is_empty() {
+    raise @core.project_io_error(
+      "serve_delegate", ".", "current executable path is unavailable",
+    )
   }
-}
-
-///|
-fn moon_cli_command() -> String {
-  match @env.get_env_var("HOME") {
-    Some(home) => shell_quote(home + "/.moon/bin/moon")
-    None => "moon"
-  }
+  executable
 }
 
 ///|
@@ -115,15 +106,12 @@ pub fn native_serve_delegate_command_result(
   host : String,
   port : Int,
 ) -> Result[String, @core.ProjectIOError] {
-  let workspace_root = serve_delegate_workspace_root() catch {
+  let executable_path = current_executable_path() catch {
     err => return Err(err)
   }
   Ok(
-    "cd " +
-    shell_quote(workspace_root) +
-    " && " +
-    moon_cli_command() +
-    " run --manifest-path native-serve/moon.mod.json native-serve/src/cmd/main --target native -- serve-prebuilt --root " +
+    shell_quote(executable_path) +
+    " serve-prebuilt --root " +
     shell_quote(root_dir) +
     " --host " +
     shell_quote(host) +
