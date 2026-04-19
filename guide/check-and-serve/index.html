@@ -1,0 +1,301 @@
+<!doctype html>
+<html data-theme-v2="default" data-layout-kind="article">
+  <head>
+    <meta charset="utf-8">
+    <title>检查与预览</title>
+    <link rel="stylesheet" href="/assets/moonink-default.css">
+    <link rel="stylesheet" href="/assets/theme-vars.css">
+    <meta name="description" content="check 用来提前暴露问题，serve 用来本地预览；它们的职责不同，而且 serve 明确是 native-only。"><meta property="og:description" content="check 用来提前暴露问题，serve 用来本地预览；它们的职责不同，而且 serve 明确是 native-only。"><link rel="canonical" href="https://example.com/moonink/guide/check-and-serve/"><meta property="og:url" content="https://example.com/moonink/guide/check-and-serve/"><meta property="og:title" content="检查与预览"><meta property="og:type" content="article"><meta property="og:site_name" content="月墨 / MoonInk"><link rel="alternate" type="application/rss+xml" href="https://example.com/moonink/rss.xml" title="月墨 / MoonInk">
+  </head>
+  <body class="moonink-article" data-kind="article" data-url="/guide/check-and-serve/" data-theme="default">
+    <header class="site-header">
+  <a class="site-brand" href="https://example.com/moonink">月墨 / MoonInk</a>
+  <nav class="site-header-links" aria-label="Primary">
+    <a href="/search/">Search</a>
+    <a href="/archive/">Archive</a>
+  </nav>
+  <div class="site-header-meta">
+    
+    <span>Article</span>
+  </div>
+</header>
+
+    <div class="site-shell" data-content-layout="article">
+      <aside class="site-nav">
+  <p class="site-nav-label">Explore</p>
+  <nav data-moonink-nav="auto"><ul><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/">月墨 / MoonInk</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/faq/">FAQ</a></li><li data-active="false" data-ancestor="true" data-index="true" data-expanded="true" data-current="ancestor"><a href="/guide/">使用指南</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/cli/">CLI 命令</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/config/">配置文件</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/theme-v2/">Theme V2</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/frontmatter/">页面元数据</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/content-model/">内容模型</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/obsidian-vault/">Obsidian Vault</a></li><li data-active="true" data-ancestor="false" data-index="false" data-expanded="true" data-current="page"><a href="/guide/check-and-serve/">检查与预览</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/linking-and-assets/">链接与资源</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/routing-and-output/">路由与输出</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/compare/">对比</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/compare/mkdocs/">MoonInk 与 MkDocs</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/compare/quartz/">MoonInk 与 Quartz</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/examples/">示例</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/docs-site/">文档站点示例</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/minimal-site/">最小站点示例</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/obsidian-vault/">Vault 示例</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/migration/">迁移与接入</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/migration/from-obsidian-vault/">从 Obsidian Vault 接入</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/migration/from-markdown-folder/">从 Markdown Folder 接入</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/reference/">参考</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/cli-reference/">CLI Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/theme-reference/">Theme Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/config-reference/">Config Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/frontmatter-reference/">Frontmatter Reference</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/getting-started/">快速开始</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/getting-started/install/">安装 MoonInk</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/getting-started/first-site/">第一个站点</a></li></ul></li></ul></nav>
+</aside>
+
+      <div class="content-shell">
+        <article class="article-page">
+          <header class="article-hero">
+            <div class="article-hero-copy">
+              <div class="article-eyebrow">
+                
+                
+              </div>
+              <div class="section-heading">
+                <p class="section-kicker">Article</p>
+                <h1 class="content-title">检查与预览</h1>
+              </div>
+              <p class="article-summary">check 用来提前暴露问题，serve 用来本地预览；它们的职责不同，而且 serve 明确是 native-only。</p>
+              <div class="article-meta">
+                
+                
+                <span class="article-meta-item">2 min read</span>
+              </div>
+              <ul class="tag-list"><li>guide</li><li>workflow</li></ul>
+            </div>
+            
+          </header>
+
+          <div class="article-grid">
+            <div class="article-main">
+              <div class="content-context" data-section-title="使用指南" data-section-url="/guide/"><nav data-moonink-breadcrumb="auto" aria-label="Breadcrumb"><span aria-current="page">检查与预览</span></nav></div>
+              <main class="article-body" data-source="guide/check-and-serve.md"><p>这两个命令经常一起出现，但它们不是同一种工具。简单记法是：先 <code>check</code>，再 <code>build</code>，最后按需 <code>serve</code>。</p>
+<h2 id="check-做什么"><code>check</code> 做什么</h2>
+<p><code>check</code> 会复用构建前半段的真实路径：</p>
+<ul>
+<li>
+<p>读取 <code>moonink.json</code></p>
+</li>
+<li>
+<p>发现内容与资源</p>
+</li>
+<li>
+<p>解析 frontmatter</p>
+</li>
+<li>
+<p>做 route、wikilink、theme/template 相关检查</p>
+</li>
+</ul>
+<p>它不会输出站点文件，所以特别适合放在日常写作和迁移流程前面。</p>
+<h2 id="check-的返回语义"><code>check</code> 的返回语义</h2>
+<ul>
+<li>
+<p>只有 warning：返回 <code>0</code></p>
+</li>
+<li>
+<p>有 blocking error：返回 <code>1</code></p>
+</li>
+</ul>
+<p>也就是说，warning 会被报告出来，但不会阻断你继续修正内容；真正阻断构建的是 error。</p>
+<h2 id="check-常见用法"><code>check</code> 常见用法</h2>
+<p>binary 形式：</p>
+<pre><code class="language-bash">moonink check
+moonink check --config docs/moonink/moonink.json
+moonink check --config docs/moonink/moonink.json --output preview-dist
+</code></pre>
+<p>source-run 形式：</p>
+<pre><code class="language-bash">moon run src/cmd/main -- check
+moon run src/cmd/main -- check --config docs/moonink/moonink.json
+</code></pre>
+<h2 id="serve-做什么"><code>serve</code> 做什么</h2>
+<p><code>serve</code> 的职责是：</p>
+<ol>
+<li>
+<p>先完成一次 build</p>
+</li>
+<li>
+<p>再把结果交给本地 preview runtime</p>
+</li>
+</ol>
+<p>所以它不是一个“跳过构建”的命令，而是一个“先构建、再预览”的命令。</p>
+<h2 id="serve-的关键边界native-only"><code>serve</code> 的关键边界：native-only</h2>
+<p>MoonInk 的真实 HTTP preview 只在 native target 上可用。你应该把这条约束写进自己的团队工作流里：</p>
+<ul>
+<li>
+<p>日常内容预检：先 <code>check</code></p>
+</li>
+<li>
+<p>产出文件：再 <code>build</code></p>
+</li>
+<li>
+<p>本地预览：仅在 native 环境下 <code>serve</code></p>
+</li>
+</ul>
+<p>binary 形式：</p>
+<pre><code class="language-bash">moonink serve --config docs/moonink/moonink.json --host 127.0.0.1 --port 3000
+</code></pre>
+<p>source-run 形式：</p>
+<pre><code class="language-bash">moon run src/cmd/main --target native -- serve --config docs/moonink/moonink.json --host 127.0.0.1 --port 3000
+</code></pre>
+<h2 id="什么情况先看哪一条命令">什么情况先看哪一条命令</h2>
+<ul>
+<li>
+<p>改了 frontmatter、route、link：先 <code>check</code></p>
+</li>
+<li>
+<p>想确认输出目录内容：<code>build</code></p>
+</li>
+<li>
+<p>想在浏览器里预览：<code>serve</code></p>
+</li>
+</ul>
+<p>命令参数见 <a href="/reference/cli-reference/">cli-reference</a>，最短起步流程见 <a href="/getting-started/first-site/">first-site</a>。</p>
+</main>
+
+              
+
+              
+              <section class="continuation-block">
+                <div class="section-heading">
+                  <p class="section-kicker">Continue reading</p>
+                  <h2>Nearby articles</h2>
+                </div>
+                <div class="nav-grid">
+                  <div class="nav-card"><p class="nav-card-label">Previous</p><a href="/guide/obsidian-vault/">Obsidian Vault</a></div>
+                  <div class="nav-card"><p class="nav-card-label">Next</p><a href="/getting-started/install/">安装 MoonInk</a></div>
+                </div>
+              </section>
+              
+
+              
+              <section class="continuation-block">
+                <div class="section-heading">
+                  <p class="section-kicker">Explore this thread</p>
+                  <h2>Follow the local knowledge path</h2>
+                </div>
+                <div class="relationship-stack">
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Mentioned here</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/reference/cli-reference/">CLI Reference</a>
+                        <p class="related-reason">命令参数见 cli-reference，最短起步流程见 first-site。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/getting-started/first-site/">第一个站点</a>
+                        <p class="related-reason">命令参数见 cli-reference，最短起步流程见 first-site。</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Referenced by</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/faq/">FAQ</a>
+                        <p class="related-reason">因为 check 会先把 config、frontmatter、route、wikilink、theme/template 相关问题暴露出来，而且 warning 不会直接失败。它应该是日常写作工作流的一部分。详见 check-and-serve。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/">月墨 / MoonInk</a>
+                        <p class="related-reason">- check 是 first-class command。开始 build 之前，先看 check-and-serve。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/cli/">CLI 命令</a>
+                        <p class="related-reason">check 和 build 走的是同一套输入面，但 check 不写输出。它会把 frontmatter、route、wikilink、theme/template 这类问题先暴露出来。细节见 check-and-serve。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/">使用指南</a>
+                        <p class="related-reason">3. check-and-serve</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/getting-started/">快速开始</a>
+                        <p class="related-reason">3. check-and-serve</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/getting-started/install/">安装 MoonInk</a>
+                        <p class="related-reason">- 先理解 check 的角色：check-and-serve</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/reference/cli-reference/">CLI Reference</a>
+                        <p class="related-reason">- check-and-serve</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/getting-started/first-site/">第一个站点</a>
+                        <p class="related-reason">check 会走和 build 相同的 config / content discovery / build-input 预检路径，但不输出站点文件。warning 不会让命令失败，blocking error 会返回 1 。这也是为什么它应该放在日常写作流程的前面。完整说明见 check-and-serve。</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Keep reading</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/guide/cli/">CLI 命令</a>
+                        <p class="related-reason">Directly linked · Shared tags: guide</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/reference/cli-reference/">CLI Reference</a>
+                        <p class="related-reason">Links both ways</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/getting-started/first-site/">第一个站点</a>
+                        <p class="related-reason">Links both ways</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/getting-started/install/">安装 MoonInk</a>
+                        <p class="related-reason">Directly linked</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+                </div>
+              </section>
+              
+
+              <section class="author-card">
+                <div class="section-heading">
+                  <p class="section-kicker">Author</p>
+                  <div class="author-card-title">
+                    <h3>月墨 / MoonInk</h3>
+                    
+                  </div>
+                </div>
+                <p class="author-card-note">Published from 月墨 / MoonInk</p>
+                
+                
+                <ul class="author-profile-links"></ul>
+              </section>
+            </div>
+
+            
+            <aside class="article-toc">
+              <p class="section-kicker">On this page</p>
+              <ol>
+                
+                <li data-level="2"><a href="#check-做什么">`check` 做什么</a></li>
+                
+                <li data-level="2"><a href="#check-的返回语义">`check` 的返回语义</a></li>
+                
+                <li data-level="2"><a href="#check-常见用法">`check` 常见用法</a></li>
+                
+                <li data-level="2"><a href="#serve-做什么">`serve` 做什么</a></li>
+                
+                <li data-level="2"><a href="#serve-的关键边界native-only">`serve` 的关键边界：native-only</a></li>
+                
+                <li data-level="2"><a href="#什么情况先看哪一条命令">什么情况先看哪一条命令</a></li>
+                
+              </ol>
+            </aside>
+            
+          </div>
+        </article>
+      </div>
+    </div>
+    
+  </body>
+</html>

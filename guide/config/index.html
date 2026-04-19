@@ -1,0 +1,284 @@
+<!doctype html>
+<html data-theme-v2="default" data-layout-kind="article">
+  <head>
+    <meta charset="utf-8">
+    <title>配置文件</title>
+    <link rel="stylesheet" href="/assets/moonink-default.css">
+    <link rel="stylesheet" href="/assets/theme-vars.css">
+    <meta name="description" content="MoonInk 使用一个项目根级别的 moonink.json，内容不多，但会决定内容根、输出目录、route 风格和主题路径。"><meta property="og:description" content="MoonInk 使用一个项目根级别的 moonink.json，内容不多，但会决定内容根、输出目录、route 风格和主题路径。"><link rel="canonical" href="https://example.com/moonink/guide/config/"><meta property="og:url" content="https://example.com/moonink/guide/config/"><meta property="og:title" content="配置文件"><meta property="og:type" content="article"><meta property="og:site_name" content="月墨 / MoonInk"><link rel="alternate" type="application/rss+xml" href="https://example.com/moonink/rss.xml" title="月墨 / MoonInk">
+  </head>
+  <body class="moonink-article" data-kind="article" data-url="/guide/config/" data-theme="default">
+    <header class="site-header">
+  <a class="site-brand" href="https://example.com/moonink">月墨 / MoonInk</a>
+  <nav class="site-header-links" aria-label="Primary">
+    <a href="/search/">Search</a>
+    <a href="/archive/">Archive</a>
+  </nav>
+  <div class="site-header-meta">
+    
+    <span>Article</span>
+  </div>
+</header>
+
+    <div class="site-shell" data-content-layout="article">
+      <aside class="site-nav">
+  <p class="site-nav-label">Explore</p>
+  <nav data-moonink-nav="auto"><ul><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/">月墨 / MoonInk</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/faq/">FAQ</a></li><li data-active="false" data-ancestor="true" data-index="true" data-expanded="true" data-current="ancestor"><a href="/guide/">使用指南</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/cli/">CLI 命令</a></li><li data-active="true" data-ancestor="false" data-index="false" data-expanded="true" data-current="page"><a href="/guide/config/">配置文件</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/theme-v2/">Theme V2</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/frontmatter/">页面元数据</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/content-model/">内容模型</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/obsidian-vault/">Obsidian Vault</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/check-and-serve/">检查与预览</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/linking-and-assets/">链接与资源</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/routing-and-output/">路由与输出</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/compare/">对比</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/compare/mkdocs/">MoonInk 与 MkDocs</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/compare/quartz/">MoonInk 与 Quartz</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/examples/">示例</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/docs-site/">文档站点示例</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/minimal-site/">最小站点示例</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/obsidian-vault/">Vault 示例</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/migration/">迁移与接入</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/migration/from-obsidian-vault/">从 Obsidian Vault 接入</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/migration/from-markdown-folder/">从 Markdown Folder 接入</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/reference/">参考</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/cli-reference/">CLI Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/theme-reference/">Theme Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/config-reference/">Config Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/frontmatter-reference/">Frontmatter Reference</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/getting-started/">快速开始</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/getting-started/install/">安装 MoonInk</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/getting-started/first-site/">第一个站点</a></li></ul></li></ul></nav>
+</aside>
+
+      <div class="content-shell">
+        <article class="article-page">
+          <header class="article-hero">
+            <div class="article-hero-copy">
+              <div class="article-eyebrow">
+                
+                
+              </div>
+              <div class="section-heading">
+                <p class="section-kicker">Article</p>
+                <h1 class="content-title">配置文件</h1>
+              </div>
+              <p class="article-summary">MoonInk 使用一个项目根级别的 moonink.json，内容不多，但会决定内容根、输出目录、route 风格和主题路径。</p>
+              <div class="article-meta">
+                
+                
+                <span class="article-meta-item">2 min read</span>
+              </div>
+              <ul class="tag-list"><li>guide</li><li>config</li></ul>
+            </div>
+            
+          </header>
+
+          <div class="article-grid">
+            <div class="article-main">
+              <div class="content-context" data-section-title="使用指南" data-section-url="/guide/"><nav data-moonink-breadcrumb="auto" aria-label="Breadcrumb"><span aria-current="page">配置文件</span></nav></div>
+              <main class="article-body" data-source="guide/config.md"><p><code>moonink.json</code> 是 MoonInk 站点的入口配置。对于大多数新站点来说，你先理解这几个字段就够了：<code>site_name</code>、<code>content_dir</code>、<code>output_dir</code>、<code>exclude</code>、<code>route_style</code>。</p>
+<h2 id="一个最小可用例子">一个最小可用例子</h2>
+<pre><code class="language-json">{
+  &quot;site_name&quot;: &quot;My Site&quot;,
+  &quot;content_dir&quot;: &quot;.&quot;,
+  &quot;output_dir&quot;: &quot;dist&quot;,
+  &quot;exclude&quot;: [&quot;dist&quot;],
+  &quot;route_style&quot;: &quot;pretty&quot;
+}
+</code></pre>
+<p>这也是很多内容型站点的推荐起点。</p>
+<h2 id="一个更接近日常使用的例子">一个更接近日常使用的例子</h2>
+<pre><code class="language-json">{
+  &quot;site_name&quot;: &quot;My Site&quot;,
+  &quot;site_url&quot;: &quot;https://example.com&quot;,
+  &quot;content_dir&quot;: &quot;.&quot;,
+  &quot;output_dir&quot;: &quot;dist&quot;,
+  &quot;exclude&quot;: [&quot;.obsidian&quot;, &quot;dist&quot;, &quot;.git&quot;, &quot;node_modules&quot;, &quot;.trash&quot;, &quot;templates&quot;, &quot;Templates&quot;],
+  &quot;route_style&quot;: &quot;pretty&quot;
+}
+</code></pre>
+<p>这类配置适合直接接入已有目录或 Vault。</p>
+<h2 id="obsidian-friendly-例子">Obsidian-friendly 例子</h2>
+<pre><code class="language-json">{
+  &quot;site_name&quot;: &quot;My Vault&quot;,
+  &quot;content_dir&quot;: &quot;.&quot;,
+  &quot;output_dir&quot;: &quot;dist&quot;,
+  &quot;exclude&quot;: [&quot;.obsidian&quot;, &quot;dist&quot;, &quot;.trash&quot;, &quot;Templates&quot;],
+  &quot;route_style&quot;: &quot;pretty&quot;
+}
+</code></pre>
+<p>如果你的 Vault 根目录里还有附件、笔记子目录和 <code>README.md</code>，这通常已经够用。配套工作流见 <a href="obsidian-vault.md">Obsidian Vault</a>。</p>
+<h2 id="theme-v2-例子">Theme V2 例子</h2>
+<pre><code class="language-json">{
+  &quot;site_name&quot;: &quot;My Site&quot;,
+  &quot;content_dir&quot;: &quot;.&quot;,
+  &quot;output_dir&quot;: &quot;dist&quot;,
+  &quot;route_style&quot;: &quot;pretty&quot;,
+  &quot;theme&quot;: &quot;theme&quot;,
+  &quot;theme_config&quot;: {
+    &quot;color&quot;: {
+      &quot;bg&quot;: &quot;#fff8e1&quot;
+    },
+    &quot;slots&quot;: {
+      &quot;head&quot;: &quot;&lt;meta name=\&quot;color-scheme\&quot; content=\&quot;light\&quot;&gt;&quot;
+    }
+  }
+}
+</code></pre>
+<p>如果你没有配置 <code>theme</code> 或 <code>template_file</code>，MoonInk 会回退到 built-in default theme。想自己写主题时，再进入 <a href="/guide/theme-v2/">Theme V2</a> 即可。</p>
+<h2 id="字段怎么分层理解">字段怎么分层理解</h2>
+<ul>
+<li>
+<p>日常必备：<code>site_name</code>、<code>content_dir</code>、<code>output_dir</code>、<code>exclude</code>、<code>route_style</code></p>
+</li>
+<li>
+<p>常见补充：<code>site_url</code></p>
+</li>
+<li>
+<p>主题相关：<code>theme</code>、<code>theme_config</code></p>
+</li>
+<li>
+<p>兼容路径：<code>template_file</code></p>
+</li>
+</ul>
+<p>完整字段表见 <a href="/reference/config-reference/">config-reference</a>。</p>
+</main>
+
+              
+
+              
+              <section class="continuation-block">
+                <div class="section-heading">
+                  <p class="section-kicker">Continue reading</p>
+                  <h2>Nearby articles</h2>
+                </div>
+                <div class="nav-grid">
+                  <div class="nav-card"><p class="nav-card-label">Previous</p><a href="/guide/cli/">CLI 命令</a></div>
+                  <div class="nav-card"><p class="nav-card-label">Next</p><a href="/guide/theme-v2/">Theme V2</a></div>
+                </div>
+              </section>
+              
+
+              
+              <section class="continuation-block">
+                <div class="section-heading">
+                  <p class="section-kicker">Explore this thread</p>
+                  <h2>Follow the local knowledge path</h2>
+                </div>
+                <div class="relationship-stack">
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Mentioned here</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/guide/theme-v2/">Theme V2</a>
+                        <p class="related-reason">如果你没有配置 theme 或 template_file ，MoonInk 会回退到 built-in default theme。想自己写主题时，再进入 Theme V2 即可。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/reference/config-reference/">Config Reference</a>
+                        <p class="related-reason">完整字段表见 config-reference。</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Referenced by</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/">月墨 / MoonInk</a>
+                        <p class="related-reason">- config： moonink.json 的稳定字段和推荐默认值。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/">使用指南</a>
+                        <p class="related-reason">4. config</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/examples/">示例</a>
+                        <p class="related-reason">- config</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/theme-v2/">Theme V2</a>
+                        <p class="related-reason">- 想回到 config：config</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/getting-started/">快速开始</a>
+                        <p class="related-reason">如果你是第一次接触 MoonInk，从这里开始最省路径。这个 section 只关注“先把站点跑起来”，把更细的概念说明留给 content-model、config 和 frontmatter。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/linking-and-assets/">链接与资源</a>
+                        <p class="related-reason">config</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/getting-started/first-site/">第一个站点</a>
+                        <p class="related-reason">- 想改 moonink.json ：config</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/reference/config-reference/">Config Reference</a>
+                        <p class="related-reason">Guide 版说明见 config。</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Keep reading</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/guide/theme-v2/">Theme V2</a>
+                        <p class="related-reason">Links both ways · Shared tags: guide</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/linking-and-assets/">链接与资源</a>
+                        <p class="related-reason">Directly linked · Shared tags: guide</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/reference/config-reference/">Config Reference</a>
+                        <p class="related-reason">Links both ways</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/getting-started/first-site/">第一个站点</a>
+                        <p class="related-reason">Directly linked</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+                </div>
+              </section>
+              
+
+              <section class="author-card">
+                <div class="section-heading">
+                  <p class="section-kicker">Author</p>
+                  <div class="author-card-title">
+                    <h3>月墨 / MoonInk</h3>
+                    
+                  </div>
+                </div>
+                <p class="author-card-note">Published from 月墨 / MoonInk</p>
+                
+                
+                <ul class="author-profile-links"></ul>
+              </section>
+            </div>
+
+            
+            <aside class="article-toc">
+              <p class="section-kicker">On this page</p>
+              <ol>
+                
+                <li data-level="2"><a href="#一个最小可用例子">一个最小可用例子</a></li>
+                
+                <li data-level="2"><a href="#一个更接近日常使用的例子">一个更接近日常使用的例子</a></li>
+                
+                <li data-level="2"><a href="#obsidian-friendly-例子">Obsidian-friendly 例子</a></li>
+                
+                <li data-level="2"><a href="#theme-v2-例子">Theme V2 例子</a></li>
+                
+                <li data-level="2"><a href="#字段怎么分层理解">字段怎么分层理解</a></li>
+                
+              </ol>
+            </aside>
+            
+          </div>
+        </article>
+      </div>
+    </div>
+    
+  </body>
+</html>

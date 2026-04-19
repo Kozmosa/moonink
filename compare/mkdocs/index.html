@@ -1,0 +1,233 @@
+<!doctype html>
+<html data-theme-v2="default" data-layout-kind="article">
+  <head>
+    <meta charset="utf-8">
+    <title>MoonInk 与 MkDocs</title>
+    <link rel="stylesheet" href="/assets/moonink-default.css">
+    <link rel="stylesheet" href="/assets/theme-vars.css">
+    <meta name="description" content="MkDocs 更偏 docs-first 站点组织，而 MoonInk 更强调 Markdown / Vault 内容根、WikiLink 和逐步接入已有目录。"><meta property="og:description" content="MkDocs 更偏 docs-first 站点组织，而 MoonInk 更强调 Markdown / Vault 内容根、WikiLink 和逐步接入已有目录。"><link rel="canonical" href="https://example.com/moonink/compare/mkdocs/"><meta property="og:url" content="https://example.com/moonink/compare/mkdocs/"><meta property="og:title" content="MoonInk 与 MkDocs"><meta property="og:type" content="article"><meta property="og:site_name" content="月墨 / MoonInk"><link rel="alternate" type="application/rss+xml" href="https://example.com/moonink/rss.xml" title="月墨 / MoonInk">
+  </head>
+  <body class="moonink-article" data-kind="article" data-url="/compare/mkdocs/" data-theme="default">
+    <header class="site-header">
+  <a class="site-brand" href="https://example.com/moonink">月墨 / MoonInk</a>
+  <nav class="site-header-links" aria-label="Primary">
+    <a href="/search/">Search</a>
+    <a href="/archive/">Archive</a>
+  </nav>
+  <div class="site-header-meta">
+    
+    <span>Article</span>
+  </div>
+</header>
+
+    <div class="site-shell" data-content-layout="article">
+      <aside class="site-nav">
+  <p class="site-nav-label">Explore</p>
+  <nav data-moonink-nav="auto"><ul><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/">月墨 / MoonInk</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/faq/">FAQ</a></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/guide/">使用指南</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/cli/">CLI 命令</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/config/">配置文件</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/theme-v2/">Theme V2</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/frontmatter/">页面元数据</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/content-model/">内容模型</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/obsidian-vault/">Obsidian Vault</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/check-and-serve/">检查与预览</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/linking-and-assets/">链接与资源</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/routing-and-output/">路由与输出</a></li></ul></li><li data-active="false" data-ancestor="true" data-index="true" data-expanded="true" data-current="ancestor"><a href="/compare/">对比</a><ul><li data-active="true" data-ancestor="false" data-index="false" data-expanded="true" data-current="page"><a href="/compare/mkdocs/">MoonInk 与 MkDocs</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/compare/quartz/">MoonInk 与 Quartz</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/examples/">示例</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/docs-site/">文档站点示例</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/minimal-site/">最小站点示例</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/obsidian-vault/">Vault 示例</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/migration/">迁移与接入</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/migration/from-obsidian-vault/">从 Obsidian Vault 接入</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/migration/from-markdown-folder/">从 Markdown Folder 接入</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/reference/">参考</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/cli-reference/">CLI Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/theme-reference/">Theme Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/config-reference/">Config Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/frontmatter-reference/">Frontmatter Reference</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/getting-started/">快速开始</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/getting-started/install/">安装 MoonInk</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/getting-started/first-site/">第一个站点</a></li></ul></li></ul></nav>
+</aside>
+
+      <div class="content-shell">
+        <article class="article-page">
+          <header class="article-hero">
+            <div class="article-hero-copy">
+              <div class="article-eyebrow">
+                
+                
+              </div>
+              <div class="section-heading">
+                <p class="section-kicker">Article</p>
+                <h1 class="content-title">MoonInk 与 MkDocs</h1>
+              </div>
+              <p class="article-summary">MkDocs 更偏 docs-first 站点组织，而 MoonInk 更强调 Markdown / Vault 内容根、WikiLink 和逐步接入已有目录。</p>
+              <div class="article-meta">
+                <span class="article-meta-item">2026-04-19</span>
+                
+                <span class="article-meta-item">2 min read</span>
+              </div>
+              <ul class="tag-list"><li>compare</li><li>docs</li></ul>
+            </div>
+            
+          </header>
+
+          <div class="article-grid">
+            <div class="article-main">
+              <div class="content-context" data-section-title="对比" data-section-url="/compare/"><nav data-moonink-breadcrumb="auto" aria-label="Breadcrumb"><span aria-current="page">MoonInk 与 MkDocs</span></nav></div>
+              <main class="article-body" data-source="compare/mkdocs.md"><p>MoonInk 和 MkDocs 都能拿来做文档站，但它们默认假设的内容工作流并不一样。</p>
+<h2 id="mkdocs-常见出发点">MkDocs 常见出发点</h2>
+<ul>
+<li>
+<p>先定义一个 docs-first 项目结构</p>
+</li>
+<li>
+<p>再围绕导航、站点配置和主题来组织内容</p>
+</li>
+</ul>
+<h2 id="moonink-常见出发点">MoonInk 常见出发点</h2>
+<ul>
+<li>
+<p>先承认你已经有一个 Markdown folder 或 Vault</p>
+</li>
+<li>
+<p>先让它能 <code>check</code>、能 <code>build</code></p>
+</li>
+<li>
+<p>再把首页、section hub、Theme V2 逐步补齐</p>
+</li>
+</ul>
+<h2 id="moonink-更适合哪些情况">MoonInk 更适合哪些情况</h2>
+<ul>
+<li>
+<p>你不想先做一次大规模内容迁移</p>
+</li>
+<li>
+<p>你希望保留双中括号 WikiLink 和附件写法</p>
+</li>
+<li>
+<p>你希望 page / article 混合，而不是只把内容视作“文档导航节点”</p>
+</li>
+</ul>
+<h2 id="什么时候-mkdocs-风格可能更贴近你">什么时候 MkDocs 风格可能更贴近你</h2>
+<ul>
+<li>
+<p>你的团队已经把信息架构、导航和站点部署流程固定在另一套 docs-first 习惯里</p>
+</li>
+<li>
+<p>你更想从“一个文档项目”出发，而不是从“一个现有内容根”出发</p>
+</li>
+</ul>
+<h2 id="怎么判断">怎么判断</h2>
+<p>如果你现有内容本来就是零散 Markdown、Vault 笔记或混合目录，先看 <a href="/guide/content-model/">content-model</a>、<a href="/guide/routing-and-output/">routing-and-output</a> 和 <a href="../migration/from-markdown-folder.md">从 Markdown Folder 接入</a> 会更贴近 MoonInk 的思路。</p>
+</main>
+
+              
+
+              
+              <section class="continuation-block">
+                <div class="section-heading">
+                  <p class="section-kicker">Continue reading</p>
+                  <h2>Nearby articles</h2>
+                </div>
+                <div class="nav-grid">
+                  
+                  <div class="nav-card"><p class="nav-card-label">Next</p><a href="/compare/quartz/">MoonInk 与 Quartz</a></div>
+                </div>
+              </section>
+              
+
+              
+              <section class="continuation-block">
+                <div class="section-heading">
+                  <p class="section-kicker">Explore this thread</p>
+                  <h2>Follow the local knowledge path</h2>
+                </div>
+                <div class="relationship-stack">
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Mentioned here</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/guide/content-model/">内容模型</a>
+                        <p class="related-reason">如果你现有内容本来就是零散 Markdown、Vault 笔记或混合目录，先看 content-model、routing-and-output 和 从 Markdown Folder 接入 会更贴近 MoonInk 的思路。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/routing-and-output/">路由与输出</a>
+                        <p class="related-reason">如果你现有内容本来就是零散 Markdown、Vault 笔记或混合目录，先看 content-model、routing-and-output 和 从 Markdown Folder 接入 会更贴近 MoonInk 的思路。</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Referenced by</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/">月墨 / MoonInk</a>
+                        <p class="related-reason">- 想了解取舍：quartz、mkdocs</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/compare/">对比</a>
+                        <p class="related-reason">- mkdocs</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Keep reading</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/guide/content-model/">内容模型</a>
+                        <p class="related-reason">Directly linked</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/routing-and-output/">路由与输出</a>
+                        <p class="related-reason">Directly linked</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/compare/quartz/">MoonInk 与 Quartz</a>
+                        <p class="related-reason">Shared tags: compare</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/examples/docs-site/">文档站点示例</a>
+                        <p class="related-reason">Shared tags: docs</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+                </div>
+              </section>
+              
+
+              <section class="author-card">
+                <div class="section-heading">
+                  <p class="section-kicker">Author</p>
+                  <div class="author-card-title">
+                    <h3>月墨 / MoonInk</h3>
+                    
+                  </div>
+                </div>
+                <p class="author-card-note">Published from 月墨 / MoonInk</p>
+                
+                
+                <ul class="author-profile-links"></ul>
+              </section>
+            </div>
+
+            
+            <aside class="article-toc">
+              <p class="section-kicker">On this page</p>
+              <ol>
+                
+                <li data-level="2"><a href="#mkdocs-常见出发点">MkDocs 常见出发点</a></li>
+                
+                <li data-level="2"><a href="#moonink-常见出发点">MoonInk 常见出发点</a></li>
+                
+                <li data-level="2"><a href="#moonink-更适合哪些情况">MoonInk 更适合哪些情况</a></li>
+                
+                <li data-level="2"><a href="#什么时候-mkdocs-风格可能更贴近你">什么时候 MkDocs 风格可能更贴近你</a></li>
+                
+                <li data-level="2"><a href="#怎么判断">怎么判断</a></li>
+                
+              </ol>
+            </aside>
+            
+          </div>
+        </article>
+      </div>
+    </div>
+    
+  </body>
+</html>

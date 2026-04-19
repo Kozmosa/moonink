@@ -1,0 +1,257 @@
+<!doctype html>
+<html data-theme-v2="default" data-layout-kind="article">
+  <head>
+    <meta charset="utf-8">
+    <title>安装 MoonInk</title>
+    <link rel="stylesheet" href="/assets/moonink-default.css">
+    <link rel="stylesheet" href="/assets/theme-vars.css">
+    <meta name="description" content="MoonInk 同时支持 binary install 和 source-run，两条路径都能进入同一套 CLI 工作流。"><meta property="og:description" content="MoonInk 同时支持 binary install 和 source-run，两条路径都能进入同一套 CLI 工作流。"><link rel="canonical" href="https://example.com/moonink/getting-started/install/"><meta property="og:url" content="https://example.com/moonink/getting-started/install/"><meta property="og:title" content="安装 MoonInk"><meta property="og:type" content="article"><meta property="og:site_name" content="月墨 / MoonInk"><link rel="alternate" type="application/rss+xml" href="https://example.com/moonink/rss.xml" title="月墨 / MoonInk">
+  </head>
+  <body class="moonink-article" data-kind="article" data-url="/getting-started/install/" data-theme="default">
+    <header class="site-header">
+  <a class="site-brand" href="https://example.com/moonink">月墨 / MoonInk</a>
+  <nav class="site-header-links" aria-label="Primary">
+    <a href="/search/">Search</a>
+    <a href="/archive/">Archive</a>
+  </nav>
+  <div class="site-header-meta">
+    
+    <span>Article</span>
+  </div>
+</header>
+
+    <div class="site-shell" data-content-layout="article">
+      <aside class="site-nav">
+  <p class="site-nav-label">Explore</p>
+  <nav data-moonink-nav="auto"><ul><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/">月墨 / MoonInk</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/faq/">FAQ</a></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/guide/">使用指南</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/cli/">CLI 命令</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/config/">配置文件</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/theme-v2/">Theme V2</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/frontmatter/">页面元数据</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/content-model/">内容模型</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/obsidian-vault/">Obsidian Vault</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/check-and-serve/">检查与预览</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/linking-and-assets/">链接与资源</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/routing-and-output/">路由与输出</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/compare/">对比</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/compare/mkdocs/">MoonInk 与 MkDocs</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/compare/quartz/">MoonInk 与 Quartz</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/examples/">示例</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/docs-site/">文档站点示例</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/minimal-site/">最小站点示例</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/obsidian-vault/">Vault 示例</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/migration/">迁移与接入</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/migration/from-obsidian-vault/">从 Obsidian Vault 接入</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/migration/from-markdown-folder/">从 Markdown Folder 接入</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/reference/">参考</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/cli-reference/">CLI Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/theme-reference/">Theme Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/config-reference/">Config Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/frontmatter-reference/">Frontmatter Reference</a></li></ul></li><li data-active="false" data-ancestor="true" data-index="true" data-expanded="true" data-current="ancestor"><a href="/getting-started/">快速开始</a><ul><li data-active="true" data-ancestor="false" data-index="false" data-expanded="true" data-current="page"><a href="/getting-started/install/">安装 MoonInk</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/getting-started/first-site/">第一个站点</a></li></ul></li></ul></nav>
+</aside>
+
+      <div class="content-shell">
+        <article class="article-page">
+          <header class="article-hero">
+            <div class="article-hero-copy">
+              <div class="article-eyebrow">
+                
+                
+              </div>
+              <div class="section-heading">
+                <p class="section-kicker">Article</p>
+                <h1 class="content-title">安装 MoonInk</h1>
+              </div>
+              <p class="article-summary">MoonInk 同时支持 binary install 和 source-run，两条路径都能进入同一套 CLI 工作流。</p>
+              <div class="article-meta">
+                
+                
+                <span class="article-meta-item">2 min read</span>
+              </div>
+              
+            </div>
+            
+          </header>
+
+          <div class="article-grid">
+            <div class="article-main">
+              <div class="content-context" data-section-title="快速开始" data-section-url="/getting-started/"><nav data-moonink-breadcrumb="auto" aria-label="Breadcrumb"><span aria-current="page">安装 MoonInk</span></nav></div>
+              <main class="article-body" data-source="getting-started/install.md"><p>这一页只解决一个问题：怎样把 MoonInk 跑起来。装好之后，继续看 <a href="/getting-started/first-site/">first-site</a>。</p>
+<h2 id="路径一使用-binary">路径一：使用 binary</h2>
+<p>MoonInk 的 binary 分发入口是 GitHub Releases：<code>github.com/Kozmosa/moonink</code>。</p>
+<p>推荐流程：</p>
+<ol>
+<li>
+<p>打开 Releases 页面。</p>
+</li>
+<li>
+<p>下载与你的平台匹配的压缩包或可执行文件。</p>
+</li>
+<li>
+<p>解压后把 <code>moonink</code> 放进你的 <code>PATH</code>。</p>
+</li>
+<li>
+<p>运行 <code>moonink help</code> 确认命令可用。</p>
+</li>
+</ol>
+<pre><code class="language-bash">moonink help
+</code></pre>
+<p>如果你准备在本地预览站点，后面运行 <code>serve</code> 时请使用 native 环境；<code>serve</code> 是 <code>native-only</code>。</p>
+<h2 id="路径二从源码运行">路径二：从源码运行</h2>
+<p>如果你正在仓库里开发、验证或试用 MoonInk，可以直接 source-run。</p>
+<p>前置条件：</p>
+<ul>
+<li>
+<p>已安装 MoonBit toolchain</p>
+</li>
+<li>
+<p>已 clone MoonInk 仓库</p>
+</li>
+</ul>
+<p>常用起步命令：</p>
+<pre><code class="language-bash">moon run src/cmd/main -- help
+</code></pre>
+<pre><code class="language-bash">moon run src/cmd/main -- build --config docs/moonink/moonink.json
+</code></pre>
+<p>需要本地预览时，使用 native target：</p>
+<pre><code class="language-bash">moon run src/cmd/main --target native -- serve --config docs/moonink/moonink.json
+</code></pre>
+<h2 id="选哪条路径">选哪条路径</h2>
+<ul>
+<li>
+<p>想直接使用 MoonInk：优先 binary install。</p>
+</li>
+<li>
+<p>想边看仓库边验证行为：优先 source-run。</p>
+</li>
+</ul>
+<p>无论你走哪条路径，CLI surface 都一样。命令面总览见 <a href="/guide/cli/">cli</a>，参数细节见 <a href="/reference/cli-reference/">cli-reference</a>。</p>
+<h2 id="装好之后做什么">装好之后做什么</h2>
+<ul>
+<li>新建一个站点：<a href="/getting-started/first-site/">first-site</a></li>
+<li>现有 Vault 接入：<a href="../guide/obsidian-vault.md">Obsidian Vault 指南</a></li>
+<li>先理解 <code>check</code> 的角色：<a href="/guide/check-and-serve/">check-and-serve</a></li>
+</ul>
+</main>
+
+              
+
+              
+              <section class="continuation-block">
+                <div class="section-heading">
+                  <p class="section-kicker">Continue reading</p>
+                  <h2>Nearby articles</h2>
+                </div>
+                <div class="nav-grid">
+                  <div class="nav-card"><p class="nav-card-label">Previous</p><a href="/guide/check-and-serve/">检查与预览</a></div>
+                  <div class="nav-card"><p class="nav-card-label">Next</p><a href="/reference/cli-reference/">CLI Reference</a></div>
+                </div>
+              </section>
+              
+
+              
+              <section class="continuation-block">
+                <div class="section-heading">
+                  <p class="section-kicker">Explore this thread</p>
+                  <h2>Follow the local knowledge path</h2>
+                </div>
+                <div class="relationship-stack">
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Mentioned here</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/getting-started/first-site/">第一个站点</a>
+                        <p class="related-reason">这一页只解决一个问题：怎样把 MoonInk 跑起来。装好之后，继续看 first-site。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/cli/">CLI 命令</a>
+                        <p class="related-reason">无论你走哪条路径，CLI surface 都一样。命令面总览见 cli，参数细节见 cli-reference。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/reference/cli-reference/">CLI Reference</a>
+                        <p class="related-reason">无论你走哪条路径，CLI surface 都一样。命令面总览见 cli，参数细节见 cli-reference。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/check-and-serve/">检查与预览</a>
+                        <p class="related-reason">- 先理解 check 的角色：check-and-serve</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Referenced by</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/faq/">FAQ</a>
+                        <p class="related-reason">安装页见 install。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/">月墨 / MoonInk</a>
+                        <p class="related-reason">- 从零开始：先看 install，然后继续 first-site。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/getting-started/">快速开始</a>
+                        <p class="related-reason">1. install</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Keep reading</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/guide/cli/">CLI 命令</a>
+                        <p class="related-reason">Directly linked</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/check-and-serve/">检查与预览</a>
+                        <p class="related-reason">Directly linked</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/reference/cli-reference/">CLI Reference</a>
+                        <p class="related-reason">Directly linked</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/getting-started/first-site/">第一个站点</a>
+                        <p class="related-reason">Directly linked</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+                </div>
+              </section>
+              
+
+              <section class="author-card">
+                <div class="section-heading">
+                  <p class="section-kicker">Author</p>
+                  <div class="author-card-title">
+                    <h3>月墨 / MoonInk</h3>
+                    
+                  </div>
+                </div>
+                <p class="author-card-note">Published from 月墨 / MoonInk</p>
+                
+                
+                <ul class="author-profile-links"></ul>
+              </section>
+            </div>
+
+            
+            <aside class="article-toc">
+              <p class="section-kicker">On this page</p>
+              <ol>
+                
+                <li data-level="2"><a href="#路径一使用-binary">路径一：使用 binary</a></li>
+                
+                <li data-level="2"><a href="#路径二从源码运行">路径二：从源码运行</a></li>
+                
+                <li data-level="2"><a href="#选哪条路径">选哪条路径</a></li>
+                
+                <li data-level="2"><a href="#装好之后做什么">装好之后做什么</a></li>
+                
+              </ol>
+            </aside>
+            
+          </div>
+        </article>
+      </div>
+    </div>
+    
+  </body>
+</html>

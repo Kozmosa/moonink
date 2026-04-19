@@ -1,0 +1,14 @@
+:root {
+  --moonink-color-bg: #f3ede2;
+  --moonink-color-fg: #231b15;
+  --moonink-text-muted: #655648;
+  --moonink-radius-card: 1.35rem;
+  --moonink-shadow-card: 0 22px 60px rgba(61, 38, 18, 0.12);
+  --moonink-border-muted: #d7c6b4;
+  --moonink-color-accent: #8d4c2f;
+  --moonink-article-width: 48rem;
+  --moonink-color-surface: #fbf7f0;
+  --moonink-sidebar-width: 17rem;
+  --moonink-color-accent-soft: #d9b59c;
+  --moonink-color-surface-alt: #ecdfcf;
+}

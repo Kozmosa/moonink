@@ -1,0 +1,315 @@
+<!doctype html>
+<html data-theme-v2="default" data-layout-kind="article">
+  <head>
+    <meta charset="utf-8">
+    <title>Theme V2</title>
+    <link rel="stylesheet" href="/assets/moonink-default.css">
+    <link rel="stylesheet" href="/assets/theme-vars.css">
+    <meta name="description" content="Theme V2 是当前推荐的主题 authoring path；如果你暂时不自定义主题，MoonInk 会使用 built-in default theme。"><meta property="og:description" content="Theme V2 是当前推荐的主题 authoring path；如果你暂时不自定义主题，MoonInk 会使用 built-in default theme。"><link rel="canonical" href="https://example.com/moonink/guide/theme-v2/"><meta property="og:url" content="https://example.com/moonink/guide/theme-v2/"><meta property="og:title" content="Theme V2"><meta property="og:type" content="article"><meta property="og:site_name" content="月墨 / MoonInk"><link rel="alternate" type="application/rss+xml" href="https://example.com/moonink/rss.xml" title="月墨 / MoonInk">
+  </head>
+  <body class="moonink-article" data-kind="article" data-url="/guide/theme-v2/" data-theme="default">
+    <header class="site-header">
+  <a class="site-brand" href="https://example.com/moonink">月墨 / MoonInk</a>
+  <nav class="site-header-links" aria-label="Primary">
+    <a href="/search/">Search</a>
+    <a href="/archive/">Archive</a>
+  </nav>
+  <div class="site-header-meta">
+    
+    <span>Article</span>
+  </div>
+</header>
+
+    <div class="site-shell" data-content-layout="article">
+      <aside class="site-nav">
+  <p class="site-nav-label">Explore</p>
+  <nav data-moonink-nav="auto"><ul><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/">月墨 / MoonInk</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/faq/">FAQ</a></li><li data-active="false" data-ancestor="true" data-index="true" data-expanded="true" data-current="ancestor"><a href="/guide/">使用指南</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/cli/">CLI 命令</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/config/">配置文件</a></li><li data-active="true" data-ancestor="false" data-index="false" data-expanded="true" data-current="page"><a href="/guide/theme-v2/">Theme V2</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/frontmatter/">页面元数据</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/content-model/">内容模型</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/obsidian-vault/">Obsidian Vault</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/check-and-serve/">检查与预览</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/linking-and-assets/">链接与资源</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/routing-and-output/">路由与输出</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/compare/">对比</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/compare/mkdocs/">MoonInk 与 MkDocs</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/compare/quartz/">MoonInk 与 Quartz</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/examples/">示例</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/docs-site/">文档站点示例</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/minimal-site/">最小站点示例</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/obsidian-vault/">Vault 示例</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/migration/">迁移与接入</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/migration/from-obsidian-vault/">从 Obsidian Vault 接入</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/migration/from-markdown-folder/">从 Markdown Folder 接入</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/reference/">参考</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/cli-reference/">CLI Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/theme-reference/">Theme Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/config-reference/">Config Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/frontmatter-reference/">Frontmatter Reference</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/getting-started/">快速开始</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/getting-started/install/">安装 MoonInk</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/getting-started/first-site/">第一个站点</a></li></ul></li></ul></nav>
+</aside>
+
+      <div class="content-shell">
+        <article class="article-page">
+          <header class="article-hero">
+            <div class="article-hero-copy">
+              <div class="article-eyebrow">
+                
+                
+              </div>
+              <div class="section-heading">
+                <p class="section-kicker">Article</p>
+                <h1 class="content-title">Theme V2</h1>
+              </div>
+              <p class="article-summary">Theme V2 是当前推荐的主题 authoring path；如果你暂时不自定义主题，MoonInk 会使用 built-in default theme。</p>
+              <div class="article-meta">
+                
+                
+                <span class="article-meta-item">2 min read</span>
+              </div>
+              <ul class="tag-list"><li>guide</li><li>theme</li></ul>
+            </div>
+            
+          </header>
+
+          <div class="article-grid">
+            <div class="article-main">
+              <div class="content-context" data-section-title="使用指南" data-section-url="/guide/"><nav data-moonink-breadcrumb="auto" aria-label="Breadcrumb"><span aria-current="page">Theme V2</span></nav></div>
+              <main class="article-body" data-source="guide/theme-v2.md"><p>这页关注的是“什么时候开始自定义主题，以及最小 Theme V2 要长什么样”。如果你只是想先把内容站跑起来，不需要马上写主题。</p>
+<h2 id="默认情况下会发生什么">默认情况下会发生什么</h2>
+<p>如果你的项目没有自定义 <code>theme</code>，也没有使用 <code>template_file</code>，MoonInk 会回退到 built-in default theme。也就是说：</p>
+<ul>
+<li>
+<p>新站点可以先不写主题目录</p>
+</li>
+<li>
+<p>你可以先专注在 <a href="/guide/content-model/">content-model</a>、<a href="/guide/frontmatter/">frontmatter</a> 和 <a href="/guide/linking-and-assets/">linking-and-assets</a></p>
+</li>
+<li>
+<p>等内容结构稳定后，再进入 Theme V2</p>
+</li>
+</ul>
+<h2 id="theme-v2-的最小目录">Theme V2 的最小目录</h2>
+<pre><code class="language-text">theme/
+  theme.json
+  layouts/
+    index.html
+    page.html
+    article.html
+  partials/
+  assets/
+</code></pre>
+<p>这就是当前最推荐的主题组织方式。</p>
+<h2 id="一个最小-manifest">一个最小 manifest</h2>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;my-theme&quot;,
+  &quot;layouts&quot;: {
+    &quot;index&quot;: &quot;layouts/index.html&quot;,
+    &quot;page&quot;: &quot;layouts/page.html&quot;,
+    &quot;article&quot;: &quot;layouts/article.html&quot;
+  },
+  &quot;tokens&quot;: [
+    { &quot;name&quot;: &quot;color.bg&quot;, &quot;default&quot;: &quot;#fff8e1&quot; }
+  ],
+  &quot;slots&quot;: [&quot;head&quot;, &quot;scripts&quot;]
+}
+</code></pre>
+<p>完整 key 说明见 <a href="/reference/theme-reference/">theme-reference</a>。</p>
+<h2 id="theme-config-怎么用"><code>theme_config</code> 怎么用</h2>
+<p>你可以在 <code>moonink.json</code> 里给主题传 token 或 slot 值：</p>
+<pre><code class="language-json">{
+  &quot;theme&quot;: &quot;theme&quot;,
+  &quot;theme_config&quot;: {
+    &quot;color&quot;: {
+      &quot;bg&quot;: &quot;#fff8e1&quot;
+    },
+    &quot;slots&quot;: {
+      &quot;head&quot;: &quot;&lt;meta name=\&quot;theme-color\&quot; content=\&quot;#fff8e1\&quot;&gt;&quot;
+    }
+  }
+}
+</code></pre>
+<h2 id="layout-要怎么理解"><code>layout</code> 要怎么理解</h2>
+<p><code>layout</code> 不是 beginner-default frontmatter。它更适合放在 theme-aware 场景里理解：</p>
+<ul>
+<li>
+<p>frontmatter 允许写 <code>layout: article | page | home</code></p>
+</li>
+<li>
+<p>但只有 active theme 把 <code>layout</code> 列进 <code>page_overrides</code> allowlist 时，才适合当成常规 override 使用</p>
+</li>
+</ul>
+<p>如果你只是想正常写页面，大多数时候不需要动它。</p>
+<h2 id="template-file-放在哪里"><code>template_file</code> 放在哪里</h2>
+<p><code>template_file</code> 仍然是兼容路径，但不是当前推荐主线。新的主题工作优先围绕 Theme V2 目录和 manifest 展开。</p>
+<h2 id="接下来建议">接下来建议</h2>
+<ul>
+<li>想看 key 表：<a href="/reference/theme-reference/">theme-reference</a></li>
+<li>想回到 config：<a href="/guide/config/">config</a></li>
+<li>想继续保持默认主题写内容：<a href="/getting-started/first-site/">first-site</a></li>
+</ul>
+</main>
+
+              
+
+              
+              <section class="continuation-block">
+                <div class="section-heading">
+                  <p class="section-kicker">Continue reading</p>
+                  <h2>Nearby articles</h2>
+                </div>
+                <div class="nav-grid">
+                  <div class="nav-card"><p class="nav-card-label">Previous</p><a href="/guide/config/">配置文件</a></div>
+                  <div class="nav-card"><p class="nav-card-label">Next</p><a href="/guide/frontmatter/">页面元数据</a></div>
+                </div>
+              </section>
+              
+
+              
+              <section class="continuation-block">
+                <div class="section-heading">
+                  <p class="section-kicker">Explore this thread</p>
+                  <h2>Follow the local knowledge path</h2>
+                </div>
+                <div class="relationship-stack">
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Mentioned here</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/guide/content-model/">内容模型</a>
+                        <p class="related-reason">- 你可以先专注在 content-model、frontmatter 和 linking-and-assets</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/frontmatter/">页面元数据</a>
+                        <p class="related-reason">- 你可以先专注在 content-model、frontmatter 和 linking-and-assets</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/linking-and-assets/">链接与资源</a>
+                        <p class="related-reason">- 你可以先专注在 content-model、frontmatter 和 linking-and-assets</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/reference/theme-reference/">Theme Reference</a>
+                        <p class="related-reason">完整 key 说明见 theme-reference。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/config/">配置文件</a>
+                        <p class="related-reason">- 想回到 config：config</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Referenced by</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/examples/docs-site/">文档站点示例</a>
+                        <p class="related-reason">如果你想从这个例子继续走到主题定制，下一步是 Theme V2。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/faq/">FAQ</a>
+                        <p class="related-reason">不需要。新站点可以先用 built-in default theme。等内容结构稳定后，再进入 Theme V2。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/">月墨 / MoonInk</a>
+                        <p class="related-reason">- 你想先用 built-in default theme 起步，之后再切到 Theme V2 自定义主题。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/">使用指南</a>
+                        <p class="related-reason">9. Theme V2</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/config/">配置文件</a>
+                        <p class="related-reason">如果你没有配置 theme 或 template_file ，MoonInk 会回退到 built-in default theme。想自己写主题时，再进入 Theme V2 即可。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/frontmatter/">页面元数据</a>
+                        <p class="related-reason">所以对 built-in default theme + 首次上手用户来说，你通常不需要写 layout 。更适合先理解 Theme V2 的主题边界。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/linking-and-assets/">链接与资源</a>
+                        <p class="related-reason">在这套文档里，你会经常看到 config 、 cli-reference 、 Theme V2 这样的链接。它们不只是可读性更强，也会形成 backlinks 网络。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/reference/theme-reference/">Theme Reference</a>
+                        <p class="related-reason">Guide 版说明见 Theme V2。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/reference/config-reference/">Config Reference</a>
+                        <p class="related-reason">- 需要主题自定义时，优先进入 Theme V2</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Keep reading</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/guide/config/">配置文件</a>
+                        <p class="related-reason">Links both ways · Shared tags: guide</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/frontmatter/">页面元数据</a>
+                        <p class="related-reason">Links both ways · Shared tags: guide</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/linking-and-assets/">链接与资源</a>
+                        <p class="related-reason">Links both ways · Shared tags: guide</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/content-model/">内容模型</a>
+                        <p class="related-reason">Directly linked · Shared tags: guide</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+                </div>
+              </section>
+              
+
+              <section class="author-card">
+                <div class="section-heading">
+                  <p class="section-kicker">Author</p>
+                  <div class="author-card-title">
+                    <h3>月墨 / MoonInk</h3>
+                    
+                  </div>
+                </div>
+                <p class="author-card-note">Published from 月墨 / MoonInk</p>
+                
+                
+                <ul class="author-profile-links"></ul>
+              </section>
+            </div>
+
+            
+            <aside class="article-toc">
+              <p class="section-kicker">On this page</p>
+              <ol>
+                
+                <li data-level="2"><a href="#默认情况下会发生什么">默认情况下会发生什么</a></li>
+                
+                <li data-level="2"><a href="#theme-v2-的最小目录">Theme V2 的最小目录</a></li>
+                
+                <li data-level="2"><a href="#一个最小-manifest">一个最小 manifest</a></li>
+                
+                <li data-level="2"><a href="#theme-config-怎么用">`theme_config` 怎么用</a></li>
+                
+                <li data-level="2"><a href="#layout-要怎么理解">`layout` 要怎么理解</a></li>
+                
+                <li data-level="2"><a href="#template-file-放在哪里">`template_file` 放在哪里</a></li>
+                
+                <li data-level="2"><a href="#接下来建议">接下来建议</a></li>
+                
+              </ol>
+            </aside>
+            
+          </div>
+        </article>
+      </div>
+    </div>
+    
+  </body>
+</html>

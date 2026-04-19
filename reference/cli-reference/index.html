@@ -1,0 +1,311 @@
+<!doctype html>
+<html data-theme-v2="default" data-layout-kind="article">
+  <head>
+    <meta charset="utf-8">
+    <title>CLI Reference</title>
+    <link rel="stylesheet" href="/assets/moonink-default.css">
+    <link rel="stylesheet" href="/assets/theme-vars.css">
+    <meta name="description" content="MoonInk 当前公开的命令面包括 help、onboard、build、check、serve，以及它们稳定可用的 flags。"><meta property="og:description" content="MoonInk 当前公开的命令面包括 help、onboard、build、check、serve，以及它们稳定可用的 flags。"><link rel="canonical" href="https://example.com/moonink/reference/cli-reference/"><meta property="og:url" content="https://example.com/moonink/reference/cli-reference/"><meta property="og:title" content="CLI Reference"><meta property="og:type" content="article"><meta property="og:site_name" content="月墨 / MoonInk"><link rel="alternate" type="application/rss+xml" href="https://example.com/moonink/rss.xml" title="月墨 / MoonInk">
+  </head>
+  <body class="moonink-article" data-kind="article" data-url="/reference/cli-reference/" data-theme="default">
+    <header class="site-header">
+  <a class="site-brand" href="https://example.com/moonink">月墨 / MoonInk</a>
+  <nav class="site-header-links" aria-label="Primary">
+    <a href="/search/">Search</a>
+    <a href="/archive/">Archive</a>
+  </nav>
+  <div class="site-header-meta">
+    
+    <span>Article</span>
+  </div>
+</header>
+
+    <div class="site-shell" data-content-layout="article">
+      <aside class="site-nav">
+  <p class="site-nav-label">Explore</p>
+  <nav data-moonink-nav="auto"><ul><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/">月墨 / MoonInk</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/faq/">FAQ</a></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/guide/">使用指南</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/cli/">CLI 命令</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/config/">配置文件</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/theme-v2/">Theme V2</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/frontmatter/">页面元数据</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/content-model/">内容模型</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/obsidian-vault/">Obsidian Vault</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/check-and-serve/">检查与预览</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/linking-and-assets/">链接与资源</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/routing-and-output/">路由与输出</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/compare/">对比</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/compare/mkdocs/">MoonInk 与 MkDocs</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/compare/quartz/">MoonInk 与 Quartz</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/examples/">示例</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/docs-site/">文档站点示例</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/minimal-site/">最小站点示例</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/obsidian-vault/">Vault 示例</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/migration/">迁移与接入</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/migration/from-obsidian-vault/">从 Obsidian Vault 接入</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/migration/from-markdown-folder/">从 Markdown Folder 接入</a></li></ul></li><li data-active="false" data-ancestor="true" data-index="true" data-expanded="true" data-current="ancestor"><a href="/reference/">参考</a><ul><li data-active="true" data-ancestor="false" data-index="false" data-expanded="true" data-current="page"><a href="/reference/cli-reference/">CLI Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/theme-reference/">Theme Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/config-reference/">Config Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/frontmatter-reference/">Frontmatter Reference</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/getting-started/">快速开始</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/getting-started/install/">安装 MoonInk</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/getting-started/first-site/">第一个站点</a></li></ul></li></ul></nav>
+</aside>
+
+      <div class="content-shell">
+        <article class="article-page">
+          <header class="article-hero">
+            <div class="article-hero-copy">
+              <div class="article-eyebrow">
+                
+                
+              </div>
+              <div class="section-heading">
+                <p class="section-kicker">Article</p>
+                <h1 class="content-title">CLI Reference</h1>
+              </div>
+              <p class="article-summary">MoonInk 当前公开的命令面包括 help、onboard、build、check、serve，以及它们稳定可用的 flags。</p>
+              <div class="article-meta">
+                
+                
+                <span class="article-meta-item">2 min read</span>
+              </div>
+              
+            </div>
+            
+          </header>
+
+          <div class="article-grid">
+            <div class="article-main">
+              <div class="content-context" data-section-title="参考" data-section-url="/reference/"><nav data-moonink-breadcrumb="auto" aria-label="Breadcrumb"><span aria-current="page">CLI Reference</span></nav></div>
+              <main class="article-body" data-source="reference/cli-reference.md"><p>这一页只列当前稳定可写进用户文档的命令与参数。</p>
+<h2 id="命令与-flags">命令与 flags</h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Flags</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>help</code></td>
+<td>无</td>
+<td>显示 CLI 入口</td>
+</tr>
+<tr>
+<td><code>onboard</code></td>
+<td>无</td>
+<td>在当前目录写 <code>moonink.json</code>；已存在时中止</td>
+</tr>
+<tr>
+<td><code>build</code></td>
+<td><code>--config</code>, <code>--output</code></td>
+<td>生成静态输出</td>
+</tr>
+<tr>
+<td><code>check</code></td>
+<td><code>--config</code>, <code>--output</code></td>
+<td>validation-only 预检</td>
+</tr>
+<tr>
+<td><code>serve</code></td>
+<td><code>--config</code>, <code>--output</code>, <code>--host</code>, <code>--port</code></td>
+<td>build 后启动本地 preview，且仅限 native</td>
+</tr>
+</tbody>
+</table>
+<h2 id="默认值">默认值</h2>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>默认值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--config</code></td>
+<td><code>moonink.json</code></td>
+</tr>
+<tr>
+<td><code>--output</code></td>
+<td>不覆盖 config；通常是 <code>dist</code></td>
+</tr>
+<tr>
+<td><code>--host</code></td>
+<td><code>127.0.0.1</code></td>
+</tr>
+<tr>
+<td><code>--port</code></td>
+<td><code>3000</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="常见调用">常见调用</h2>
+<p>binary 形式：</p>
+<pre><code class="language-bash">moonink build --config docs/moonink/moonink.json
+moonink check --config docs/moonink/moonink.json
+moonink serve --config docs/moonink/moonink.json --host 127.0.0.1 --port 3000
+</code></pre>
+<p>source-run 形式：</p>
+<pre><code class="language-bash">moon run src/cmd/main -- build --config docs/moonink/moonink.json
+moon run src/cmd/main -- check --config docs/moonink/moonink.json
+moon run src/cmd/main --target native -- serve --config docs/moonink/moonink.json
+</code></pre>
+<h2 id="返回边界">返回边界</h2>
+<ul>
+<li>
+<p><code>build</code>：成功返回 <code>0</code>；如果只是出现构建诊断，也仍然可能返回成功</p>
+</li>
+<li>
+<p><code>check</code>：warning-only 返回 <code>0</code>，error 返回 <code>1</code></p>
+</li>
+<li>
+<p><code>serve</code>：先 build，再进入 preview；真实 preview 是 <code>native-only</code></p>
+</li>
+</ul>
+<h2 id="相关页面">相关页面</h2>
+<ul>
+<li><a href="/guide/cli/">cli</a></li>
+<li><a href="/guide/check-and-serve/">check-and-serve</a></li>
+</ul>
+</main>
+
+              
+
+              
+              <section class="continuation-block">
+                <div class="section-heading">
+                  <p class="section-kicker">Continue reading</p>
+                  <h2>Nearby articles</h2>
+                </div>
+                <div class="nav-grid">
+                  <div class="nav-card"><p class="nav-card-label">Previous</p><a href="/getting-started/install/">安装 MoonInk</a></div>
+                  <div class="nav-card"><p class="nav-card-label">Next</p><a href="/guide/linking-and-assets/">链接与资源</a></div>
+                </div>
+              </section>
+              
+
+              
+              <section class="continuation-block">
+                <div class="section-heading">
+                  <p class="section-kicker">Explore this thread</p>
+                  <h2>Follow the local knowledge path</h2>
+                </div>
+                <div class="relationship-stack">
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Mentioned here</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/guide/cli/">CLI 命令</a>
+                        <p class="related-reason">- cli</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/check-and-serve/">检查与预览</a>
+                        <p class="related-reason">- check-and-serve</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Referenced by</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/">月墨 / MoonInk</a>
+                        <p class="related-reason">- 想查精确字段：cli-reference、config-reference、frontmatter-reference、theme-reference</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/cli/">CLI 命令</a>
+                        <p class="related-reason">- 精确参数表：cli-reference</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/">使用指南</a>
+                        <p class="related-reason">- 命令参数表：cli-reference</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/reference/">参考</a>
+                        <p class="related-reason">- cli-reference</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/check-and-serve/">检查与预览</a>
+                        <p class="related-reason">命令参数见 cli-reference，最短起步流程见 first-site。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/getting-started/install/">安装 MoonInk</a>
+                        <p class="related-reason">无论你走哪条路径，CLI surface 都一样。命令面总览见 cli，参数细节见 cli-reference。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/linking-and-assets/">链接与资源</a>
+                        <p class="related-reason">在这套文档里，你会经常看到 config 、 cli-reference 、 Theme V2 这样的链接。它们不只是可读性更强，也会形成 backlinks 网络。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/getting-started/first-site/">第一个站点</a>
+                        <p class="related-reason">默认输出目录是 dist/ 。你也可以用 --output 临时改到另一个目录，参数表见 cli-reference。</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Keep reading</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/guide/cli/">CLI 命令</a>
+                        <p class="related-reason">Links both ways</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/check-and-serve/">检查与预览</a>
+                        <p class="related-reason">Links both ways</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/getting-started/install/">安装 MoonInk</a>
+                        <p class="related-reason">Directly linked</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/linking-and-assets/">链接与资源</a>
+                        <p class="related-reason">Directly linked</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+                </div>
+              </section>
+              
+
+              <section class="author-card">
+                <div class="section-heading">
+                  <p class="section-kicker">Author</p>
+                  <div class="author-card-title">
+                    <h3>月墨 / MoonInk</h3>
+                    
+                  </div>
+                </div>
+                <p class="author-card-note">Published from 月墨 / MoonInk</p>
+                
+                
+                <ul class="author-profile-links"></ul>
+              </section>
+            </div>
+
+            
+            <aside class="article-toc">
+              <p class="section-kicker">On this page</p>
+              <ol>
+                
+                <li data-level="2"><a href="#命令与-flags">命令与 flags</a></li>
+                
+                <li data-level="2"><a href="#默认值">默认值</a></li>
+                
+                <li data-level="2"><a href="#常见调用">常见调用</a></li>
+                
+                <li data-level="2"><a href="#返回边界">返回边界</a></li>
+                
+                <li data-level="2"><a href="#相关页面">相关页面</a></li>
+                
+              </ol>
+            </aside>
+            
+          </div>
+        </article>
+      </div>
+    </div>
+    
+  </body>
+</html>

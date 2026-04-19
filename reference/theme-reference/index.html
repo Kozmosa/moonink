@@ -1,0 +1,279 @@
+<!doctype html>
+<html data-theme-v2="default" data-layout-kind="article">
+  <head>
+    <meta charset="utf-8">
+    <title>Theme Reference</title>
+    <link rel="stylesheet" href="/assets/moonink-default.css">
+    <link rel="stylesheet" href="/assets/theme-vars.css">
+    <meta name="description" content="Theme V2 的核心接口包括 manifest key、目录约定、token 命名规则，以及 page_overrides / slots 这两个主题扩展点。"><meta property="og:description" content="Theme V2 的核心接口包括 manifest key、目录约定、token 命名规则，以及 page_overrides / slots 这两个主题扩展点。"><link rel="canonical" href="https://example.com/moonink/reference/theme-reference/"><meta property="og:url" content="https://example.com/moonink/reference/theme-reference/"><meta property="og:title" content="Theme Reference"><meta property="og:type" content="article"><meta property="og:site_name" content="月墨 / MoonInk"><link rel="alternate" type="application/rss+xml" href="https://example.com/moonink/rss.xml" title="月墨 / MoonInk">
+  </head>
+  <body class="moonink-article" data-kind="article" data-url="/reference/theme-reference/" data-theme="default">
+    <header class="site-header">
+  <a class="site-brand" href="https://example.com/moonink">月墨 / MoonInk</a>
+  <nav class="site-header-links" aria-label="Primary">
+    <a href="/search/">Search</a>
+    <a href="/archive/">Archive</a>
+  </nav>
+  <div class="site-header-meta">
+    
+    <span>Article</span>
+  </div>
+</header>
+
+    <div class="site-shell" data-content-layout="article">
+      <aside class="site-nav">
+  <p class="site-nav-label">Explore</p>
+  <nav data-moonink-nav="auto"><ul><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/">月墨 / MoonInk</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/faq/">FAQ</a></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/guide/">使用指南</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/cli/">CLI 命令</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/config/">配置文件</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/theme-v2/">Theme V2</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/frontmatter/">页面元数据</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/content-model/">内容模型</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/obsidian-vault/">Obsidian Vault</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/check-and-serve/">检查与预览</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/linking-and-assets/">链接与资源</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/guide/routing-and-output/">路由与输出</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/compare/">对比</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/compare/mkdocs/">MoonInk 与 MkDocs</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/compare/quartz/">MoonInk 与 Quartz</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/examples/">示例</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/docs-site/">文档站点示例</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/minimal-site/">最小站点示例</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/examples/obsidian-vault/">Vault 示例</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/migration/">迁移与接入</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/migration/from-obsidian-vault/">从 Obsidian Vault 接入</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/migration/from-markdown-folder/">从 Markdown Folder 接入</a></li></ul></li><li data-active="false" data-ancestor="true" data-index="true" data-expanded="true" data-current="ancestor"><a href="/reference/">参考</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/cli-reference/">CLI Reference</a></li><li data-active="true" data-ancestor="false" data-index="false" data-expanded="true" data-current="page"><a href="/reference/theme-reference/">Theme Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/config-reference/">Config Reference</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/reference/frontmatter-reference/">Frontmatter Reference</a></li></ul></li><li data-active="false" data-ancestor="false" data-index="true" data-expanded="false" data-current="false"><a href="/getting-started/">快速开始</a><ul><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/getting-started/install/">安装 MoonInk</a></li><li data-active="false" data-ancestor="false" data-index="false" data-expanded="false" data-current="false"><a href="/getting-started/first-site/">第一个站点</a></li></ul></li></ul></nav>
+</aside>
+
+      <div class="content-shell">
+        <article class="article-page">
+          <header class="article-hero">
+            <div class="article-hero-copy">
+              <div class="article-eyebrow">
+                
+                
+              </div>
+              <div class="section-heading">
+                <p class="section-kicker">Article</p>
+                <h1 class="content-title">Theme Reference</h1>
+              </div>
+              <p class="article-summary">Theme V2 的核心接口包括 manifest key、目录约定、token 命名规则，以及 page_overrides / slots 这两个主题扩展点。</p>
+              <div class="article-meta">
+                
+                
+                <span class="article-meta-item">2 min read</span>
+              </div>
+              
+            </div>
+            
+          </header>
+
+          <div class="article-grid">
+            <div class="article-main">
+              <div class="content-context" data-section-title="参考" data-section-url="/reference/"><nav data-moonink-breadcrumb="auto" aria-label="Breadcrumb"><span aria-current="page">Theme Reference</span></nav></div>
+              <main class="article-body" data-source="reference/theme-reference.md"><h2 id="theme-json-key"><code>theme.json</code> key</h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>类型</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>主题名</td>
+</tr>
+<tr>
+<td><code>layouts</code></td>
+<td>object</td>
+<td>layout key 到模板文件的映射</td>
+</tr>
+<tr>
+<td><code>tokens</code></td>
+<td>array</td>
+<td>主题 token 声明</td>
+</tr>
+<tr>
+<td><code>page_overrides</code></td>
+<td>string array</td>
+<td>允许的 page override key allowlist</td>
+</tr>
+<tr>
+<td><code>slots</code></td>
+<td>string array</td>
+<td>主题声明可接受的 slot 名</td>
+</tr>
+</tbody>
+</table>
+<h2 id="目录约定">目录约定</h2>
+<table>
+<thead>
+<tr>
+<th>路径</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>theme/theme.json</code></td>
+<td>manifest</td>
+</tr>
+<tr>
+<td><code>theme/layouts/</code></td>
+<td>布局模板</td>
+</tr>
+<tr>
+<td><code>theme/partials/</code></td>
+<td>partial 模板</td>
+</tr>
+<tr>
+<td><code>theme/assets/</code></td>
+<td>主题静态资源</td>
+</tr>
+</tbody>
+</table>
+<h2 id="最小-manifest">最小 manifest</h2>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;my-theme&quot;,
+  &quot;layouts&quot;: {
+    &quot;index&quot;: &quot;layouts/index.html&quot;,
+    &quot;page&quot;: &quot;layouts/page.html&quot;,
+    &quot;article&quot;: &quot;layouts/article.html&quot;
+  },
+  &quot;tokens&quot;: [
+    { &quot;name&quot;: &quot;color.bg&quot;, &quot;default&quot;: &quot;#fff8e1&quot; }
+  ],
+  &quot;page_overrides&quot;: [&quot;layout&quot;],
+  &quot;slots&quot;: [&quot;head&quot;, &quot;scripts&quot;]
+}
+</code></pre>
+<h2 id="token-命名规则">token 命名规则</h2>
+<p>token <code>name</code> 使用点分段的 lowercase ASCII letters / digits 风格，例如：</p>
+<ul>
+<li>
+<p><code>color.bg</code></p>
+</li>
+<li>
+<p><code>color.accent</code></p>
+</li>
+<li>
+<p><code>spacing.gap</code></p>
+</li>
+</ul>
+<h2 id="page-overrides-怎么理解"><code>page_overrides</code> 怎么理解</h2>
+<p><code>page_overrides</code> 不是普通内容作者每天都会碰到的字段，它是主题作者用来声明“这套主题允许哪些页面级 override”的地方。</p>
+<p>一个常见例子是：</p>
+<pre><code class="language-json">{
+  &quot;page_overrides&quot;: [&quot;layout&quot;]
+}
+</code></pre>
+<p>这意味着该主题接受页面 frontmatter 里的 <code>layout</code> override。</p>
+<p>Guide 版说明见 <a href="/guide/theme-v2/">Theme V2</a>。</p>
+</main>
+
+              
+
+              
+              <section class="continuation-block">
+                <div class="section-heading">
+                  <p class="section-kicker">Continue reading</p>
+                  <h2>Nearby articles</h2>
+                </div>
+                <div class="nav-grid">
+                  <div class="nav-card"><p class="nav-card-label">Previous</p><a href="/guide/routing-and-output/">路由与输出</a></div>
+                  <div class="nav-card"><p class="nav-card-label">Next</p><a href="/getting-started/first-site/">第一个站点</a></div>
+                </div>
+              </section>
+              
+
+              
+              <section class="continuation-block">
+                <div class="section-heading">
+                  <p class="section-kicker">Explore this thread</p>
+                  <h2>Follow the local knowledge path</h2>
+                </div>
+                <div class="relationship-stack">
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Mentioned here</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/guide/theme-v2/">Theme V2</a>
+                        <p class="related-reason">Guide 版说明见 Theme V2。</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Referenced by</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/">月墨 / MoonInk</a>
+                        <p class="related-reason">- 想查精确字段：cli-reference、config-reference、frontmatter-reference、theme-reference</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/">使用指南</a>
+                        <p class="related-reason">- Theme manifest 速查：theme-reference</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/guide/theme-v2/">Theme V2</a>
+                        <p class="related-reason">完整 key 说明见 theme-reference。</p>
+                      </li>
+                      
+                      <li class="related-card">
+                        <a href="/reference/">参考</a>
+                        <p class="related-reason">- theme-reference</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+
+                  
+                  <div class="relationship-group">
+                    <p class="relationship-group-label">Keep reading</p>
+                    <ul class="related-list">
+                      
+                      <li class="related-card">
+                        <a href="/guide/theme-v2/">Theme V2</a>
+                        <p class="related-reason">Links both ways</p>
+                      </li>
+                      
+                    </ul>
+                  </div>
+                  
+                </div>
+              </section>
+              
+
+              <section class="author-card">
+                <div class="section-heading">
+                  <p class="section-kicker">Author</p>
+                  <div class="author-card-title">
+                    <h3>月墨 / MoonInk</h3>
+                    
+                  </div>
+                </div>
+                <p class="author-card-note">Published from 月墨 / MoonInk</p>
+                
+                
+                <ul class="author-profile-links"></ul>
+              </section>
+            </div>
+
+            
+            <aside class="article-toc">
+              <p class="section-kicker">On this page</p>
+              <ol>
+                
+                <li data-level="2"><a href="#theme-json-key">`theme.json` key</a></li>
+                
+                <li data-level="2"><a href="#目录约定">目录约定</a></li>
+                
+                <li data-level="2"><a href="#最小-manifest">最小 manifest</a></li>
+                
+                <li data-level="2"><a href="#token-命名规则">token 命名规则</a></li>
+                
+                <li data-level="2"><a href="#page-overrides-怎么理解">`page_overrides` 怎么理解</a></li>
+                
+              </ol>
+            </aside>
+            
+          </div>
+        </article>
+      </div>
+    </div>
+    
+  </body>
+</html>
