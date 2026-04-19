@@ -150,87 +150,85 @@ These should arrive only after the underlying relationship data is accurate and 
 
 ## Feature roadmap
 
-### Near-term priorities
+### Current baseline: M1 is complete
 
-These are the highest-leverage improvements for one to two upcoming versions.
+MoonInk has already completed the first practical Quartz-style slice:
 
-#### A. Metadata and frontmatter upgrade
-
-MoonInk should stabilize support for:
-
-- `date`
-- `updated`
-- `tags`
-- `series`
-- `summary`
-- `cover`
-- `draft`
-- `author`
-- `column`
-- `readingTime` as a derived or exposed value
-
-This is the data foundation for article pages, homepage curation, collection pages, social cards, and archive behavior.
-
-#### B. Branded article page v1
-
-The default article page should grow:
-
-- cover or hero support;
-- richer metadata presentation;
-- table of contents;
-- previous/next navigation;
-- series navigation;
-- author card;
-- clearer article rhythm.
-
-#### C. Backlinks v2
-
-Backlinks should move from a basic list into a proper continuation module with contextual excerpts and stable ordering.
-
-#### D. Homepage curation v1
-
-The homepage should support curated hero content, featured writing, collection entry points, recent updates, and exploration entry points.
-
-#### E. Tag, topic, and series collection pages
-
-These should become formal site surfaces rather than incidental metadata outputs.
-
-#### F. Related notes v1
-
-MoonInk should generate a first-pass related-reading module based on links, shared tags, shared series, or other lightweight build-time signals.
-
-### Mid-term priorities
-
-These features strengthen the Quartz-like exploration identity after the near-term product surface is in place.
-
-- `explore page`
-- `hover preview`
-- `archive`
-- `RSS`
-- `Open Graph and social-card support`
-- `canonical metadata`
-- `explicit column system` such as Essays, Notes, and Projects
-- `local relationship navigation` for the current article context
-
-### Flagship priorities
-
-These are the capabilities most likely to separate MoonInk from a generic static site generator once the foundations are stable.
-
-- `local relationship graph` or `topic graph`
-- `paragraph-aware backlink context and deep return jumps`
-- `composable homepage module system`
-- `wander / random / trail exploration mode`
-
-## Scope for the next implementation plan
-
-This design is intentionally broader than a single coding milestone. The next implementation plan should target `M1` only:
-
-- metadata and frontmatter upgrade;
+- metadata and frontmatter upgrade for article pages;
 - branded article page v1;
 - backlinks v2;
 - related notes v1.
 
-Homepage curation, collection-page expansion, and heavier exploration features should remain out of scope for the first implementation plan unless a later user decision explicitly broadens the milestone.
+This means the next roadmap no longer starts from article-surface viability. It starts from the need to turn the current engine into a more complete public-facing product.
+
+### M2 roadmap: Search productization and public site shell v1
+
+The next milestone should turn existing infrastructure into reader-visible product surfaces.
+
+Primary deliverables:
+
+- built-in `/search/` page;
+- default-theme search UI that consumes `search-index.json`;
+- title / summary / tag-aware weighted matching;
+- per-document search inclusion control such as `search: false` or an equivalent stable frontmatter contract;
+- homepage curation v1;
+- formal tag, topic, series, and archive collection pages;
+- RSS, Open Graph, canonical, and related public metadata support.
+
+This milestone should make MoonInk feel like a coherent authored publication rather than a set of strong individual article pages.
+
+### M3 roadmap: Frontmatter-driven site behavior and collection-page contract
+
+Once search and the public shell exist, the next milestone should strengthen the content model so more of the site behavior is intentionally driven by metadata instead of implicit defaults.
+
+Primary deliverables:
+
+- `draft` exclusion from standard output;
+- deterministic ordering rules based on `date` and `updated`;
+- `featured`, `pinned`, `search_exclude`, `toc`, and `layout` style fields where they materially affect site behavior;
+- richer `author`, `profile`, and site-level metadata models;
+- unified card density and ordering rules across homepage, search results, and collection pages;
+- a stable contract for how collection pages are grouped, sorted, and rendered.
+
+This milestone should make MoonInk's build output feel deliberate and configurable rather than merely well-rendered.
+
+### M4 roadmap: Developer experience and exploration differentiation
+
+After the public product shell and metadata model are stable, the next milestone should improve author workflow and add stronger discovery features.
+
+Primary deliverables:
+
+- `serve` watch mode;
+- live reload or equivalent preview refresh behavior;
+- incremental or partial rebuild strategy where feasible;
+- better preview-time error reporting and failure visibility;
+- stronger explore/discovery surfaces;
+- local relationship navigation and other higher-value exploration affordances.
+
+This milestone should make MoonInk feel stronger both as an authoring tool during development and as a knowledge-garden product during browsing.
+
+### Flagship follow-on priorities
+
+These remain strong differentiators once M2 through M4 are in place:
+
+- local relationship graph or topic graph;
+- paragraph-aware backlink context and deep return jumps;
+- composable homepage module system;
+- wander / random / trail exploration mode.
+
+## Scope for the next implementation plan
+
+This design is intentionally broader than a single coding milestone.
+
+`M1` is now complete and should be treated as the current product baseline. The next implementation plan should therefore target `M2` first:
+
+- built-in search page and theme-side search consumption;
+- weighted search behavior and search inclusion/exclusion controls;
+- homepage curation v1;
+- tag/topic/series/archive collection pages;
+- RSS, Open Graph, canonical, and related public metadata support.
+
+Frontmatter-deepening work beyond what is needed for `M2`, along with `serve` watch/reload behavior and heavier exploration features, should remain out of scope for that next implementation plan unless a later user decision explicitly broadens it.
 
 ## Architecture mapping
 
@@ -295,7 +293,9 @@ Any client-side enhancement should remain narrowly scoped and optional in effect
 
 ### M1: Articles become destination pages
 
-Deliver:
+Status: complete.
+
+Delivered:
 
 - metadata upgrade;
 - branded article page v1;
@@ -304,27 +304,42 @@ Deliver:
 
 Success means that a shared article link already feels like a polished product surface and that the page clearly offers a next-step reading path.
 
-### M2: The site gains a strong public-facing shell
+### M2: Search becomes productized and the site gains a public shell
 
 Deliver:
 
+- built-in `/search/` page and default-theme search UI;
+- title / summary / tag-aware weighted search behavior;
+- search inclusion and exclusion controls in frontmatter;
 - homepage curation v1;
-- tag/topic/series pages;
-- archive, RSS, and social metadata support;
-- explicit content columns where appropriate.
+- tag/topic/series/archive collection pages;
+- RSS, Open Graph, canonical, and related public metadata support.
 
-Success means the site no longer feels like a collection of isolated pages but like a coherent authored publication.
+Success means the site no longer feels like a collection of isolated article pages. It should feel like a coherent authored publication with a visible discovery path.
 
-### M3: The exploration layer becomes a differentiator
+### M3: Frontmatter drives site behavior and collection-page rules
 
 Deliver:
 
-- explore page;
-- hover preview;
-- local relationship navigation or graph;
-- wander-style discovery features.
+- `draft` exclusion from standard builds;
+- stable ordering and freshness rules based on `date` and `updated`;
+- `featured`, `pinned`, `search_exclude`, `toc`, and `layout` style contracts where justified;
+- richer author/profile/site metadata;
+- unified card, ranking, and collection-page presentation rules.
 
-Success means the site supports open-ended browsing in a way that feels meaningfully closer to a knowledge garden than a traditional blog.
+Success means the build output is no longer shaped mainly by theme conventions and implicit defaults. It is shaped by an intentional metadata model that authors can rely on.
+
+### M4: Developer experience and exploration both improve materially
+
+Deliver:
+
+- `serve` watch mode;
+- live reload or equivalent preview refresh;
+- incremental rebuild improvements where feasible;
+- stronger preview-time error visibility;
+- explore and relationship-navigation improvements that deepen discovery.
+
+Success means MoonInk becomes stronger both while authors are iterating locally and while readers are browsing the generated site.
 
 ## Acceptance criteria
 
@@ -340,23 +355,26 @@ This design should be considered successful when the default MoonInk experience 
 
 ### Must-have
 
-- metadata and frontmatter upgrade
-- branded article page v1
-- backlinks v2
+- built-in `/search/` page
+- default-theme search UI
+- weighted title / summary / tag matching
 - homepage curation v1
-- tag/topic/series collection pages
-- related notes v1
+- tag/topic/series/archive collection pages
+- RSS, Open Graph, canonical, and related public metadata support
 
 ### Should-have
 
-- explore page
-- hover preview
-- archive, RSS, Open Graph, and canonical support
-- explicit column system
-- local relationship navigation
+- `draft` exclusion from normal builds
+- stable `date` / `updated` ordering rules
+- `featured`, `pinned`, `search_exclude`, `toc`, and `layout` style fields where justified
+- richer `author` / `profile` / site metadata
+- unified card density and ranking rules across search and collection pages
+- `serve` watch mode and live reload
 
 ### Flagship
 
+- incremental rebuild and stronger preview failure surfaces
+- explore page and local relationship navigation
 - local relationship graph or topic graph
 - paragraph-aware backlink context and return jumps
 - composable homepage module system
@@ -402,4 +420,7 @@ Implementation should verify at least:
 - site-wide relationship computation for backlinks, related notes, topics, and series;
 - build outputs for curated homepage and collection pages;
 - built-in theme rendering coverage for article-page modules and relationship modules;
-- focused CLI/runtime integration coverage for end-to-end output behavior.
+- focused CLI/runtime integration coverage for end-to-end output behavior;
+- search artifact consumption and ranking behavior for the built-in search experience;
+- frontmatter-driven visibility, ordering, and layout contracts;
+- `serve` watch / reload behavior and preview-time failure reporting when those features land.
