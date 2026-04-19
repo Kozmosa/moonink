@@ -14,7 +14,7 @@
       <div class="content-shell content-shell-page">
         <div class="content-shell-inner">
           <header class="content-header" data-content-layout="{{ page.kind }}">
-            <p class="content-kind-label">Page</p>
+            <p class="content-kind-label">{{ page.kind_label }}</p>
             <h1 class="content-title">{{ page.title }}</h1>
             {% if page.summary %}<p class="article-summary">{{ page.summary }}</p>{% endif %}
             <div class="content-context" data-section-title="{{ page.current_section_title }}" data-section-url="{{ page.current_section_url }}">{{ page.page_header_html }}</div>

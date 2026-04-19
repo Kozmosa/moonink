@@ -6,12 +6,14 @@ MoonInk V1 should provide built-in local search without relying on external serv
 
 ## 2. Strategy
 
-Build time generates a static `search-index.json` file consumed by built-in client-side
-JavaScript in the generated site.
+Build time generates:
+
+- `dist/search-index.json` as the canonical machine-consumable search artifact;
+- a built-in `/search/` page plus built-in client-side JavaScript that consume the same search contract.
 
 ## 3. Indexed Fields
 
-Current indexed fields:
+The emitted index currently includes:
 
 - title
 - summary
@@ -20,6 +22,19 @@ Current indexed fields:
 - kind
 - url
 - date
+- source path
+- published date
+- freshness date (`updated ?? date`)
+- series
+- cover
+- author label
+- `featured`
+- `pinned`
+
+Eligibility rules:
+
+- draft pages are excluded entirely;
+- `search: false` excludes only the search artifact and search results.
 
 ## 4. Built-In Search Behavior
 
@@ -32,7 +47,11 @@ The current ranking order is weighted toward:
 3. tags
 4. excerpt
 
-Documents with `search: false` are omitted from the generated index.
+When search relevance ties occur, fallback ordering is:
+
+1. `pinned desc`
+2. `freshness_at desc`
+3. `source_path asc`
 
 ## 5. Constraints
 

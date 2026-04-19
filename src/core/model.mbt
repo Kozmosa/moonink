@@ -21,6 +21,12 @@ pub(all) struct SitePage {
   cover : String?
   author : String?
   column : String?
+  featured : Bool
+  pinned : Bool
+  search : Bool
+  toc : Bool?
+  published_at : String?
+  freshness_at : String?
   reading_time_minutes : Int
   source_format : SourceFormat
   source_path : String
@@ -28,6 +34,78 @@ pub(all) struct SitePage {
   content_kind : ContentKind
   is_index : Bool
 } derive(Debug, Eq)
+
+///|
+pub(all) enum CardDensity {
+  Hero
+  Standard
+  Compact
+} derive(Debug, Eq)
+
+///|
+pub impl Show for CardDensity with output(self, logger) {
+  match self {
+    Hero => logger.write_string("Hero")
+    Standard => logger.write_string("Standard")
+    Compact => logger.write_string("Compact")
+  }
+}
+
+///|
+pub(all) struct SiteCard {
+  title : String
+  url_path : String
+  source_path : String
+  summary : String
+  display_date : String?
+  published_at : String?
+  freshness_at : String?
+  tags : Array[String]
+  series : String?
+  cover : String?
+  author : String?
+  featured : Bool
+  pinned : Bool
+  density : CardDensity
+} derive(Debug, Eq)
+
+///|
+pub(all) struct NamedCardCollection {
+  name : String
+  slug : String
+  url_path : String
+  cards : Array[SiteCard]
+} derive(Debug, Eq)
+
+///|
+pub(all) struct ArchiveMonth {
+  year : String
+  month : String
+  label : String
+  cards : Array[SiteCard]
+} derive(Debug, Eq)
+
+///|
+pub(all) struct SiteCollections {
+  homepage_featured : Array[SiteCard]
+  homepage_recent : Array[SiteCard]
+  search : Array[SiteCard]
+  tags : Array[NamedCardCollection]
+  series : Array[NamedCardCollection]
+  archive : Array[ArchiveMonth]
+} derive(Debug, Eq)
+
+///|
+pub fn SiteCollections::empty() -> SiteCollections {
+  {
+    homepage_featured: [],
+    homepage_recent: [],
+    search: [],
+    tags: [],
+    series: [],
+    archive: [],
+  }
+}
 
 ///|
 pub(all) struct HeadingEntry {
@@ -108,6 +186,7 @@ pub(all) struct NavigationModel {
 pub(all) struct SiteAssemblyModel {
   pages : Array[SitePage]
   navigation : NavigationModel
+  collections : SiteCollections
   page_count : Int
   article_count : Int
   navigation_items : Int
@@ -126,6 +205,7 @@ pub fn build_site_model_dummy(
       total_items: 0,
       note: "Navigation assembly is a placeholder in the scaffold stage.",
     },
+    collections: SiteCollections::empty(),
     page_count: inventory.total_pages,
     article_count: inventory.total_articles,
     navigation_items: 0,

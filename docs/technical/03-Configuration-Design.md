@@ -9,7 +9,7 @@ MoonInk uses JSON as its project configuration format (`moonink.json`).
 - easy to read and edit manually;
 - deterministic to parse using MoonBit's built-in `@json.parse()`;
 - explicit over magical defaults;
-- small schema focused on V1 needs.
+- small schema focused on current product needs.
 
 ## 3. Configuration Schema
 
@@ -30,6 +30,15 @@ MoonInk uses JSON as its project configuration format (`moonink.json`).
       "featured_paths": ["essays/stone-garden.md"],
       "recent_count": 2
     }
+  },
+  "author": {
+    "name": "Site Author",
+    "bio": "Writes careful notes.",
+    "homepage_text": "Building intentional surfaces.",
+    "avatar": "/avatar.png",
+    "links": [
+      { "label": "GitHub", "url": "https://example.com/github" }
+    ]
   }
 }
 ```
@@ -50,6 +59,12 @@ MoonInk uses JSON as its project configuration format (`moonink.json`).
 - `text_encoding` — encoding declaration in emitted HTML (default: `"utf-8"`)
 - `theme` — project-local theme directory name for Theme V2 bundles or legacy theme overrides (default: `"theme"`)
 - `theme_config` — nested Theme V2 configuration data used for token overrides, declared slots, and homepage curation
+- `author` — typed site-level author/profile metadata used by homepage presence, article author cards, and shared surface card labels
+  - `name` — default displayed author name when a page does not override `author`
+  - `bio` — shared profile copy for article pages and public author presence
+  - `homepage_text` — homepage-facing intro copy when the built-in theme renders author presence
+  - `avatar` — optional avatar or image reference
+  - `links` — array of `{ label, url }` objects for public profile links
 
 ## 5. Route Style
 
@@ -62,7 +77,8 @@ Validation catches:
 
 - missing required fields (`site_name`);
 - invalid or parent-traversal paths;
-- malformed JSON.
+- malformed JSON;
+- malformed `author` objects or `author.links` entries.
 
 ## 7. `theme_config.homepage`
 

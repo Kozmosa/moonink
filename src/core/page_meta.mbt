@@ -31,7 +31,10 @@ fn normalize_layout_override(layout : String?) -> String? {
       if normalized.is_empty() {
         None
       } else {
-        Some(normalized)
+        match normalize_frontmatter_layout_key(normalized) {
+          Some(mapped) => Some(mapped)
+          None => Some(normalized)
+        }
       }
     }
     None => None

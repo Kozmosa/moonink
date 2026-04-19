@@ -8,6 +8,14 @@ pub(all) struct SearchIndexItem {
   excerpt : String
   tags : Array[String]
   date : String?
+  published_at : String?
+  freshness_at : String?
+  series : String?
+  cover : String?
+  author : String?
+  featured : Bool
+  pinned : Bool
+  source_path : String
 } derive(Debug, Eq)
 
 ///|
@@ -414,6 +422,15 @@ fn append_json_nullable_string(
 }
 
 ///|
+fn append_json_bool(builder : StringBuilder, value : Bool) -> Unit {
+  if value {
+    builder.write_string("true")
+  } else {
+    builder.write_string("false")
+  }
+}
+
+///|
 fn append_search_index_item_json(
   builder : StringBuilder,
   item : SearchIndexItem,
@@ -432,6 +449,22 @@ fn append_search_index_item_json(
   append_json_string_array(builder, item.tags)
   builder.write_string(",\"date\":")
   append_json_nullable_string(builder, item.date)
+  builder.write_string(",\"published_at\":")
+  append_json_nullable_string(builder, item.published_at)
+  builder.write_string(",\"freshness_at\":")
+  append_json_nullable_string(builder, item.freshness_at)
+  builder.write_string(",\"series\":")
+  append_json_nullable_string(builder, item.series)
+  builder.write_string(",\"cover\":")
+  append_json_nullable_string(builder, item.cover)
+  builder.write_string(",\"author\":")
+  append_json_nullable_string(builder, item.author)
+  builder.write_string(",\"featured\":")
+  append_json_bool(builder, item.featured)
+  builder.write_string(",\"pinned\":")
+  append_json_bool(builder, item.pinned)
+  builder.write_string(",\"source_path\":")
+  append_json_string(builder, item.source_path)
   builder.write_string("}")
 }
 
