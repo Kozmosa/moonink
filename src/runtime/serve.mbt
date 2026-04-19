@@ -62,60 +62,13 @@ pub fn launch_preview_result(
         note: "Dry-run preview launch validated the built output without starting a server.",
       })
     PreviewRunner::NativeMocket =>
-      Ok({
-        ..launch,
-        note: "Native mocket preview runner is reserved for a native-only entrypoint.",
-      })
+      match validate_native_preview_startup_result(launch.host, launch.port) {
+        Ok(_) =>
+          Ok({
+            ..launch,
+            note: "Native mocket preview launch validated the built output for in-process main-binary serving.",
+          })
+        Err(err) => Err(err)
+      }
   }
-}
-
-///|
-fn shell_quote(value : String) -> String {
-  let mut quoted = "'"
-  for i in 0..<value.length() {
-    let char = value[i:i + 1].to_string()
-    if char == "'" {
-      quoted = quoted + "'\"'\"'"
-    } else {
-      quoted = quoted + char
-    }
-  }
-  quoted + "'"
-}
-
-///|
-fn current_executable_path() -> String raise @core.ProjectIOError {
-  let argv = @env.args()
-  if argv.length() == 0 {
-    raise @core.project_io_error(
-      "serve_delegate", ".", "current executable path is unavailable",
-    )
-  }
-  let executable = argv[0]
-  if executable.is_empty() {
-    raise @core.project_io_error(
-      "serve_delegate", ".", "current executable path is unavailable",
-    )
-  }
-  executable
-}
-
-///|
-pub fn native_serve_delegate_command_result(
-  root_dir : String,
-  host : String,
-  port : Int,
-) -> Result[String, @core.ProjectIOError] {
-  let executable_path = current_executable_path() catch {
-    err => return Err(err)
-  }
-  Ok(
-    shell_quote(executable_path) +
-    " serve-prebuilt --root " +
-    shell_quote(root_dir) +
-    " --host " +
-    shell_quote(host) +
-    " --port " +
-    shell_quote(port.to_string()),
-  )
 }

@@ -58,6 +58,8 @@ pub fn page_view_model_from_meta(PageMeta) -> ThemePageViewModel
 
 pub fn parse_config_json(String, String) -> MooninkConfig raise ConfigError
 
+pub fn parse_config_json_with_project_root(String, String, String) -> MooninkConfig raise ConfigError
+
 pub fn parse_frontmatter(String) -> Frontmatter
 
 pub fn parse_frontmatter_from_source(String) -> (Frontmatter, String)

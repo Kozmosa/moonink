@@ -184,18 +184,13 @@ pub fn prepare_main_serve_launch_result(
 
 ///|
 pub fn run_main_serve_command(options : ServeCliOptions) -> CliOutcome {
-  let (launch, prepared) = match
-    prepare_main_serve_launch_with_watch_result(
-      options.config_path,
-      options.output_dir,
-      options.host,
-      options.port,
-    ) {
-    Ok(state) => state
-    Err(message) => return { exit_code: 1, message }
-  }
-  println(launch.build_message)
-  run_main_serve_watch_loop(options.config_path, options.output_dir, prepared)
+  run_serve_command_runtime_from_config_with_runner(
+    options.config_path,
+    options.output_dir,
+    options.host,
+    options.port,
+    @runtime.native_mocket_preview_runner(),
+  )
 }
 
 ///|
@@ -224,7 +219,7 @@ pub fn run_serve_command_runtime_from_config_with_runner(
         startup.preview_root,
         host=startup.host,
         port=startup.port,
-        note="Native mocket preview runner is delegated to the native main entrypoint.",
+        note="Native mocket preview runner is validated for in-process main-binary serving.",
       )
   }
   {

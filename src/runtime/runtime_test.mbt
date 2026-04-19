@@ -1,4 +1,38 @@
 ///|
+fn host_path(relative : String) -> String {
+  match @runtime.resolve_host_path_from_cwd_result(relative) {
+    Ok(path) => path
+    Err(_) => panic()
+  }
+}
+
+///|
+test "resolve_host_path_from_cwd_result makes default moonink.json absolute" {
+  let resolved = match
+    @runtime.resolve_host_path_from_cwd_result("moonink.json") {
+    Ok(path) => path
+    Err(_) => panic()
+  }
+  inspect(resolved.has_prefix("/"), content="true")
+  inspect(resolved.has_suffix("/moonink.json"), content="true")
+}
+
+///|
+test "load_config_result accepts relative and absolute host config paths" {
+  let relative = match
+    @runtime.load_config_result("fixtures/v2/minimal/moonink.json") {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  let absolute = match
+    @runtime.load_config_result(host_path("fixtures/v2/minimal/moonink.json")) {
+    Ok(config) => config
+    Err(_) => panic()
+  }
+  inspect(relative == absolute, content="true")
+}
+
+///|
 test "load_config_result reads the minimal v2 fixture" {
   let config = match
     @runtime.load_config_result("fixtures/v2/minimal/moonink.json") {
@@ -7,7 +41,11 @@ test "load_config_result reads the minimal v2 fixture" {
   }
   inspect(config.site_name, content="Fixture Site")
   inspect(config.site_url, content="Some(\"https://example.com/docs\")")
-  inspect(config.project_root, content="fixtures/v2/minimal")
+  inspect(
+    config.config_path,
+    content=host_path("fixtures/v2/minimal/moonink.json"),
+  )
+  inspect(config.project_root, content=host_path("fixtures/v2/minimal"))
   inspect(config.content_dir, content=".")
   inspect(config.output_dir, content="dist")
   inspect(config.template_file, content="None")
@@ -31,6 +69,7 @@ test "load_active_theme_layout_result falls back to built-in default theme" {
   )
   inspect(layout.theme_name, content="default")
   inspect(layout.asset_source_dir, content="None")
+  inspect(layout.embedded_assets.is_empty(), content="false")
   inspect(layout.source.contains("data-theme=\"default\""), content="true")
 }
 
@@ -132,7 +171,7 @@ test "discover_content_result ignores root helper directories" {
   inspect(inventory.files.length(), content="1")
   inspect(
     inventory.files[0].path,
-    content="fixtures/v2/theme_layout_basic/index.md",
+    content=host_path("fixtures/v2/theme_layout_basic/index.md"),
   )
 }
 
@@ -480,7 +519,7 @@ test "load_active_theme_bundle_result falls back to built-in theme v2 bundle" {
   inspect(bundle.layouts.get("article") is Some(_), content="true")
   inspect(bundle.partials.get("header") is Some(_), content="true")
   inspect(bundle.assets_root, content="None")
-  inspect(bundle.embedded_assets.length() > 0, content="true")
+  inspect(bundle.embedded_assets.is_empty(), content="false")
 }
 
 ///|
@@ -578,6 +617,29 @@ test "load_config_result rejects parent traversal paths" {
     @runtime.load_config_result("../moonink.json") is Err(_),
     content="true",
   )
+}
+
+///|
+test "runtime theme loading source no longer probes repository builtin theme paths" {
+  let source = @runtime.io_read_file_to_string(
+    host_path("src/runtime/theme_loader.mbt"),
+  ) catch {
+    _ => panic()
+  }
+  inspect(source.contains("src/runtime/builtin_theme"), content="false")
+  inspect(source.contains("find_workspace_root_from"), content="false")
+}
+
+///|
+test "runtime serve source no longer delegates to native-serve or shell exec" {
+  let cli_source = @runtime.io_read_file_to_string(
+    host_path("src/cli/cmd_serve.mbt"),
+  ) catch {
+    _ => panic()
+  }
+  inspect(cli_source.contains("native-serve/"), content="false")
+  inspect(cli_source.contains("moon run --manifest-path"), content="false")
+  inspect(cli_source.contains("/bin/sh"), content="false")
 }
 
 ///|
@@ -762,18 +824,4 @@ test "preview launch rejects missing root directory" {
     launch,
   )
   inspect(result is Err(_), content="true")
-}
-
-///|
-test "native serve delegate command self-spawns current executable" {
-  let command = match
-    @runtime.native_serve_delegate_command_result(
-      "fixtures/v2/minimal/dist", "127.0.0.1", 3000,
-    ) {
-    Ok(command) => command
-    Err(_) => panic()
-  }
-  inspect(command.contains("serve-prebuilt --root"), content="true")
-  inspect(command.contains("native-serve/moon.mod.json"), content="false")
-  inspect(command.contains("moon run"), content="false")
 }

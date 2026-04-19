@@ -176,6 +176,18 @@ fn config_path_policy_error(
 }
 
 ///|
+fn normalize_content_dir_or_error(value : String) -> String raise ConfigError {
+  let trimmed = value.trim().to_string()
+  if trimmed == "." {
+    "."
+  } else {
+    normalize_relative_path(trimmed) catch {
+      err => raise config_path_policy_error(value, err)
+    }
+  }
+}
+
+///|
 pub fn normalize_config_path_or_error(
   value : String,
 ) -> String raise ConfigError {
@@ -353,6 +365,66 @@ fn parse_theme_config_array(values : Array[Json]) -> Array[ThemeConfigValue] {
 }
 
 ///|
+pub fn parse_config_json_with_project_root(
+  config_path : String,
+  project_root : String,
+  source : String,
+) -> MooninkConfig raise ConfigError {
+  let json = @json.parse(source.view()) catch {
+    err => raise ConfigError::InvalidJson(detail=err.to_string())
+  }
+  guard json is Object(obj) else {
+    raise ConfigError::InvalidJson(detail="expected JSON object at top level")
+  }
+  let site_name = match extract_json_string(obj, "site_name") {
+    Some(name) => name
+    None => raise ConfigError::MissingField(key="site_name")
+  }
+  let site_url = extract_json_string(obj, "site_url")
+  let content_dir = match extract_json_string(obj, "content_dir") {
+    Some(dir) => normalize_content_dir_or_error(dir)
+    None => "."
+  }
+  let output_dir = match extract_json_string(obj, "output_dir") {
+    Some(dir) => normalize_output_dir_or_error(dir)
+    None => "dist"
+  }
+  let template_file = match extract_json_string(obj, "template_file") {
+    Some(path) => Some(normalize_config_path_or_error(path))
+    None => None
+  }
+  let exclude = match extract_optional_json_string_array(obj, "exclude") {
+    Some(values) => values
+    None => default_exclude()
+  }
+  let route_style = match extract_json_string(obj, "route_style") {
+    Some("direct") => RouteStyle::Direct
+    _ => RouteStyle::Pretty
+  }
+  let theme = match extract_json_string(obj, "theme") {
+    Some(path) => Some(normalize_config_path_or_error(path))
+    None => None
+  }
+  let theme_config = extract_theme_config(obj)
+  let author_profile = extract_author_profile(obj)
+  {
+    config_path,
+    project_root,
+    site_name,
+    site_url,
+    content_dir,
+    output_dir,
+    template_file,
+    exclude,
+    route_style,
+    text_encoding: TEXT_ENCODING_NAME,
+    theme,
+    theme_config,
+    author_profile,
+  }
+}
+
+///|
 pub fn theme_config_value_from_json(value : Json) -> ThemeConfigValue {
   match value {
     Null => ThemeConfigValue::NullValue
@@ -378,58 +450,10 @@ pub fn parse_config_json(
   config_path : String,
   source : String,
 ) -> MooninkConfig raise ConfigError {
-  let json = @json.parse(source.view()) catch {
-    err => raise ConfigError::InvalidJson(detail=err.to_string())
-  }
-  guard json is Object(obj) else {
-    raise ConfigError::InvalidJson(detail="expected JSON object at top level")
-  }
   let project_root = dirname_relative_path(config_path) catch {
     err => raise config_path_policy_error(config_path, err)
   }
-  let site_name = match extract_json_string(obj, "site_name") {
-    Some(name) => name
-    None => raise ConfigError::MissingField(key="site_name")
-  }
-  let site_url = extract_json_string(obj, "site_url")
-  let content_dir = match extract_json_string(obj, "content_dir") {
-    Some(dir) => dir
-    None => "."
-  }
-  let output_dir = match extract_json_string(obj, "output_dir") {
-    Some(dir) => dir
-    None => "dist"
-  }
-  let template_file = match extract_json_string(obj, "template_file") {
-    Some(path) => Some(normalize_config_path_or_error(path))
-    None => None
-  }
-  let exclude = match extract_optional_json_string_array(obj, "exclude") {
-    Some(values) => values
-    None => default_exclude()
-  }
-  let route_style = match extract_json_string(obj, "route_style") {
-    Some("direct") => RouteStyle::Direct
-    _ => RouteStyle::Pretty
-  }
-  let theme = extract_json_string(obj, "theme")
-  let theme_config = extract_theme_config(obj)
-  let author_profile = extract_author_profile(obj)
-  {
-    config_path,
-    project_root,
-    site_name,
-    site_url,
-    content_dir,
-    output_dir,
-    template_file,
-    exclude,
-    route_style,
-    text_encoding: TEXT_ENCODING_NAME,
-    theme,
-    theme_config,
-    author_profile,
-  }
+  parse_config_json_with_project_root(config_path, project_root, source)
 }
 
 ///|

@@ -7,14 +7,12 @@ import {
 }
 
 options(
-  "native-stub": [ "search_index_clock.c", "serve_delegate.c" ],
+  "native-stub": [ "search_index_clock.c", "preview_startup.c" ],
   targets: {
+    "preview_startup_native.mbt": [ "native", "llvm" ],
+    "preview_startup_stub.mbt": [ "js", "wasm", "wasm-gc" ],
     "search_index_clock_js.mbt": [ "js" ],
     "search_index_clock_native.mbt": [ "native", "llvm" ],
     "search_index_clock_wasm.mbt": [ "wasm", "wasm-gc" ],
-    "serve_delegate_native.mbt": [ "native", "llvm" ],
-    "serve_delegate_stub.mbt": [ "js", "wasm", "wasm-gc" ],
-    "serve_process_native.mbt": [ "native", "llvm" ],
-    "serve_process_stub.mbt": [ "js", "wasm", "wasm-gc" ],
   },
 )

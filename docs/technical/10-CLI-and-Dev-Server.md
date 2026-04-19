@@ -32,7 +32,12 @@ Runs the static generation pipeline:
 5. Apply templater and site constructor.
 6. Emit HTML to `output_dir` (default `dist/`).
 
-Current implementation includes the real parser/render/template/site-assembly flow, route-aware pretty/direct output layout, build-time wikilink rewriting based on discovered page routes, project-root `public/` asset copying, and a Theme MVP that resolves layouts in this order: `theme/layout.html`, then `template_file`, then the embedded built-in default theme; selected project theme assets are copied into `dist/assets/`, and built-in assets are emitted from the embedded bundle.
+Current implementation includes the real parser/render/template/site-assembly flow, route-aware pretty/direct output layout, build-time wikilink rewriting based on discovered page routes, project-root `public/` asset copying, and a Theme MVP that resolves layouts in this order: `theme/layout.html`, then `template_file`, then the built-in default theme; selected theme assets are copied into `dist/assets/` when present.
+
+Runtime path handling for `build` now distinguishes:
+
+- host-path CLI input: `--config` may be cwd-relative or absolute and is normalized to an absolute host path before loading;
+- project-relative policy paths: `content_dir`, `output_dir`, `theme`, `template_file`, and CLI `--output` remain project-relative and are resolved from the derived absolute project root.
 
 Obsidian-direct output support extends the same build path:
 
@@ -61,37 +66,37 @@ Run a local preview flow for the generated site.
 Main workspace behavior:
 
 1. Load `moonink.json`.
-2. Build preview output through a hidden staging directory under `.moonink-preview/`.
-3. Publish staging output into the real preview root only after a successful rebuild.
-4. Emit preview-only runtime assets under `dist/__moonink/`:
+2. Resolve the config path to an absolute host path and derive the project root from that config file.
+3. Build preview output through a hidden staging directory under `.moonink-preview/`.
+4. Publish staging output into the real preview root only after a successful build.
+5. Emit preview-only runtime assets under `dist/__moonink/`:
    - `live-reload.js`
    - `preview-status.json`
-5. Start the native-only preview backend against the published preview root.
-6. Poll watched config/content/theme/template paths and rebuild on change.
-7. If a rebuild finishes with warnings, keep serving the new output and surface the warning both in terminal output and `preview-status.json`.
-8. If a rebuild fails fatally, keep serving the last successful output and update `preview-status.json` with error state instead of tearing down preview.
+6. Validate the preview root plus native host/port startup requirements.
+7. Start the in-process native preview backend from the main binary.
 
-The preview runner is still isolated behind [src/runtime/serve.mbt](src/runtime/serve.mbt). The standard wasm-gc test suite exercises the build-orchestration and dry-run validation helpers, while the native main binary owns the actual HTTP listener through an internal `serve-prebuilt` mode.
+This slice intentionally does not include file watching or hot reload as a supported contract. The protected staging/publish flow and preview-status artifacts remain, but `serve` is now a one-shot build-then-preview command rather than a watch-mode dev server.
+
+The preview runner remains isolated behind [src/runtime/serve.mbt](src/runtime/serve.mbt). The standard wasm-gc test suite exercises the build orchestration and dry-run validation helpers, while the native main package owns the real HTTP listener.
 
 Real preview serving is intentionally native-only. The main-workspace `serve`
-path should be treated as a `--target native` feature; if a non-native target
-hits the runtime stub and reports that native serve delegation is only available
-on native targets, that is expected and matches the supported-platform scope.
-
-Watch-mode preview uses polling rather than OS-specific file watching. The
-browser refresh behavior is intentionally a full-page reload, not HMR.
+path should be treated as a `--target native` feature; JS/Wasm targets stop at
+the dry-run/runtime-helper boundary rather than launching an HTTP server.
 
 ### Native preview server
 
-Real HTTP preview serving is compiled into the main native binary.
+Real HTTP preview serving is now owned by the main binary under
+[src/cmd/main/native_serve.mbt](../../src/cmd/main/native_serve.mbt).
 
 Responsibilities of the native entry:
 
-1. Parse CLI argv using the same normalization pattern as the main binary.
-2. Support the internal `serve-prebuilt` handoff used by the main workspace CLI after a successful build.
-3. Reuse `kozmosa/moonink/cli.start_prepared_serve_session_result(...)` to validate preview startup before handing off to the real server.
-4. Start a real `oboard/mocket` static file server rooted at the generated preview directory.
-5. Print the runtime-ready message with a native-server note.
+1. Parse normal CLI argv using the same normalization pattern as the rest of the binary.
+2. Support the public `serve` path by reusing CLI/runtime build-before-serve helpers.
+3. Support a hidden internal `serve-prebuilt --root ... --host ... --port ...` path for native smoke validation and migration tooling.
+4. Reuse `kozmosa/moonink/cli.start_prepared_serve_session_result(...)` to validate preview startup before handing off to the real server.
+5. Print the runtime-ready message with a main-binary native-server note.
+6. Start a real `oboard/mocket` static file server rooted at the generated preview directory.
+7. Propagate `CliOutcome.exit_code` to the host process so shell and CI callers see fatal build/config/serve-stage failures.
 
 Example launch from the repository root:
 
@@ -101,11 +106,11 @@ moon run src/cmd/main --target native -- serve fixtures/v2/minimal/moonink.json
 
 Design constraints:
 
-- The main workspace `moonink serve` is the canonical build-once-then-preview command.
-- The native main binary owns the real preview server dependency and detached release contract.
-- The native entry accepts an explicit config path so it can be launched from the repo root or other working directories.
-- Main-workspace `serve` self-spawns the same binary through an internal prebuilt-preview handoff instead of rebuilding twice.
-- Non-native targets are not expected to offer a real preview server; the native-only delegation boundary is part of the design.
+- detached execution must not require `/bin/sh`, `moon`, repository-local `native-serve/`, or repository-local built-in theme files;
+- `oboard/mocket` now lives in the main module dependency set, but only the native-only `src/cmd/main` package imports it;
+- the main workspace `moonink serve` is the canonical build-once-then-preview command;
+- `native-serve/` remains in the repository as a migration shim rather than a required runtime component;
+- non-native targets are not expected to offer a real preview server.
 
 ## 3. CLI Output Style
 
