@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="96" viewBox="0 0 320 96" fill="none">
+  <rect width="320" height="96" rx="20" fill="#F2E8D8"/>
+  <rect x="12" y="12" width="296" height="72" rx="16" fill="#FFF9F1" stroke="#D8C5AE"/>
+  <circle cx="56" cy="48" r="18" fill="#8D4C2F"/>
+  <path d="M48 48h16M56 40v16" stroke="#FFF9F1" stroke-width="4" stroke-linecap="round"/>
+  <text x="92" y="42" fill="#2B2118" font-family="Georgia, serif" font-size="24">MoonInk</text>
+  <text x="92" y="66" fill="#6C584A" font-family="Georgia, serif" font-size="14">docs vault public asset</text>
+</svg>
