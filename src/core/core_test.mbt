@@ -13,6 +13,12 @@ test "site assembly model supports construction" {
     cover: None,
     author: None,
     column: None,
+    featured: false,
+    pinned: false,
+    search: true,
+    toc: None,
+    published_at: None,
+    freshness_at: None,
     reading_time_minutes: 1,
     source_format: @core.SourceFormat::Markdown,
     source_path: "index.md",
@@ -44,6 +50,7 @@ test "site assembly model supports construction" {
   let site : @core.SiteAssemblyModel = {
     pages: [page],
     navigation,
+    collections: @core.SiteCollections::empty(),
     page_count: 1,
     article_count: 0,
     navigation_items: 2,
@@ -79,6 +86,7 @@ test "build_site_model_dummy preserves inventory counts" {
     text_encoding: "utf-8",
     theme: None,
     theme_config: {},
+    author_profile: @core.AuthorProfile::default(),
   }
   let model = @core.build_site_model_dummy(config, inventory)
   inspect(model.page_count, content="3")
@@ -183,6 +191,49 @@ test "parse_config_json preserves explicit empty excludes" {
 }
 
 ///|
+test "parse_config_json parses typed author profile" {
+  let json =
+    #|{
+    #|  "site_name": "Author Fixture",
+    #|  "author": {
+    #|    "name": "Site Author",
+    #|    "bio": "Writes careful notes.",
+    #|    "homepage_text": "Building intentional surfaces.",
+    #|    "avatar": "/avatar.png",
+    #|    "links": [
+    #|      { "label": "GitHub", "url": "https://example.com/github" }
+    #|    ]
+    #|  }
+    #|}
+  let config = @core.parse_config_json("moonink.json", json) catch {
+    _ => panic()
+  }
+  inspect(config.author_profile.name, content="Some(\"Site Author\")")
+  inspect(config.author_profile.bio, content="Some(\"Writes careful notes.\")")
+  inspect(
+    config.author_profile.homepage_text,
+    content="Some(\"Building intentional surfaces.\")",
+  )
+  inspect(config.author_profile.avatar, content="Some(\"/avatar.png\")")
+  inspect(config.author_profile.links[0].label, content="GitHub")
+}
+
+///|
+test "parse_config_json rejects malformed author links" {
+  let json =
+    #|{
+    #|  "site_name": "Author Fixture",
+    #|  "author": {
+    #|    "links": [false]
+    #|  }
+    #|}
+  inspect(
+    try? @core.parse_config_json("moonink.json", json),
+    content="Err(InvalidField(key=\"author.links\", detail=\"must contain only objects with string `label` and `url`\"))",
+  )
+}
+
+///|
 test "parse_config_json parses optional template_file" {
   let json =
     #|{"site_name": "Templated", "template_file": "templates/site.html"}
@@ -262,33 +313,6 @@ test "parse_config_json preserves nested theme_config values" {
     content="Some(ArrayValue([StringValue(\"sm\"), StringValue(\"md\")]))",
   )
   inspect(config.theme_config.get("enabled"), content="Some(BoolValue(true))")
-}
-
-///|
-test "parse_config_json preserves homepage theme config values" {
-  let json =
-    #|{"site_name": "Themed", "theme_config": {"homepage": {"hero_title": "Notes From The Workbench", "hero_summary": "Connected writing", "featured_paths": ["essays/stone-garden.md"], "recent_count": 2}}}
-  let config = @core.parse_config_json("moonink.json", json) catch {
-    _ => panic()
-  }
-  match config.theme_config.get("homepage") {
-    Some(@core.ThemeConfigValue::ObjectValue(homepage)) => {
-      inspect(
-        homepage.get("hero_title"),
-        content="Some(StringValue(\"Notes From The Workbench\"))",
-      )
-      inspect(
-        homepage.get("hero_summary"),
-        content="Some(StringValue(\"Connected writing\"))",
-      )
-      inspect(
-        homepage.get("featured_paths"),
-        content="Some(ArrayValue([StringValue(\"essays/stone-garden.md\")]))",
-      )
-      inspect(homepage.get("recent_count"), content="Some(NumberValue(\"2\"))")
-    }
-    _ => panic()
-  }
 }
 
 ///|
@@ -423,17 +447,14 @@ test "parse_frontmatter records invalid scalar draft value" {
 }
 
 ///|
-test "parse_frontmatter parses search false flag" {
-  let fm = @core.parse_frontmatter("title: Hidden Note\nsearch: false\n")
-  inspect(fm.search_enabled, content="false")
-  inspect(fm.field_shapes.get("search"), content="Some(Scalar)")
-}
-
-///|
-test "parse_frontmatter records invalid scalar search value" {
-  let fm = @core.parse_frontmatter("title: Hidden Note\nsearch: maybe\n")
-  inspect(fm.search_enabled, content="true")
+test "parse_frontmatter records invalid m3 boolean values" {
+  let fm = @core.parse_frontmatter(
+    "featured: maybe\npinned: later\nsearch: no\ntoc: auto",
+  )
+  inspect(fm.invalid_scalar_fields.get("featured"), content="Some(true)")
+  inspect(fm.invalid_scalar_fields.get("pinned"), content="Some(true)")
   inspect(fm.invalid_scalar_fields.get("search"), content="Some(true)")
+  inspect(fm.invalid_scalar_fields.get("toc"), content="Some(true)")
 }
 
 ///|
@@ -463,7 +484,7 @@ test "parse_frontmatter parses core fields" {
 
 ///|
 test "parse_frontmatter parses article presentation fields" {
-  let yaml = "title: My Article\nsummary: Quick tour\nupdated: 2026-04-19\nseries: Notebook Atlas\ncover: images/cover.png\nauthor: Koz\ncolumn: Essays"
+  let yaml = "title: My Article\nsummary: Quick tour\nupdated: 2026-04-19\nseries: Notebook Atlas\ncover: images/cover.png\nauthor: Koz\ncolumn: Essays\nfeatured: true\npinned: true\nsearch: false\ntoc: true"
   let fm = @core.parse_frontmatter(yaml)
   inspect(fm.summary, content="Some(\"Quick tour\")")
   inspect(fm.updated, content="Some(\"2026-04-19\")")
@@ -471,6 +492,10 @@ test "parse_frontmatter parses article presentation fields" {
   inspect(fm.cover, content="Some(\"images/cover.png\")")
   inspect(fm.author, content="Some(\"Koz\")")
   inspect(fm.column, content="Some(\"Essays\")")
+  inspect(fm.featured, content="true")
+  inspect(fm.pinned, content="true")
+  inspect(fm.search, content="false")
+  inspect(fm.toc, content="Some(true)")
 }
 
 ///|
@@ -708,6 +733,14 @@ test "search index document serializes stable schema" {
         excerpt: "A short intro",
         tags: ["intro", "demo"],
         date: Some("2026-04-01"),
+        published_at: Some("2026-04-01"),
+        freshness_at: Some("2026-04-02"),
+        series: Some("Notebook"),
+        cover: Some("/cover.png"),
+        author: Some("A. Author"),
+        featured: true,
+        pinned: false,
+        source_path: "hello.md",
       },
       {
         title: "About",
@@ -717,13 +750,21 @@ test "search index document serializes stable schema" {
         excerpt: "About page",
         tags: [],
         date: None,
+        published_at: None,
+        freshness_at: None,
+        series: None,
+        cover: None,
+        author: None,
+        featured: false,
+        pinned: false,
+        source_path: "about.md",
       },
     ],
   })
   inspect(
     json,
     content=(
-      #|{"version":1,"generated_at":"2026-04-15T00:00:00Z","items":[{"title":"Hello","url":"/hello/","kind":"article","summary":"A hello summary","excerpt":"A short intro","tags":["intro","demo"],"date":"2026-04-01"},{"title":"About","url":"/about/","kind":"page","summary":null,"excerpt":"About page","tags":[],"date":null}]}
+      #|{"version":1,"generated_at":"2026-04-15T00:00:00Z","items":[{"title":"Hello","url":"/hello/","kind":"article","summary":"A hello summary","excerpt":"A short intro","tags":["intro","demo"],"date":"2026-04-01","published_at":"2026-04-01","freshness_at":"2026-04-02","series":"Notebook","cover":"/cover.png","author":"A. Author","featured":true,"pinned":false,"source_path":"hello.md"},{"title":"About","url":"/about/","kind":"page","summary":null,"excerpt":"About page","tags":[],"date":null,"published_at":null,"freshness_at":null,"series":null,"cover":null,"author":null,"featured":false,"pinned":false,"source_path":"about.md"}]}
     ),
   )
 }

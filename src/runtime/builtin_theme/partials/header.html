@@ -1,7 +1,11 @@
 <header class="site-header">
   <a class="site-brand" href="{{ site.url }}">{{ site.name }}</a>
+  <nav class="site-header-links" aria-label="Primary">
+    <a href="{{ site.search_url }}">Search</a>
+    <a href="{{ site.archive_url }}">Archive</a>
+  </nav>
   <div class="site-header-meta">
     {% if page.column %}<span class="site-chip">{{ page.column }}</span>{% endif %}
-    <span>{{ page.kind }}</span>
+    <span>{{ page.kind_label }}</span>
   </div>
 </header>

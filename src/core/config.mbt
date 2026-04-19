@@ -66,6 +66,26 @@ pub(all) suberror ConfigError {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct AuthorProfileLink {
+  label : String
+  url : String
+} derive(Debug, Eq)
+
+///|
+pub(all) struct AuthorProfile {
+  name : String?
+  bio : String?
+  avatar : String?
+  links : Array[AuthorProfileLink]
+  homepage_text : String?
+} derive(Debug, Eq)
+
+///|
+pub fn AuthorProfile::default() -> AuthorProfile {
+  { name: None, bio: None, avatar: None, links: [], homepage_text: None }
+}
+
+///|
 pub impl Show for ConfigError with output(self, logger) {
   match self {
     ConfigError::IOError(err) => {
@@ -115,6 +135,7 @@ pub(all) struct MooninkConfig {
   text_encoding : String
   theme : String?
   theme_config : Map[String, ThemeConfigValue]
+  author_profile : AuthorProfile
 } derive(Debug, Eq)
 
 ///|
@@ -239,6 +260,78 @@ fn extract_theme_config(
 }
 
 ///|
+fn parse_author_profile_link(
+  value : Json,
+) -> AuthorProfileLink raise ConfigError {
+  guard value is Object(obj) else {
+    raise ConfigError::InvalidField(
+      key="author.links",
+      detail="must contain only objects with string `label` and `url`",
+    )
+  }
+  let label = match extract_json_string(obj, "label") {
+    Some(value) => value
+    None =>
+      raise ConfigError::InvalidField(
+        key="author.links",
+        detail="must contain only objects with string `label` and `url`",
+      )
+  }
+  let url = match extract_json_string(obj, "url") {
+    Some(value) => value
+    None =>
+      raise ConfigError::InvalidField(
+        key="author.links",
+        detail="must contain only objects with string `label` and `url`",
+      )
+  }
+  { label, url }
+}
+
+///|
+fn parse_author_profile(
+  obj : Map[String, Json],
+) -> AuthorProfile raise ConfigError {
+  let links = match obj.get("links") {
+    None => []
+    Some(Array(values)) => {
+      let result : Array[AuthorProfileLink] = []
+      for value in values {
+        result.push(parse_author_profile_link(value) catch { err => raise err })
+      }
+      result
+    }
+    Some(_) =>
+      raise ConfigError::InvalidField(
+        key="author.links",
+        detail="must be an array of objects",
+      )
+  }
+  {
+    name: extract_json_string(obj, "name"),
+    bio: extract_json_string(obj, "bio"),
+    avatar: extract_json_string(obj, "avatar"),
+    links,
+    homepage_text: extract_json_string(obj, "homepage_text"),
+  }
+}
+
+///|
+fn extract_author_profile(
+  obj : Map[String, Json],
+) -> AuthorProfile raise ConfigError {
+  match obj.get("author") {
+    None => AuthorProfile::default()
+    Some(Object(value)) => parse_author_profile(value)
+    Some(_) =>
+      raise ConfigError::InvalidField(
+        key="author",
+        detail="must be a JSON object",
+      )
+  }
+}
+
+///|
 fn parse_theme_config_object(
   obj : Map[String, Json],
 ) -> Map[String, ThemeConfigValue] {
@@ -322,6 +415,7 @@ pub fn parse_config_json(
   }
   let theme = extract_json_string(obj, "theme")
   let theme_config = extract_theme_config(obj) catch { err => raise err }
+  let author_profile = extract_author_profile(obj) catch { err => raise err }
   {
     config_path,
     project_root,
@@ -335,6 +429,7 @@ pub fn parse_config_json(
     text_encoding: TEXT_ENCODING_NAME,
     theme,
     theme_config,
+    author_profile,
   }
 }
 

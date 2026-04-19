@@ -29,6 +29,7 @@ test "build site assembly model combines pages and navigation" {
     text_encoding: "utf-8",
     theme: None,
     theme_config: {},
+    author_profile: @core.AuthorProfile::default(),
   }
   let inventory : @core.ContentInventory = {
     root: "fixtures/v2/minimal",
@@ -314,6 +315,12 @@ test "build navigation model uses nav_title and hides nav_hidden pages" {
       cover: None,
       author: None,
       column: None,
+      featured: false,
+      pinned: false,
+      search: true,
+      toc: None,
+      published_at: None,
+      freshness_at: None,
       reading_time_minutes: 1,
       source_format: @core.SourceFormat::Markdown,
       source_path: "index.md",
@@ -334,6 +341,12 @@ test "build navigation model uses nav_title and hides nav_hidden pages" {
       cover: None,
       author: None,
       column: None,
+      featured: false,
+      pinned: false,
+      search: true,
+      toc: None,
+      published_at: None,
+      freshness_at: None,
       reading_time_minutes: 1,
       source_format: @core.SourceFormat::Markdown,
       source_path: "guide/index.md",
@@ -354,6 +367,12 @@ test "build navigation model uses nav_title and hides nav_hidden pages" {
       cover: None,
       author: None,
       column: None,
+      featured: false,
+      pinned: false,
+      search: true,
+      toc: None,
+      published_at: None,
+      freshness_at: None,
       reading_time_minutes: 1,
       source_format: @core.SourceFormat::Markdown,
       source_path: "guide/install.md",
@@ -374,6 +393,12 @@ test "build navigation model uses nav_title and hides nav_hidden pages" {
       cover: None,
       author: None,
       column: None,
+      featured: false,
+      pinned: false,
+      search: true,
+      toc: None,
+      published_at: None,
+      freshness_at: None,
       reading_time_minutes: 1,
       source_format: @core.SourceFormat::Markdown,
       source_path: "guide/config.md",
@@ -394,6 +419,12 @@ test "build navigation model uses nav_title and hides nav_hidden pages" {
       cover: None,
       author: None,
       column: None,
+      featured: false,
+      pinned: false,
+      search: true,
+      toc: None,
+      published_at: None,
+      freshness_at: None,
       reading_time_minutes: 1,
       source_format: @core.SourceFormat::Markdown,
       source_path: "hello.md",
@@ -428,6 +459,12 @@ test "build navigation model treats section index as landing item" {
       cover: None,
       author: None,
       column: None,
+      featured: false,
+      pinned: false,
+      search: true,
+      toc: None,
+      published_at: None,
+      freshness_at: None,
       reading_time_minutes: 1,
       source_format: @core.SourceFormat::Markdown,
       source_path: "guide/index.md",
@@ -448,6 +485,12 @@ test "build navigation model treats section index as landing item" {
       cover: None,
       author: None,
       column: None,
+      featured: false,
+      pinned: false,
+      search: true,
+      toc: None,
+      published_at: None,
+      freshness_at: None,
       reading_time_minutes: 1,
       source_format: @core.SourceFormat::Markdown,
       source_path: "guide/advanced/index.md",
@@ -468,6 +511,12 @@ test "build navigation model treats section index as landing item" {
       cover: None,
       author: None,
       column: None,
+      featured: false,
+      pinned: false,
+      search: true,
+      toc: None,
+      published_at: None,
+      freshness_at: None,
       reading_time_minutes: 1,
       source_format: @core.SourceFormat::Markdown,
       source_path: "guide/advanced/reference.md",
@@ -2352,9 +2401,11 @@ test "runtime cli check reports missing theme v2 layout for layout override" {
     fixture_root + "/moonink.json",
   )
   inspect(outcome.exit_code, content="1")
-  inspect(outcome.message.contains("theme/template"), content="true")
+  inspect(outcome.message.contains("frontmatter"), content="true")
   inspect(
-    outcome.message.contains("missing theme layout `landing`"),
+    outcome.message.contains(
+      "Frontmatter field `layout` must be one of `article`, `page`, or `home`",
+    ),
     content="true",
   )
   inspect(outcome.message.contains("[index.md]"), content="true")
@@ -2969,6 +3020,232 @@ test "runtime cli build emits tags series and archive pages" {
   inspect(series_page.contains("Notebook Atlas"), content="true")
   inspect(series_page.contains("Quiet Joins"), content="true")
   inspect(archive_page.contains("2026"), content="true")
+}
+
+///|
+test "runtime cli build renders m3 surfaces and exclusions" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/search_index_contract", "m3-surface-build",
+  )
+  let config_source =
+    #|{
+    #|  "site_name": "M3 Fixture",
+    #|  "site_url": "https://example.com/m3",
+    #|  "content_dir": ".",
+    #|  "output_dir": "dist",
+    #|  "exclude": ["dist"],
+    #|  "route_style": "pretty",
+    #|  "author": {
+    #|    "name": "Site Author",
+    #|    "bio": "Writes careful notes.",
+    #|    "homepage_text": "Building intentional surfaces.",
+    #|    "links": [
+    #|      { "label": "GitHub", "url": "https://example.com/github" }
+    #|    ]
+    #|  }
+    #|}
+  @runtime.io_write_string(fixture_root + "/moonink.json", config_source) catch {
+    _ => panic()
+  }
+  let guide_source =
+    #|---
+    #|title: Guide
+    #|summary: Explicit guide excerpt wins.
+    #|description: Guide description should not win.
+    #|date: 2026-04-15
+    #|tags: [search, contract]
+    #|author: Guest Writer
+    #|---
+    #|
+    #|# Guide
+    #|
+    #|Guide search body content.
+  @runtime.io_write_string(fixture_root + "/guide.md", guide_source) catch {
+    _ => panic()
+  }
+  let quiet_source =
+    #|---
+    #|title: Quiet Note
+    #|summary: Hidden from search, visible elsewhere.
+    #|date: 2026-04-16
+    #|tags: [quiet]
+    #|featured: true
+    #|search: false
+    #|---
+    #|
+    #|# Quiet Note
+    #|
+    #|Still published.
+  @runtime.io_write_string(fixture_root + "/quiet.md", quiet_source) catch {
+    _ => panic()
+  }
+  let draft_source =
+    #|---
+    #|title: Draft Note
+    #|date: 2026-04-17
+    #|tags: [quiet]
+    #|draft: true
+    #|---
+    #|
+    #|# Draft Note
+    #|
+    #|Should never ship.
+  @runtime.io_write_string(fixture_root + "/draft-note.md", draft_source) catch {
+    _ => panic()
+  }
+  let series_old_source =
+    #|---
+    #|title: Series Old
+    #|date: 2026-04-01
+    #|series: River Notes
+    #|---
+    #|
+    #|# Series Old
+    #|
+    #|The first entry.
+  @runtime.io_write_string(fixture_root + "/series-old.md", series_old_source) catch {
+    _ => panic()
+  }
+  let series_new_source =
+    #|---
+    #|title: Series New
+    #|date: 2026-04-20
+    #|series: River Notes
+    #|pinned: true
+    #|---
+    #|
+    #|# Series New
+    #|
+    #|The newer entry.
+  @runtime.io_write_string(fixture_root + "/series-new.md", series_new_source) catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_build_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="0")
+  inspect(@runtime.io_path_exists(fixture_root + "/dist/search/index.html"), content="true")
+  inspect(@runtime.io_path_exists(fixture_root + "/dist/archive/index.html"), content="true")
+  inspect(@runtime.io_path_exists(fixture_root + "/dist/tags/quiet/index.html"), content="true")
+  inspect(
+    @runtime.io_path_exists(fixture_root + "/dist/series/river-notes/index.html"),
+    content="true",
+  )
+  inspect(@runtime.io_path_exists(fixture_root + "/dist/quiet/index.html"), content="true")
+  inspect(@runtime.io_path_exists(fixture_root + "/dist/draft-note/index.html"), content="false")
+  let index_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let search_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/search/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let quiet_tag_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/tags/quiet/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let guide_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/guide/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let series_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/series/river-notes/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let archive_html = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/archive/index.html",
+  ) catch {
+    _ => panic()
+  }
+  let search_index = @runtime.io_read_file_to_string(
+    fixture_root + "/dist/search-index.json",
+  ) catch {
+    _ => panic()
+  }
+  inspect(index_html.contains("Building intentional surfaces."), content="true")
+  inspect(index_html.contains("Quiet Note"), content="true")
+  inspect(search_html.contains("data-source=\"quiet.md\""), content="false")
+  inspect(search_html.contains("data-source=\"draft-note.md\""), content="false")
+  inspect(quiet_tag_html.contains("Quiet Note"), content="true")
+  inspect(quiet_tag_html.contains("Draft Note"), content="false")
+  inspect(guide_html.contains("Guest Writer"), content="true")
+  inspect(guide_html.contains("Writes careful notes."), content="true")
+  inspect(search_index.contains("\"author\":\"Guest Writer\""), content="true")
+  inspect(search_index.contains("\"title\":\"Quiet Note\""), content="false")
+  inspect(search_index.contains("\"title\":\"Draft Note\""), content="false")
+  let old_offset = find_substring_or_panic(
+    series_html, "data-source=\"series-old.md\"",
+  )
+  let new_offset = find_substring_or_panic(
+    series_html, "data-source=\"series-new.md\"",
+  )
+  inspect((old_offset < new_offset).to_string(), content="true")
+  let archive_new = find_substring_or_panic(
+    archive_html, "data-source=\"series-new.md\"",
+  )
+  let archive_quiet = find_substring_or_panic(
+    archive_html, "data-source=\"quiet.md\"",
+  )
+  let archive_guide = find_substring_or_panic(
+    archive_html, "data-source=\"guide.md\"",
+  )
+  let archive_old = find_substring_or_panic(
+    archive_html, "data-source=\"series-old.md\"",
+  )
+  inspect((archive_new < archive_quiet).to_string(), content="true")
+  inspect((archive_quiet < archive_guide).to_string(), content="true")
+  inspect((archive_guide < archive_old).to_string(), content="true")
+}
+
+///|
+test "runtime cli check reports m3 frontmatter contract failures" {
+  let fixture_root = prepare_isolated_fixture_copy(
+    "fixtures/v2/search_index_contract", "m3-frontmatter-check",
+  )
+  let invalid_source =
+    #|---
+    #|title: Home
+    #|type: page
+    #|featured: [true]
+    #|search: maybe
+    #|toc: [true]
+    #|layout: landing
+    #|---
+    #|
+    #|# Home
+  @runtime.io_write_string(fixture_root + "/index.md", invalid_source) catch {
+    _ => panic()
+  }
+  let outcome = @cli.run_check_command_runtime_from_config(
+    fixture_root + "/moonink.json",
+  )
+  inspect(outcome.exit_code, content="1")
+  inspect(outcome.message.contains("[check] frontmatter"), content="true")
+  inspect(
+    outcome.message.contains("Frontmatter field `featured` must be a boolean"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("Frontmatter field `search` must be a boolean"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains("Frontmatter field `toc` must be a boolean"),
+    content="true",
+  )
+  inspect(
+    outcome.message.contains(
+      "Frontmatter field `layout` must be one of `article`, `page`, or `home`",
+    ),
+    content="true",
+  )
+  inspect(outcome.message.contains("missing theme layout `landing`"), content="false")
 }
 
 ///|

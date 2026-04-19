@@ -9,9 +9,10 @@ package boundaries change materially.
 **Last updated:** 2026-04-19 — reflects the current `help` / `onboard` /
 `build` / `check` / `serve` surface, Theme System V2 bundle rendering,
 Obsidian direct-output defaults, content-tree asset handling, homepage
-inference, the M1 article-experience contract, and the M2 search/public-shell
-contract for generated surfaces, homepage curation, collection pages, and
-public metadata outputs.
+inference, the M1 article-experience contract, the M2 search/public-shell
+contract, and the M3 metadata/surface contract for draft exclusion, search
+exclusion, homepage modules, generated search/tag/series/archive pages, and
+typed site author/profile data.
 
 ## Current CLI Surface
 
@@ -91,44 +92,44 @@ Current real behavior:
 1. Reads `moonink.json` via `runtime/config_loader.mbt`.
 2. Discovers content via `runtime/content_discovery.mbt` using recursive scan + exclude rules.
 3. Loads build inputs with parsed frontmatter metadata and classified content kind.
-4. Resolves the active presentation path with this precedence:
+4. Filters `draft: true` entries out of the published build.
+5. Resolves the active presentation path with this precedence:
    - configured project Theme V2 bundle at `<theme>/theme.json` when `moonink.json.theme` is set, otherwise `theme/theme.json`;
    - configured project legacy `<theme>/layout.html` when `moonink.json.theme` is set, otherwise `theme/layout.html`, if no project bundle exists;
    - configured `template_file` if no project bundle or legacy project layout exists;
    - repository-owned built-in Theme V2 bundle otherwise.
-5. For Theme V2 builds, validates every page against the manifest contract before output cleanup:
+6. For Theme V2 builds, validates every source-backed page and generated system surface against the manifest contract before output cleanup:
    - the selected layout key must exist;
    - page overrides must be allowlisted by `page_overrides`.
-6. Fully clears `output_dir` before rebuilding.
-7. Copies project-root `public/` assets into the output root.
-8. Copies active theme assets into `dist/assets/`.
-9. For Theme V2 builds, emits `dist/assets/theme-vars.css` from declared manifest tokens plus `theme_config` overrides.
-10. Ensures the generated search client asset exists at `dist/assets/moonink-search.js`, even when a custom Theme V2 bundle falls back to `page` for generated surfaces.
-11. Builds the site assembly model from discovered pages, presentation metadata, and navigation.
-12. Builds a route-aware WikiLinker index plus article-experience signals:
+7. Fully clears `output_dir` before rebuilding.
+8. Copies project-root `public/` assets into the output root.
+9. Copies active theme assets into `dist/assets/`.
+10. For Theme V2 builds, emits `dist/assets/theme-vars.css` from declared manifest tokens plus `theme_config` overrides.
+11. Ensures the generated search client asset exists at `dist/assets/moonink-search.js`, even when a custom Theme V2 bundle falls back to `page` for generated surfaces.
+12. Builds the site assembly model from published pages, shared card data, collection surfaces, and navigation.
+13. Builds a route-aware WikiLinker index plus article-experience signals:
     - contextual backlinks from markdown wikilink mentions;
     - related-note candidates from link + tag + series overlap;
     - article previous/next navigation;
     - series navigation;
     - markdown heading outlines for TOC rendering.
-13. Parses each source document through DocFlow adapters.
-14. Applies WikiLink rewriting and collects rendered HTML.
-15. For markdown renders, injects stable heading `id` attributes so TOC links can target real anchors.
-16. For Theme V2 builds, computes the selected layout key as:
+14. Parses each source document through DocFlow adapters.
+15. Applies WikiLink rewriting and collects rendered HTML.
+16. For markdown renders, injects stable heading `id` attributes so TOC links can target real anchors.
+17. For Theme V2 builds, computes the selected layout key as:
     - `layout` frontmatter override when present;
     - otherwise page kind `index`, `page`, or `article`.
-17. For Theme V2 builds, assembles a structured render context with:
-    - `site` metadata including `theme_name`, `theme_asset_root`, and full `theme_config`;
-    - generated-surface URLs for `search`, `tags`, `series`, and `archive`;
-    - `page` metadata including kind, layout key, summary/date/updated/tags/series/cover/author/column/reading-time, homepage hero fields, section context, rendered body, and page-level theme metadata;
-    - `collections.nav`, `collections.pages`, `collections.backlinks`, `collections.related`, `collections.toc`, `collections.series`, and `collections.sections`;
+18. For Theme V2 builds, assembles a structured render context with:
+    - `site` metadata including `theme_name`, `theme_asset_root`, full `theme_config`, typed `author`, and generated-surface URLs for `search`, `tags`, `series`, and `archive`;
+    - `page` metadata including shared behavior fields such as `featured`, `pinned`, `search`, `published_at`, `freshness_at`, author display, homepage hero fields, section context, rendered body, and page-level theme metadata;
+    - `collections.nav`, `collections.pages`, `collections.backlinks`, `collections.related`, `collections.toc`, `collections.series`, `collections.sections`, `collections.homepage_featured`, `collections.homepage_recent`, `collections.search_cards`, `collections.tag_pages`, `collections.series_pages`, and `collections.archive_months`;
     - built-in and manifest-declared `slots`.
-18. Renders Theme V2 templates through `docflow.render_theme_template(...)`, including `{% if %}`, `{% for %}`, and partial includes.
-19. Emits source-backed HTML files using `core.output_html_path(...)`, respecting configured `route_style` (`pretty` or `direct`).
-20. Emits generated public surfaces for `/search/`, `/tags/`, `/series/`, and `/archive/`, using dedicated Theme V2 layouts when available and `page` as the fallback for custom bundles.
-21. Emits `dist/search-index.json` and `dist/rss.xml` as standard build artifacts.
-22. Injects canonical, Open Graph, and RSS `<head>` metadata through Theme V2 `head` slots.
-23. Reports processed source counts plus page/article breakdown.
+19. Renders Theme V2 templates through `docflow.render_theme_template(...)`, including `{% if %}`, `{% for %}`, and partial includes.
+20. Emits source-backed HTML files using `core.output_html_path(...)`, respecting configured `route_style` (`pretty` or `direct`).
+21. Emits generated public surfaces for `/search/`, `/tags/`, `/series/`, and `/archive/`, using dedicated Theme V2 layouts when available and `page` as the fallback for custom bundles.
+22. Emits `dist/search-index.json` and `dist/rss.xml` as standard build artifacts, with `search-index.json` excluding drafts and `search: false` pages.
+23. Injects canonical, Open Graph, and RSS `<head>` metadata through Theme V2 `head` slots.
+24. Reports processed source counts plus page/article breakdown.
 
 Obsidian direct-output extensions on top of that baseline:
 
@@ -180,8 +181,10 @@ Current behavior:
 6. Applies blocking validation for:
    - active theme bundle or legacy layout resolution failures;
    - missing Theme V2 layouts for required page kinds or layout overrides;
+   - missing Theme V2 layouts for generated system surfaces unless the bundle can fall back to `page`;
    - unsupported Theme V2 page override fields;
-   - obvious frontmatter type mismatches, including invalid boolean-like `draft` values;
+   - obvious frontmatter type mismatches, including invalid boolean-like `draft`, `featured`, `pinned`, `search`, and `toc` values;
+   - invalid author-facing `layout` values;
    - final emitted output path conflicts.
 7. Parses each document through format-appropriate parser adapters.
 8. Applies WikiLink resolution and records unresolved or ambiguous WikiLink diagnostics as warning-only document diagnostics.
@@ -227,6 +230,8 @@ Theme V2 additionally derives a page-kind layout key:
 - non-index pages -> `page`
 - articles -> `article`
 - explicit frontmatter `layout` overrides the derived key
+- author-facing `layout: home` normalizes to the internal `index` layout key
+- generated system pages use system-owned layout keys such as `search`, `tag`, `series`, and `archive`, with Theme V2 bundles allowed to fall back to `page`
 
 Article-experience metadata now recognized in frontmatter:
 
@@ -236,7 +241,11 @@ Article-experience metadata now recognized in frontmatter:
 - `cover`
 - `author`
 - `column`
+- `draft`
+- `featured`
+- `pinned`
 - `search`
+- `toc`
 - derived `reading_time_minutes` from source body text
 
 Default exclude patterns now include `.obsidian`, `.git`, `node_modules`, `dist`, `.trash`, `templates`, `Templates`, plus any hidden directory.
@@ -257,6 +266,8 @@ Key fields currently exercised by the CLI include:
 - `theme`
   - selects the project-local theme directory name used for Theme V2 bundles or legacy theme layouts; defaults to `theme`
 - `theme_config`
+- `author`
+  - typed site-level author/profile metadata used by homepage presence, article author cards, and shared card labels
 
 `theme_config` is preserved as nested `ThemeConfigValue` data rather than flattened at parse time.
 Flattening only happens later for Theme V2 token emission.

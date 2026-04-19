@@ -94,7 +94,9 @@
                   </div>
                 </div>
                 <p class="author-card-note">Published from {{ site.name }}</p>
-                {% if page.summary %}<p class="author-card-copy">{{ page.summary }}</p>{% endif %}
+                {% if site.author.bio %}<p class="author-card-copy">{{ site.author.bio }}</p>{% endif %}
+                {% if site.author.homepage_text %}<p class="author-card-copy">{{ site.author.homepage_text }}</p>{% endif %}
+                {% if site.author.links %}<ul class="author-profile-links">{% for item in site.author.links.items %}<li><a href="{{ item.url }}">{{ item.label }}</a></li>{% endfor %}</ul>{% endif %}
               </section>
             </div>
 
