@@ -1841,6 +1841,9 @@ fn build_outbound_links_by_url(
 }
 
 ///|
+let max_mention_entries_per_page : Int = 5
+
+///|
 fn build_mentioned_relationships_by_url(
   inputs : Array[@runtime.BuildInput],
   pages : Array[@core.SitePage],
@@ -1874,7 +1877,7 @@ fn build_mentioned_relationships_by_url(
             date: page.date,
             series: page.series,
           })
-          if entries.length() >= 5 {
+          if entries.length() >= max_mention_entries_per_page {
             break
           }
         }

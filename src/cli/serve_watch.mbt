@@ -2,6 +2,12 @@
 let serve_watch_poll_millis : Int = 400
 
 ///|
+let serve_watch_max_mention_entries : Int = 5
+
+///|
+let serve_watch_max_diagnostic_lines : Int = 6
+
+///|
 let serve_preview_artifact_paths : Array[String] = [
   "__moonink/live-reload.js", "__moonink/preview-status.json",
 ]
@@ -186,7 +192,7 @@ fn preview_status_diagnostics_from_build(
 ) -> Array[String] {
   let lines : Array[String] = []
   for diagnostic in diagnostics {
-    if lines.length() >= 6 {
+    if lines.length() >= serve_watch_max_diagnostic_lines {
       break
     }
     lines.push("[\{diagnostic.source_path}] \{diagnostic.entry.message}")
@@ -203,7 +209,7 @@ fn preview_failure_diagnostics(message : String) -> Array[String] {
       continue
     }
     lines.push(line)
-    if lines.length() >= 6 {
+    if lines.length() >= serve_watch_max_diagnostic_lines {
       break
     }
   }
@@ -467,9 +473,11 @@ fn watch_roots_for_config(
 
 ///|
 fn hash_bytes(bytes : Bytes) -> String {
-  let mut hash = 16777619
+  let prime : Int64 = 16777619L
+  let modulus : Int64 = 2147483647L
+  let mut hash : Int64 = prime
   for index in 0..<bytes.length() {
-    hash = (hash * 16777619 + bytes[index].to_int()) % 2147483647
+    hash = (hash * prime + bytes[index].to_int().to_int64()) % modulus
   }
   bytes.length().to_string() + ":" + hash.to_string()
 }
@@ -1011,16 +1019,16 @@ fn start_preview_child_result(
 ///|
 fn preview_process_still_running_result(
   process : @runtime.SpawnedProcess,
-) -> Result[Bool, String] {
+) -> Result[Unit, String] {
   match @runtime.poll_spawned_process_result(process) {
-    Ok(0) => Ok(true)
+    Ok(0) => Ok(())
     Ok(status) =>
       Err(
-        "[serve] failed during preview startup\nreason: preview server exited with status \{status - 1}",
+        "[serve] watch loop interrupted\nreason: preview server exited with status \{status - 1}",
       )
     Err(err) =>
       Err(
-        "[serve] failed during preview startup\n" +
+        "[serve] watch loop interrupted\n" +
         @core.format_project_io_error(err),
       )
   }
@@ -1079,8 +1087,7 @@ fn run_main_serve_watch_loop(
   while true {
     @runtime.sleep_millis(serve_watch_poll_millis)
     match preview_process_still_running_result(preview_process) {
-      Ok(true) => ()
-      Ok(false) => ()
+      Ok(_) => ()
       Err(message) => return { exit_code: 1, message }
     }
     let next_snapshot = watch_snapshot_for_roots(watch_roots) catch {
