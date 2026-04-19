@@ -1,0 +1,8 @@
+{
+  "site_name": "月墨 / MoonInk",
+  "site_url": "https://example.com/moonink",
+  "content_dir": ".",
+  "output_dir": "dist",
+  "exclude": [".obsidian", "dist", ".git", "node_modules", ".trash", "templates", "Templates"],
+  "route_style": "pretty"
+}

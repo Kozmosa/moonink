@@ -1,0 +1,8 @@
+MoonInk quick checklist
+
+- install MoonInk
+- run moonink onboard
+- add index.md
+- run moonink check
+- run moonink build
+- use moonink serve on native targets only
